@@ -25,7 +25,7 @@ classifiers = [
 
 is_pypy = hasattr(sys, 'pypy_version_info')
 
-long_description = codecs.open('README.rst', 'r', 'utf-8').read()
+long_description = codecs.open('README.md', 'r', 'utf-8').read()
 
 setup(
     name=NAME,
