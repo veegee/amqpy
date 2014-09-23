@@ -29,9 +29,9 @@ long_description = codecs.open('README.md', 'r', 'utf-8').read()
 
 setup(
     name=NAME,
-    version=amqpy.VERSION,
     description=DESCRIPTION,
     long_description=long_description,
+    version=amqpy.__version__,
     author=amqpy.__author__,
     author_email=amqpy.__contact__,
     maintainer=amqpy.__maintainer__,
