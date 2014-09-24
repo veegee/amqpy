@@ -1,12 +1,15 @@
 """Messages for AMQP
 """
 from .serialization import GenericContent
+from . import spec
 
 __all__ = ['Message']
 
 
 class Message(GenericContent):
-    """A Message for use with the Channnel.basic_* methods."""
+    """A Message for use with the `Channel.basic_*` methods
+    """
+    CLASS_ID = spec.Basic.CLASS_ID
 
     # : Instances of this class have these attributes, which are passed back and forth as message properties between
     # : client and server
@@ -27,10 +30,12 @@ class Message(GenericContent):
         ('cluster_id', 'shortstr')
     ]
 
-    def __init__(self, body='', children=None, channel=None, **properties):
+    def __init__(self, body='', channel=None, **properties):
         """
         :param body: message body
+        :param channel: associated channel
         :type body: bytes or str
+        :type channel: amqpy.Channel
 
         `properties` can include:
 
@@ -53,7 +58,7 @@ class Message(GenericContent):
 
             msg = Message('hello world', content_type='text/plain', application_headers={'foo': 7})
         """
-        super(Message, self).__init__(**properties)
+        super().__init__(**properties)
         self.body = body
         self.channel = channel
 
@@ -74,3 +79,6 @@ class Message(GenericContent):
     @property
     def delivery_tag(self):
         return self.delivery_info.get('delivery_tag')
+
+    def ack(self):
+        self.channel.basic_ack(self.delivery_tag, False)
