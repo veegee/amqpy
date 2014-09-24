@@ -65,9 +65,9 @@ class Connection(AbstractChannel):
         If you are using SSL, make sure the correct port number is specified (usually 5671), as the default of 5672 is
         for non-SSL connections.
 
-        :param str host: host[:port] (if port is not specified, the default of 5672 is used)
-        :param str userid: username
+        :param str host: host
         :param int port: port
+        :param str userid: username
         :param str password: password
         :param login_response: if not specified, one is built up for you from `userid` and `password` if present
         :param str virtual_host: virtual host
@@ -82,11 +82,8 @@ class Connection(AbstractChannel):
         :param callable on_blocked: callback on connection blocked
         :param callable on_unblocked: callback on connection unblocked
         :param bool confirm_publish: confirm publish
-        :param callable on_tune_ok: callback on tune ok
-        :param str login_method: login method
         :type ssl: dict or None
         """
-
         channel_max = channel_max or 65535
         frame_max = frame_max or 131072
 
