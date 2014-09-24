@@ -30,7 +30,7 @@ class Message(GenericContent):
     def __init__(self, body='', children=None, channel=None, **properties):
         """
         :param body: message body
-        :type body: str
+        :type body: bytes or str
 
         `properties` can include:
 
@@ -63,10 +63,9 @@ class Message(GenericContent):
         Received messages may contain a 'delivery_info' attribute, which isn't compared.
         """
         try:
-            return (super(Message, self).__eq__(other) and
-                    self.body == other.body)
+            return super().__eq__(other) and self.body == other.body
         except AttributeError:
-            return NotImplemented
+            return False
 
     @property
     def headers(self):

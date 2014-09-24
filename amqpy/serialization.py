@@ -404,7 +404,7 @@ class GenericContent(object):
         try:
             return self.properties == other.properties
         except AttributeError:
-            return NotImplemented
+            return False
 
     def __getattr__(self, name):
         """Look for additional properties in the 'properties' dictionary, and if present - the 'delivery_info'
