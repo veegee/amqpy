@@ -81,4 +81,8 @@ class Message(GenericContent):
         return self.delivery_info.get('delivery_tag')
 
     def ack(self):
+        """`ack` message with basic_ack()
+
+        This is a convenience method which calls :meth:`self.channel.basic_ack()`
+        """
         self.channel.basic_ack(self.delivery_tag, False)
