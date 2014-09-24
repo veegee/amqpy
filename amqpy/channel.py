@@ -7,9 +7,9 @@ from queue import Queue
 
 from .abstract_channel import AbstractChannel
 from .exceptions import ChannelError, ConsumerCancelled, error_for_code
-from .protocol import basic_return_t, queue_declare_ok_t
+from .spec import basic_return_t, queue_declare_ok_t
 from .serialization import AMQPWriter
-from . import protocol as proto
+from . import spec
 
 
 __all__ = ['Channel']
@@ -770,7 +770,7 @@ class Channel(AbstractChannel):
         self._send_method((50, 20), args)
 
         if not nowait:
-            return self.wait(allowed_methods=[proto.Queue.BindOk])
+            return self.wait(allowed_methods=[spec.Queue.BindOk])
 
     def _queue_bind_ok(self, args):
         """Confirm bind successful
@@ -980,7 +980,7 @@ class Channel(AbstractChannel):
         self._send_method((50, 10), args)
 
         if not nowait:
-            return self.wait(allowed_methods=[proto.Queue.DeclareOk])
+            return self.wait(allowed_methods=[spec.Queue.DeclareOk])
 
     def _queue_declare_ok(self, args):
         """Confirms a queue definition
@@ -1070,7 +1070,7 @@ class Channel(AbstractChannel):
         self._send_method((50, 40), args)
 
         if not nowait:
-            return self.wait(allowed_methods=[proto.Queue.DeleteOk])
+            return self.wait(allowed_methods=[spec.Queue.DeleteOk])
 
     def _queue_delete_ok(self, args):
         """Confirm deletion of a queue
@@ -1136,10 +1136,10 @@ class Channel(AbstractChannel):
         args.write_short(0)
         args.write_shortstr(queue)
         args.write_bit(nowait)
-        self._send_method(proto.Queue.Purge, args)
+        self._send_method(spec.Queue.Purge, args)
 
         if not nowait:
-            return self.wait(allowed_methods=[proto.Queue.PurgeOk])
+            return self.wait(allowed_methods=[spec.Queue.PurgeOk])
 
     def _queue_purge_ok(self, args):
         """Confirms a queue purge
@@ -1196,7 +1196,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
         args.write_bit(multiple)
-        self._send_method(proto.Basic.Ack, args)
+        self._send_method(spec.Basic.Ack, args)
 
     def basic_cancel(self, consumer_tag, nowait=False):
         """End a queue consumer
@@ -1236,7 +1236,7 @@ class Channel(AbstractChannel):
             args.write_shortstr(consumer_tag)
             args.write_bit(nowait)
             self._send_method((60, 30), args)
-            return self.wait(allowed_methods=[proto.Basic.CancelOk])
+            return self.wait(allowed_methods=[spec.Basic.CancelOk])
 
     def _basic_cancel_notify(self, args):
         """Consumer cancelled by server.
@@ -1369,10 +1369,10 @@ class Channel(AbstractChannel):
         args.write_bit(exclusive)
         args.write_bit(nowait)
         args.write_table(arguments or {})
-        self._send_method(proto.Basic.Consume, args)
+        self._send_method(spec.Basic.Consume, args)
 
         if not nowait:
-            consumer_tag = self.wait(allowed_methods=[proto.Basic.ConsumeOk])
+            consumer_tag = self.wait(allowed_methods=[spec.Basic.ConsumeOk])
 
         self.callbacks[consumer_tag] = callback
 
@@ -1520,7 +1520,7 @@ class Channel(AbstractChannel):
         args.write_shortstr(queue)
         args.write_bit(no_ack)
         self._send_method((60, 70), args)
-        return self.wait(allowed_methods=[proto.Basic.GetOk, proto.Basic.GetEmpty])
+        return self.wait(allowed_methods=[spec.Basic.GetOk, spec.Basic.GetEmpty])
 
     def _basic_get_empty(self, args):
         """Indicate no messages available
@@ -1729,7 +1729,7 @@ class Channel(AbstractChannel):
         args.write_short(prefetch_count)
         args.write_bit(a_global)
         self._send_method((60, 10), args)
-        return self.wait(allowed_methods=[proto.Basic.QosOk])
+        return self.wait(allowed_methods=[spec.Basic.QosOk])
 
     def _basic_qos_ok(self, args):
         """Confirm the requested qos
@@ -1879,9 +1879,9 @@ class Channel(AbstractChannel):
         This method commits all messages published and acknowledged in the current transaction. A new transaction
         starts immediately after a commit.
         """
-        self._send_method(proto.Tx.Commit)
+        self._send_method(spec.Tx.Commit)
         return self.wait(allowed_methods=[
-            proto.Tx.CommitOk
+            spec.Tx.CommitOk
         ])
 
     def _tx_commit_ok(self, args):
@@ -1900,7 +1900,7 @@ class Channel(AbstractChannel):
 
         """
         self._send_method((90, 30))
-        return self.wait(allowed_methods=[proto.Tx.RollbackOk])
+        return self.wait(allowed_methods=[spec.Tx.RollbackOk])
 
     def _tx_rollback_ok(self, args):
         """Confirm a successful rollback
@@ -1916,8 +1916,8 @@ class Channel(AbstractChannel):
         This method sets the channel to use standard transactions. The client must use this method at least once on a
         channel before using the Commit or Rollback methods.
         """
-        self._send_method(proto.Tx.Select)
-        return self.wait(allowed_methods=[proto.Tx.SelectOk])
+        self._send_method(spec.Tx.Select)
+        return self.wait(allowed_methods=[spec.Tx.SelectOk])
 
     def _tx_select_ok(self, args):
         """Confirm transaction mode
@@ -1937,9 +1937,9 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_bit(nowait)
 
-        self._send_method(proto.Confirm.Select, args)
+        self._send_method(spec.Confirm.Select, args)
         if not nowait:
-            self.wait(allowed_methods=[proto.Confirm.SelectOk])
+            self.wait(allowed_methods=[spec.Confirm.SelectOk])
 
     def _confirm_select_ok(self, args):
         """With this method the broker confirms to the client that the channel is now using publisher confirms
@@ -1972,7 +1972,7 @@ class Channel(AbstractChannel):
         (60, 30): _basic_cancel_notify,
         (60, 31): _basic_cancel_ok,
         (60, 50): _basic_return,
-        proto.Basic.Deliver: _basic_deliver,
+        spec.Basic.Deliver: _basic_deliver,
         (60, 71): _basic_get_ok,
         (60, 72): _basic_get_empty,
         (60, 80): _basic_ack_recv,
@@ -1984,5 +1984,5 @@ class Channel(AbstractChannel):
     }
 
     _IMMEDIATE_METHODS = [
-        proto.Basic.Return,
+        spec.Basic.Return,
     ]

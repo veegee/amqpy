@@ -12,7 +12,7 @@ from .channel import Channel
 from .exceptions import (ChannelError, ResourceError, ConnectionError, error_for_code,
                          AMQPNotImplementedError)
 from .transport import create_transport
-from . import protocol as proto
+from . import spec
 
 
 HAS_MSG_PEEK = hasattr(socket, 'MSG_PEEK')
@@ -97,7 +97,7 @@ class Connection(AbstractChannel):
         # at the beginning
 
         d = dict(LIBRARY_PROPERTIES, **client_properties or {})
-        self._method_override = {proto.Basic.Return: self._dispatch_basic_return}
+        self._method_override = {spec.Basic.Return: self._dispatch_basic_return}
 
         self.channels = {}
         # the connection object itself is treated as channel 0
@@ -132,14 +132,14 @@ class Connection(AbstractChannel):
         self.method_writer = MethodWriter(self.transport, self.frame_max)
 
         # wait for server to send the START method
-        self.wait(allowed_methods=[proto.Connection.Start])
+        self.wait(allowed_methods=[spec.Connection.Start])
 
         # reply with START-OK and connection parameters
         self._x_start_ok(d, login_method, login_response, locale)
 
         self._wait_tune_ok = True
         while self._wait_tune_ok:
-            self.wait(allowed_methods=[proto.Connection.Secure, proto.Connection.Tune])
+            self.wait(allowed_methods=[spec.Connection.Secure, spec.Connection.Tune])
 
         self._x_open(virtual_host)
 
@@ -164,7 +164,7 @@ class Connection(AbstractChannel):
             return self._avail_channel_ids.pop()
         except IndexError:
             raise ResourceError('No free channel ids, current={0}, channel_max={1}'.format(
-                len(self.channels), self.channel_max), proto.Channel.Open)
+                len(self.channels), self.channel_max), spec.Channel.Open)
 
     def _claim_channel_id(self, channel_id):
         try:
@@ -181,7 +181,7 @@ class Connection(AbstractChannel):
 
         for queued_method in method_queue:
             method_sig = queued_method[0]
-            if (allowed_methods is None) or (method_sig in allowed_methods) or (method_sig == proto.Channel.Close):
+            if (allowed_methods is None) or (method_sig in allowed_methods) or (method_sig == spec.Channel.Close):
                 method_queue.remove(queued_method)
                 return queued_method
 
@@ -190,7 +190,7 @@ class Connection(AbstractChannel):
             channel, method_sig, args, content = self.method_reader.read_method()
 
             if channel == channel_id \
-                    and (allowed_methods is None or method_sig in allowed_methods or method_sig == proto.Channel.Close):
+                    and (allowed_methods is None or method_sig in allowed_methods or method_sig == spec.Channel.Close):
                 return method_sig, args, content
 
             # certain methods like basic_return should be dispatched immediately rather than being queued, even if
@@ -272,7 +272,7 @@ class Connection(AbstractChannel):
             method_queue = channel.method_queue
             for queued_method in method_queue:
                 method_sig = queued_method[0]
-                if allowed_methods is None or method_sig in allowed_methods or method_sig == proto.Channel.Close:
+                if allowed_methods is None or method_sig in allowed_methods or method_sig == spec.Channel.Close:
                     method_queue.remove(queued_method)
                     method_sig, args, content = queued_method
                     return channel_id, method_sig, args, content
@@ -282,7 +282,7 @@ class Connection(AbstractChannel):
             channel, method_sig, args, content = self.method_reader.read_method(timeout)
 
             if channel in channels \
-                    and (allowed_methods is None or method_sig in allowed_methods or method_sig == proto.Channel.Close):
+                    and (allowed_methods is None or method_sig in allowed_methods or method_sig == spec.Channel.Close):
                 return channel, method_sig, args, content
 
             # not the channel and/or method we were looking for; queue this method for later
@@ -360,8 +360,8 @@ class Connection(AbstractChannel):
         args.write_shortstr(reply_text)
         args.write_short(method_sig[0])  # class_id
         args.write_short(method_sig[1])  # method_id
-        self._send_method(proto.Connection.Close, args)
-        return self.wait(allowed_methods=[proto.Connection.Close, proto.Connection.CloseOk])
+        self._send_method(spec.Connection.Close, args)
+        return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 
     def _close(self, args):
         """Request a connection close
@@ -436,7 +436,7 @@ class Connection(AbstractChannel):
             A peer that detects a socket closure without having received a Close-Ok handshake method SHOULD log the
             error.
         """
-        self._send_method(proto.Connection.CloseOk)
+        self._send_method(spec.Connection.CloseOk)
         self._do_close()
 
     def _close_ok(self, args):
@@ -495,8 +495,8 @@ class Connection(AbstractChannel):
         args.write_shortstr(virtual_host)
         args.write_shortstr(capabilities)
         args.write_bit(False)
-        self._send_method(proto.Connection.Open, args)
-        return self.wait(allowed_methods=[proto.Connection.OpenOk])
+        self._send_method(spec.Connection.Open, args)
+        return self.wait(allowed_methods=[spec.Connection.OpenOk])
 
     def _open_ok(self, args):
         """Signal that the connection is ready
@@ -538,7 +538,7 @@ class Connection(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_longstr(response)
-        self._send_method(proto.Connection.SecureOk, args)
+        self._send_method(spec.Connection.SecureOk, args)
 
     def _start(self, args):
         """Start connection negotiation
@@ -657,7 +657,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(mechanism)
         args.write_longstr(response)
         args.write_shortstr(locale)
-        self._send_method(proto.Connection.StartOk, args)
+        self._send_method(spec.Connection.StartOk, args)
 
     def _tune(self, args):
         """Propose connection tuning parameters
@@ -756,7 +756,7 @@ class Connection(AbstractChannel):
         args.write_short(channel_max)
         args.write_long(frame_max)
         args.write_short(heartbeat or 0)
-        self._send_method(proto.Connection.TuneOk, args)
+        self._send_method(spec.Connection.TuneOk, args)
         self._wait_tune_ok = False
 
     @property
@@ -768,12 +768,12 @@ class Connection(AbstractChannel):
         return self.server_properties.get('capabilities') or {}
 
     _METHOD_MAP = {
-        proto.Connection.Start: _start,
-        proto.Connection.Secure: _secure,
-        proto.Connection.Tune: _tune,
-        proto.Connection.OpenOk: _open_ok,
-        proto.Connection.Close: _close,
-        proto.Connection.CloseOk: _close_ok,
-        proto.Connection.Blocked: _blocked,
-        proto.Connection.Unblocked: _unblocked,
+        spec.Connection.Start: _start,
+        spec.Connection.Secure: _secure,
+        spec.Connection.Tune: _tune,
+        spec.Connection.OpenOk: _open_ok,
+        spec.Connection.Close: _close,
+        spec.Connection.CloseOk: _close_ok,
+        spec.Connection.Blocked: _blocked,
+        spec.Connection.Unblocked: _unblocked,
     }
