@@ -4,7 +4,6 @@ import logging
 import socket
 from array import array
 
-from .five import items
 from .method_framing import MethodReader, MethodWriter
 from .serialization import AMQPWriter
 from . import __version__
@@ -12,7 +11,6 @@ from .abstract_channel import AbstractChannel
 from .channel import Channel
 from .exceptions import (ChannelError, ResourceError, ConnectionError, error_for_code,
                          AMQPNotImplementedError)
-from .five import range, values
 from .transport import create_transport
 from . import protocol as proto
 
@@ -153,7 +151,7 @@ class Connection(AbstractChannel):
         try:
             self.transport.close()
 
-            temp_list = [x for x in values(self.channels) if x is not self]
+            temp_list = [x for x in self.channels.values() if x is not self]
             for ch in temp_list:
                 ch._do_close()
         except socket.error:
@@ -270,7 +268,7 @@ class Connection(AbstractChannel):
             return amqp_method(channel, args, content)
 
     def _wait_multiple(self, channels, allowed_methods, timeout=None):
-        for channel_id, channel in items(channels):
+        for channel_id, channel in channels.items():
             method_queue = channel.method_queue
             for queued_method in method_queue:
                 method_sig = queued_method[0]

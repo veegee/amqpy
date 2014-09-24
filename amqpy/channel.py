@@ -11,6 +11,7 @@ from .protocol import basic_return_t, queue_declare_ok_t
 from .serialization import AMQPWriter
 from . import protocol as proto
 
+
 __all__ = ['Channel']
 
 log = logging.getLogger('amqpy')

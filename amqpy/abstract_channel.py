@@ -1,8 +1,10 @@
 """Code common to Connection and Channel objects
 """
+from abc import ABCMeta, abstractmethod
+
 from .exceptions import AMQPNotImplementedError, RecoverableConnectionError
 from .serialization import AMQPWriter
-from abc import ABCMeta, abstractmethod
+
 
 __all__ = ['AbstractChannel']
 
