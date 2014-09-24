@@ -5,15 +5,16 @@ from struct import pack, unpack
 from .message import Message
 from .exceptions import AMQPError, UnexpectedFrame, Timeout
 from .serialization import AMQPReader
+from . import spec
 
 
 __all__ = ['MethodReader']
 
 # MethodReader needs to know which methods are supposed to be followed by content headers and bodies.
 _CONTENT_METHODS = [
-    (60, 50),  # Basic.return
-    (60, 60),  # Basic.deliver
-    (60, 71),  # Basic.get_ok
+    spec.Basic.Return,
+    spec.Basic.Deliver,
+    spec.Basic.GetOk,
 ]
 
 
