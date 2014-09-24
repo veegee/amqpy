@@ -193,22 +193,14 @@ class Connection(AbstractChannel):
             # certain methods like basic_return should be dispatched immediately rather than being queued, even if
             # they're not one of the 'allowed_methods' we're looking for
             if channel and method_sig in self.Channel._IMMEDIATE_METHODS:
-                self.channels[channel].dispatch_method(
-                    method_sig, args, content,
-                )
+                self.channels[channel].dispatch_method(method_sig, args, content)
                 continue
 
-            # not the channel and/or method we were looking for.  Queue
-            # this method for later
-            self.channels[channel].method_queue.append(
-                (method_sig, args, content),
-            )
+            # not the channel and/or method we were looking for; queue this method for later
+            self.channels[channel].method_queue.append((method_sig, args, content))
 
-            #
-            # If we just queued up a method for channel 0 (the Connection
-            # itself) it's probably a close method in reaction to some
-            # error, so deal with it right away.
-            #
+            # If we just queued up a method for channel 0 (the Connection itself) it's probably a close method in
+            # reaction to some error, so deal with it right away.
             if not channel:
                 self.wait()
 
