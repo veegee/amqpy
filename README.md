@@ -45,8 +45,8 @@ Features
 To do
 =====
 
+* Rewrite `wait` and callback mechanism
 * Completely document all functions and create Sphinx docs
-* Tests using py.test
 * Thread safety (?)
 * Asynchronous operation
 * Python 3.4 asyncio support
