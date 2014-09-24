@@ -9,13 +9,10 @@ from .serialization import AMQPWriter
 from . import __version__
 from .abstract_channel import AbstractChannel
 from .channel import Channel
-from .exceptions import (ChannelError, ResourceError, ConnectionError, error_for_code,
-                         AMQPNotImplementedError)
+from .exceptions import ChannelError, ResourceError, ConnectionError, error_for_code, AMQPNotImplementedError
 from .transport import create_transport
 from . import spec
 
-
-HAS_MSG_PEEK = hasattr(socket, 'MSG_PEEK')
 
 __all__ = ['Connection']
 
@@ -214,7 +211,7 @@ class Connection(AbstractChannel):
             return self.Channel(self, channel_id)
 
     def is_alive(self):
-        if HAS_MSG_PEEK:
+        if hasattr(socket, 'MSG_PEEK'):
             sock = self.sock
             prev = sock.gettimeout()
             sock.settimeout(0.0001)
