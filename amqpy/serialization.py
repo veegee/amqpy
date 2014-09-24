@@ -1,7 +1,5 @@
+"""Convert between bytestreams and higher-level AMQP types
 """
-Convert between bytestreams and higher-level AMQP types.
-"""
-import sys
 from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
@@ -10,36 +8,24 @@ from time import mktime
 
 from .exceptions import FrameSyntaxError
 
-IS_PY3K = sys.version_info[0] >= 3
 
-if IS_PY3K:
-    def byte(n):
-        return bytes([n])
-else:
-    byte = chr
-
-ILLEGAL_TABLE_TYPE_WITH_KEY = """\
-Table type {0!r} for key {1!r} not handled by amqpy. [value: {2!r}]
-"""
-
-ILLEGAL_TABLE_TYPE = """\
-    Table type {0!r} not handled by amqpy. [value: {1!r}]
-"""
+def byte(n):
+    return bytes([n])
 
 
 class AMQPReader(object):
-    """Read higher-level AMQP types from a bytestream."""
+    """Read higher-level AMQP types from a bytestream
+    """
 
     def __init__(self, source):
-        """Source should be either a file-like object with a read() method, or
-        a plain (non-unicode) string."""
+        """Source should be either a file-like object with a read() method, or a plain (non-unicode) string
+        """
         if isinstance(source, bytes):
             self.input = BytesIO(source)
         elif hasattr(source, 'read'):
             self.input = source
         else:
-            raise ValueError(
-                'AMQPReader needs a file-like object or plain string')
+            raise ValueError('AMQPReader needs a file-like object or plain string')
 
         self.bitcount = self.bits = 0
 
@@ -183,7 +169,7 @@ class AMQPReader(object):
         elif ftype == 86:
             val = None
         else:
-            raise FrameSyntaxError('Unknown value in table: {0!r} ({1!r})'.format(ftype, type(ftype)))
+            raise FrameSyntaxError('Unknown value in table: {!r} ({!r})'.format(ftype, type(ftype)))
         return val
 
     def read_array(self):
@@ -246,11 +232,14 @@ class AMQPWriter(object):
         self._flushbits()
         return self.out.getvalue()
 
-    def write(self, s):
-        """Write a plain Python string with no special encoding in Python 2.x, or bytes in Python 3.x
+    def write(self, b):
+        """Write bytes
+
+        :param b: bytes to write
+        :type b: bytes
         """
         self._flushbits()
-        self.out.write(s)
+        self.out.write(b)
 
     def write_bit(self, b):
         """Write a boolean value
@@ -371,8 +360,10 @@ class AMQPWriter(object):
         elif v is None:
             self.write(b'V')
         else:
-            err = (ILLEGAL_TABLE_TYPE_WITH_KEY.format(type(v), k, v) if k
-                   else ILLEGAL_TABLE_TYPE.format(type(v), v))
+            if k:
+                err = 'Table type {!r} for key {!r} not handled by amqpy. [value: {!r}]'.format(type(v), k, v)
+            else:
+                err = 'Table type {!r} not handled by amqpy. [value: {!r}]'.format(type(v), v)
             raise FrameSyntaxError(err)
 
     def write_array(self, a):
@@ -384,8 +375,8 @@ class AMQPWriter(object):
         self.out.write(array_data)
 
     def write_timestamp(self, v):
-        """Write out a Python datetime.datetime object as a 64-bit integer
-        representing seconds since the Unix epoch."""
+        """Write out a Python datetime.datetime object as a 64-bit integer representing seconds since the Unix epoch
+        """
         self.out.write(pack('>q', int(mktime(v.timetuple()))))
 
 
