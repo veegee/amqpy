@@ -13,6 +13,13 @@ class Method:
         self.content = content
 
 
+class FrameType:
+    METHOD = 1
+    HEADER = 2
+    BODY = 3
+    HEARTBEAT = 8
+
+
 class Connection:
     CLASS_ID = 10
 

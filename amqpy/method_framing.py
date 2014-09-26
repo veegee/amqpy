@@ -6,6 +6,7 @@ from .message import Message
 from .exceptions import AMQPError, UnexpectedFrame, Timeout
 from .serialization import AMQPReader
 from . import spec
+from .spec import FrameType
 
 
 __all__ = ['MethodReader']
@@ -18,7 +19,7 @@ _CONTENT_METHODS = [
 ]
 
 
-class _PartialMessage(object):
+class _PartialMessage:
     """Helper class to build up a multi-frame method
     """
 
@@ -96,18 +97,15 @@ class MethodReader:
             self.bytes_recv += 1
 
             if frame_type not in (self.expected_types[channel], 8):
-                put((
-                    channel,
-                    UnexpectedFrame(
-                        'Received frame {0} while expecting type: {1}'.format(
-                            frame_type, self.expected_types[channel]))))
-            elif frame_type == 1:
+                msg = 'Received frame {0} while expecting type: {1}'.format(frame_type, self.expected_types[channel])
+                put((channel, UnexpectedFrame(msg)))
+            elif frame_type == FrameType.METHOD:
                 self._process_method_frame(channel, payload)
-            elif frame_type == 2:
+            elif frame_type == FrameType.HEADER:
                 self._process_content_header(channel, payload)
-            elif frame_type == 3:
+            elif frame_type == FrameType.BODY:
                 self._process_content_body(channel, payload)
-            elif frame_type == 8:
+            elif frame_type == FrameType.HEARTBEAT:
                 self._process_heartbeat(channel, payload)
 
     def _process_heartbeat(self, channel, payload):
@@ -196,40 +194,54 @@ class MethodReader:
                 self.sock.settimeout(orig_timeout)
 
 
-class MethodWriter(object):
+class MethodWriter:
     """Convert AMQP methods into AMQP frames and send them out to the peer
     """
 
     def __init__(self, dest, frame_max):
+        """
+        :param dest: destination transport
+        :param frame_max: frame_max
+        :type dest: amqpy.transport.AbstractTransport
+        :type frame_max: int
+        """
         self.dest = dest
         self.frame_max = frame_max
         self.bytes_sent = 0
 
-    def write_method(self, channel, method_sig, args, content=None):
-        write_frame = self.dest.write_frame
-        payload = pack('>HH', method_sig[0], method_sig[1]) + args
+    def write_method(self, channel, method_tup, args, content=None):
+        """Write method
 
+        :param channel: channel
+        :param method_tup: method tuple
+        :param args: method args
+        :param content: content payload
+        :type channel: int
+        :type method_tup: tuple(int, int)
+        :type args: bytes
+        :type content: amqpy.message.GenericContent
+        """
+        # check content first so we can raise an exception if there's a problem before sending the first frame
         if content:
-            # do this early, so we can raise an exception if there's a
-            # problem with the content properties, before sending the
-            # first frame
             body = content.body
-            if isinstance(body, str):
-                coding = content.properties.get('content_encoding', None)
-                if coding is None:
-                    coding = content.properties['content_encoding'] = 'UTF-8'
+            if isinstance(content.body, str):
+                # encode body to bytes
+                coding = content.properties.setdefault('content_encoding', 'UTF-8')
+                body = content.body.encode(coding)
+            properties = content.serialize_properties()
 
-                body = body.encode(coding)
-            properties = content._serialize_properties()
-
-        write_frame(1, channel, payload)
+        # write frame method
+        payload_frame_method = pack('>HH', method_tup[0], method_tup[1]) + args
+        self.dest.write_frame(FrameType.METHOD, channel, payload_frame_method)
 
         if content:
-            payload = pack('>HHQ', method_sig[0], 0, len(body)) + properties
+            # write frame header
+            payload_frame_header = pack('>HHQ', method_tup[0], 0, len(body)) + properties
+            self.dest.write_frame(FrameType.HEADER, channel, payload_frame_header)
 
-            write_frame(2, channel, payload)
-
+            # write frame body
             chunk_size = self.frame_max - 8
             for i in range(0, len(body), chunk_size):
-                write_frame(3, channel, body[i:i + chunk_size])
+                self.dest.write_frame(FrameType.BODY, channel, body[i:i + chunk_size])
+
         self.bytes_sent += 1
