@@ -73,8 +73,8 @@ class Connection(AbstractChannel):
         :param dict client_properties: dict of client properties
         :param ssl: dict of SSL options passed to :func:`ssl.wrap_socket()`, None to disable SSL
         :param float connect_timeout: connect timeout
-        :param int channel_max: channel max
-        :param int frame_max: frame max
+        :param int channel_max: maximum number of channels
+        :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
         :param callable on_open: callback on connection open
         :param callable on_blocked: callback on connection blocked
@@ -82,8 +82,8 @@ class Connection(AbstractChannel):
         :param bool confirm_publish: confirm publish
         :type ssl: dict or None
         """
-        channel_max = channel_max or 65535
-        frame_max = frame_max or 131072
+        channel_max = channel_max or 65535  # maximum number of channels
+        frame_max = frame_max or 131072  # maximum frame payload size in bytes
 
         # create login "response" to send to server
         login_response = AMQPWriter()

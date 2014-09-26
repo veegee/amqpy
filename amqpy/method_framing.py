@@ -94,8 +94,9 @@ class MethodReader:
         self.bytes_recv = 0  # not an actual byte count, just incremented whenever we receive
 
     def _next_method(self):
-        """Read the next method from the source, once one complete method has been assembled it is placed in the
-        internal queue
+        """Read the next method from the source and process it
+
+        Once one complete method has been assembled, it is placed in the internal queue.
         """
         while not self.queue:
             try:
@@ -215,7 +216,7 @@ class MethodWriter:
     def __init__(self, dest, frame_max):
         """
         :param dest: destination transport
-        :param frame_max: frame_max
+        :param frame_max: maximum frame payload size in bytes
         :type dest: amqpy.transport.AbstractTransport
         :type frame_max: int
         """
