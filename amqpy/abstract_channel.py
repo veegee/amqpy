@@ -38,7 +38,7 @@ class AbstractChannel(metaclass=ABCMeta):
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
-    def _send_method(self, method_tup, args=bytes(), content=None):
+    def _send_method_2(self, method_tup, args=bytes(), content=None):
         """Send a method to the server in the current channel
         """
         if self.connection is None:
@@ -49,6 +49,13 @@ class AbstractChannel(metaclass=ABCMeta):
 
         method = Method(method_tup, args, content)
         self.connection.method_writer.write_method(self.channel_id, method)
+
+    def _send_method(self, method):
+        if self.connection is None:
+            raise RecoverableConnectionError('connection already closed')
+
+        self.connection.method_writer.write_method(self.channel_id, method)
+
 
     def wait(self, allowed_methods=None):
         """Wait for a method that matches our allowed_methods parameter and dispatch to it

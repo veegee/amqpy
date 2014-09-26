@@ -7,7 +7,7 @@ basic_return_t = namedtuple('basic_return_t', ('reply_code', 'reply_text', 'exch
 
 
 class Method:
-    def __init__(self, method_tup, args, content):
+    def __init__(self, method_tup, args=bytes(), content=None):
         """
         :param method_tup: method tuple consisting of class_id and method_id
         :param args: method args

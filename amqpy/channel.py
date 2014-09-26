@@ -10,6 +10,7 @@ from .exceptions import ChannelError, ConsumerCancelled, error_for_code
 from .spec import basic_return_t, queue_declare_ok_t
 from .serialization import AMQPWriter
 from . import spec
+from .spec import Method
 
 
 __all__ = ['Channel']
@@ -131,11 +132,8 @@ class Channel(AbstractChannel):
             args.write_shortstr(reply_text)
             args.write_short(method_sig[0])  # class_id
             args.write_short(method_sig[1])  # method_id
-            self._send_method((20, 40), args)
-            return self.wait(allowed_methods=[
-                (20, 40),  # Channel.close
-                (20, 41),  # Channel.close_ok
-            ])
+            self._send_method(Method(spec.Channel.Close, args.getvalue()))
+            return self.wait(allowed_methods=[spec.Channel.Close, spec.Channel.CloseOk])
         finally:
             self.connection = None
 
@@ -183,12 +181,10 @@ class Channel(AbstractChannel):
         class_id = args.read_short()
         method_id = args.read_short()
 
-        self._send_method((20, 41))
+        self._send_method(Method(spec.Channel.CloseOk))
         self._do_revive()
 
-        raise error_for_code(
-            reply_code, reply_text, (class_id, method_id), ChannelError,
-        )
+        raise error_for_code(reply_code, reply_text, (class_id, method_id), ChannelError)
 
     def _close_ok(self, args):
         """Confirm a channel close
@@ -242,10 +238,8 @@ class Channel(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_bit(active)
-        self._send_method((20, 20), args)
-        return self.wait(allowed_methods=[
-            (20, 21),  # Channel.flow_ok
-        ])
+        self._send_method(Method(spec.Channel.Flow, args.getvalue()))
+        return self.wait(allowed_methods=[spec.Channel.FlowOk])
 
     def _flow(self, args):
         """Enable/disable flow from peer
@@ -299,19 +293,12 @@ class Channel(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_bit(active)
-        self._send_method((20, 21), args)
+        self._send_method(Method(spec.Channel.FlowOk, args.getvalue()))
 
     def _flow_ok(self, args):
         """Confirm a flow method
 
         Confirms to the peer that a flow command was received and processed.
-
-        PARAMETERS: active: boolean
-
-                current flow setting
-
-                Confirms the setting of the processed flow method: True means the peer will start sending or continue to
-                send content frames; False means it will not.
         """
         return args.read_bit()
 
@@ -319,27 +306,14 @@ class Channel(AbstractChannel):
         """Open a channel for use
 
         This method opens a virtual connection (a channel).
-
-        RULE:
-
-            This method MUST NOT be called when the channel is already open.
-
-        PARAMETERS: out_of_band: shortstr (DEPRECATED)
-
-                out-of-band settings
-
-                Configures out-of-band transfers on this channel.  The syntax and meaning of this field will be formally
-                defined at a later date.
         """
         if self.is_open:
             return
 
         args = AMQPWriter()
         args.write_shortstr('')  # out_of_band: deprecated
-        self._send_method((20, 10), args)
-        return self.wait(allowed_methods=[
-            (20, 11),  # Channel.open_ok
-        ])
+        self._send_method(Method(spec.Channel.Open, args.getvalue()))
+        return self.wait(allowed_methods=[spec.Channel.OpenOk])
 
     def _open_ok(self, args):
         """Signal that the channel is ready
@@ -459,15 +433,13 @@ class Channel(AbstractChannel):
         args.write_bit(False)  # internal: deprecated
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method((40, 10), args)
+        self._send_method(Method(spec.Exchange.Declare, args.getvalue()))
 
         if auto_delete:
             warn(VDeprecationWarning(EXCHANGE_AUTODELETE_DEPRECATED))
 
         if not nowait:
-            return self.wait(allowed_methods=[
-                (40, 11),  # Channel.exchange_declare_ok
-            ])
+            return self.wait(allowed_methods=[spec.Exchange.DeclareOk])
 
     def _exchange_declare_ok(self, args):
         """Confirms an exchange declaration
@@ -517,12 +489,10 @@ class Channel(AbstractChannel):
         args.write_shortstr(exchange)
         args.write_bit(if_unused)
         args.write_bit(nowait)
-        self._send_method((40, 20), args)
+        self._send_method(Method(spec.Exchange.Delete, args.getvalue()))
 
         if not nowait:
-            return self.wait(allowed_methods=[
-                (40, 21),  # Channel.exchange_delete_ok
-            ])
+            return self.wait(allowed_methods=[spec.Exchange.DeleteOk])
 
     def _exchange_delete_ok(self, args):
         """Confirm deletion of an exchange
@@ -598,12 +568,10 @@ class Channel(AbstractChannel):
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method((40, 30), args)
+        self._send_method(Method(spec.Exchange.Bind, args.getvalue()))
 
         if not nowait:
-            return self.wait(allowed_methods=[
-                (40, 31),  # Channel.exchange_bind_ok
-            ])
+            return self.wait(allowed_methods=[spec.Exchange.BindOk])
 
     def exchange_unbind(self, destination, source='', routing_key='', nowait=False, arguments=None):
         """This method unbinds an exchange from an exchange.
@@ -658,12 +626,10 @@ class Channel(AbstractChannel):
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method((40, 40), args)
+        self._send_method(Method(spec.Exchange.Unbind, args.getvalue()))
 
         if not nowait:
-            return self.wait(allowed_methods=[
-                (40, 51),  # Channel.exchange_unbind_ok
-            ])
+            return self.wait(allowed_methods=[spec.Exchange.UnbindOk])
 
     def _exchange_bind_ok(self, args):
         """Confirm bind successful
@@ -767,7 +733,7 @@ class Channel(AbstractChannel):
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method((50, 20), args)
+        self._send_method(Method(spec.Queue.Bind, args.getvalue()))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.BindOk])
@@ -834,12 +800,10 @@ class Channel(AbstractChannel):
         args.write_shortstr(routing_key)
         # args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method((50, 50), args)
+        self._send_method(Method(spec.Queue.Unbind, args.getvalue()))
 
         if not nowait:
-            return self.wait(allowed_methods=[
-                (50, 51),  # Channel.queue_unbind_ok
-            ])
+            return self.wait(allowed_methods=[spec.Queue.UnbindOk])
 
     def _queue_unbind_ok(self, args):
         """Confirm unbind successful
@@ -977,7 +941,7 @@ class Channel(AbstractChannel):
         args.write_bit(auto_delete)
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method((50, 10), args)
+        self._send_method(Method(spec.Queue.Declare, args.getvalue()))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.DeclareOk])
@@ -1067,7 +1031,7 @@ class Channel(AbstractChannel):
         args.write_bit(if_unused)
         args.write_bit(if_empty)
         args.write_bit(nowait)
-        self._send_method((50, 40), args)
+        self._send_method(Method(spec.Queue.Delete, args.getvalue()))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.DeleteOk])
@@ -1136,7 +1100,7 @@ class Channel(AbstractChannel):
         args.write_short(0)
         args.write_shortstr(queue)
         args.write_bit(nowait)
-        self._send_method(spec.Queue.Purge, args)
+        self._send_method(Method(spec.Queue.Purge, args.getvalue()))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.PurgeOk])
@@ -1196,7 +1160,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
         args.write_bit(multiple)
-        self._send_method(spec.Basic.Ack, args)
+        self._send_method(Method(spec.Basic.Ack, args.getvalue()))
 
     def basic_cancel(self, consumer_tag, nowait=False):
         """End a queue consumer
@@ -1235,7 +1199,7 @@ class Channel(AbstractChannel):
             args = AMQPWriter()
             args.write_shortstr(consumer_tag)
             args.write_bit(nowait)
-            self._send_method((60, 30), args)
+            self._send_method(Method(spec.Basic.Cancel, args.getvalue()))
             return self.wait(allowed_methods=[spec.Basic.CancelOk])
 
     def _basic_cancel_notify(self, args):
@@ -1248,7 +1212,7 @@ class Channel(AbstractChannel):
         if callback:
             callback(consumer_tag)
         else:
-            raise ConsumerCancelled(consumer_tag, (60, 30))
+            raise ConsumerCancelled(consumer_tag, spec.Basic.Cancel)
 
     def _basic_cancel_ok(self, args):
         """Confirm a cancelled consumer
@@ -1369,7 +1333,7 @@ class Channel(AbstractChannel):
         args.write_bit(exclusive)
         args.write_bit(nowait)
         args.write_table(arguments or {})
-        self._send_method(spec.Basic.Consume, args)
+        self._send_method(Method(spec.Basic.Consume, args.getvalue()))
 
         if not nowait:
             consumer_tag = self.wait(allowed_methods=[spec.Basic.ConsumeOk])
@@ -1519,7 +1483,7 @@ class Channel(AbstractChannel):
         args.write_short(0)
         args.write_shortstr(queue)
         args.write_bit(no_ack)
-        self._send_method((60, 70), args)
+        self._send_method(Method(spec.Basic.Get, args.getvalue()))
         return self.wait(allowed_methods=[spec.Basic.GetOk, spec.Basic.GetEmpty])
 
     def _basic_get_empty(self, args):
@@ -1527,14 +1491,6 @@ class Channel(AbstractChannel):
 
         This method tells the client that the queue has no messages
         available for the client.
-
-        PARAMETERS:
-            cluster_id: shortstr
-
-                Cluster id
-
-                For use by cluster applications, should not be used by
-                client applications.
         """
         cluster_id = args.read_shortstr()  # noqa
 
@@ -1603,59 +1559,21 @@ class Channel(AbstractChannel):
         }
         return msg
 
-    def _basic_publish(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
+    def basic_publish(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
         """Publish a message
 
         This method publishes a message to a specific exchange. The message will be routed to queues as defined by the
         exchange configuration and distributed to any active consumers when the transaction, if any, is committed.
 
-        PARAMETERS:
-
-            exchange: shortstr
-
-                Specifies the name of the exchange to publish to.  The exchange name can be empty, meaning the default
-                exchange.  If the exchange name is specified, and that exchange does not exist, the server will raise a
-                channel exception.
-
-                RULE:
-
-                    The server MUST accept a blank exchange name to mean the default exchange.
-
-                RULE:
-
-                    The exchange MAY refuse basic content in which case it MUST raise a channel exception with reply
-                    code 540 (not implemented).
-
-            routing_key: shortstr
-
-                Message routing key
-
-                Specifies the routing key for the message.  The routing key is used for routing messages depending on
-                the exchange configuration.
-
-            mandatory: boolean
-
-                indicate mandatory routing
-
-                This flag tells the server how to react if the message cannot be routed to a queue.  If this flag is
-                True, the server will return an unroutable message with a Return method.  If this flag is False, the
-                server silently drops the message.
-
-                RULE:
-
-                    The server SHOULD implement the mandatory flag.
-
-            immediate: boolean
-
-                request immediate delivery
-
-                This flag tells the server how to react if the message cannot be routed to a queue consumer immediately.
-                If this flag is set, the server will return an undeliverable message with a Return method. If this flag
-                is zero, the server will queue the message, but with no guarantee that it will ever be consumed.
-
-                RULE:
-
-                    The server SHOULD implement the immediate flag.
+        :param msg: message
+        :param exchange: exchange name, empty string means default exchange
+        :param routing_key: routing key
+        :param mandatory: True: deliver to at least one queue or return the message; False: drop the unroutable message
+        :param immediate: request immediate delivery
+        :type msg: amqpy.Message
+        :type exchange: str
+        :type mandatory: bool
+        :type immediate: bool
         """
         args = AMQPWriter()
         args.write_short(0)
@@ -1664,16 +1582,14 @@ class Channel(AbstractChannel):
         args.write_bit(mandatory)
         args.write_bit(immediate)
 
-        self._send_method((60, 40), args, msg)
-
-    basic_publish = _basic_publish
+        self._send_method(Method(spec.Basic.Publish, args.getvalue(), msg))
 
     def basic_publish_confirm(self, *args, **kwargs):
         if not self._confirm_selected:
             self._confirm_selected = True
             self.confirm_select()
-        ret = self._basic_publish(*args, **kwargs)
-        self.wait([(60, 80)])
+        ret = self.basic_publish(*args, **kwargs)
+        self.wait([spec.Basic.Ack])
         return ret
 
     def basic_qos(self, prefetch_size, prefetch_count, a_global):
@@ -1728,7 +1644,7 @@ class Channel(AbstractChannel):
         args.write_long(prefetch_size)
         args.write_short(prefetch_count)
         args.write_bit(a_global)
-        self._send_method((60, 10), args)
+        self._send_method(Method(spec.Basic.Qos, args.getvalue()))
         return self.wait(allowed_methods=[spec.Basic.QosOk])
 
     def _basic_qos_ok(self, args):
@@ -1765,12 +1681,12 @@ class Channel(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_bit(requeue)
-        self._send_method((60, 110), args)
+        self._send_method(Method(spec.Basic.Recover, args.getvalue()))
 
     def basic_recover_async(self, requeue=False):
         args = AMQPWriter()
         args.write_bit(requeue)
-        self._send_method((60, 100), args)
+        self._send_method(Method(spec.Basic.RecoverAsync, args.getvalue()))
 
     def _basic_recover_ok(self, args):
         """In 0-9-1 the deprecated recover solicits a response
@@ -1836,7 +1752,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
         args.write_bit(requeue)
-        self._send_method((60, 90), args)
+        self._send_method(Method(spec.Basic.Reject, args.getvalue()))
 
     def _basic_return(self, args, msg):
         """Return a failed message
@@ -1879,10 +1795,8 @@ class Channel(AbstractChannel):
         This method commits all messages published and acknowledged in the current transaction. A new transaction
         starts immediately after a commit.
         """
-        self._send_method(spec.Tx.Commit)
-        return self.wait(allowed_methods=[
-            spec.Tx.CommitOk
-        ])
+        self._send_method(Method(spec.Tx.Commit))
+        return self.wait(allowed_methods=[spec.Tx.CommitOk])
 
     def _tx_commit_ok(self, args):
         """Confirm a successful commit
@@ -1899,7 +1813,7 @@ class Channel(AbstractChannel):
         starts immediately after a rollback.
 
         """
-        self._send_method((90, 30))
+        self._send_method(Method(spec.Tx.Rollback))
         return self.wait(allowed_methods=[spec.Tx.RollbackOk])
 
     def _tx_rollback_ok(self, args):
@@ -1916,7 +1830,7 @@ class Channel(AbstractChannel):
         This method sets the channel to use standard transactions. The client must use this method at least once on a
         channel before using the Commit or Rollback methods.
         """
-        self._send_method(spec.Tx.Select)
+        self._send_method(Method(spec.Tx.Select))
         return self.wait(allowed_methods=[spec.Tx.SelectOk])
 
     def _tx_select_ok(self, args):
@@ -1937,7 +1851,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_bit(nowait)
 
-        self._send_method(spec.Confirm.Select, args)
+        self._send_method(Method(spec.Confirm.Select, args.getvalue()))
         if not nowait:
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
 

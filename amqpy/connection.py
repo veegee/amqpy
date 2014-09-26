@@ -12,6 +12,7 @@ from .channel import Channel
 from .exceptions import ChannelError, ResourceError, ConnectionError, error_for_code, AMQPNotImplementedError
 from .transport import create_transport
 from . import spec
+from .spec import Method
 
 
 __all__ = ['Connection']
@@ -346,7 +347,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(reply_text)
         args.write_short(method_sig[0])  # class_id
         args.write_short(method_sig[1])  # method_id
-        self._send_method(spec.Connection.Close, args)
+        self._send_method(Method(spec.Connection.Close, args.getvalue()))
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 
     def _close(self, args):
@@ -398,8 +399,7 @@ class Connection(AbstractChannel):
 
         self._x_close_ok()
 
-        raise error_for_code(reply_code, reply_text,
-                             (class_id, method_id), ConnectionError)
+        raise error_for_code(reply_code, reply_text, (class_id, method_id), ConnectionError)
 
     def _blocked(self, args):
         """RabbitMQ Extension."""
@@ -418,7 +418,7 @@ class Connection(AbstractChannel):
         the connection and close the socket. RULE: A peer that detects a socket closure without having received a
         Close-Ok handshake method SHOULD log the error.
         """
-        self._send_method(spec.Connection.CloseOk)
+        self._send_method(Method(spec.Connection.CloseOk))
         self._do_close()
 
     def _close_ok(self, args):
@@ -446,7 +446,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(virtual_host)
         args.write_shortstr(capabilities)
         args.write_bit(False)
-        self._send_method(spec.Connection.Open, args)
+        self._send_method(Method(spec.Connection.Open, args.getvalue()))
         return self.wait(allowed_methods=[spec.Connection.OpenOk])
 
     def _open_ok(self, args):
@@ -483,7 +483,7 @@ class Connection(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_longstr(response)
-        self._send_method(spec.Connection.SecureOk, args)
+        self._send_method(Method(spec.Connection.SecureOk, args.getvalue()))
 
     def _start(self, args):
         """Start connection negotiation
@@ -571,7 +571,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(mechanism)
         args.write_longstr(response)
         args.write_shortstr(locale)
-        self._send_method(spec.Connection.StartOk, args)
+        self._send_method(Method(spec.Connection.StartOk, args.getvalue()))
 
     def _tune(self, args):
         """Propose connection tuning parameters
@@ -649,7 +649,7 @@ class Connection(AbstractChannel):
         args.write_short(channel_max)
         args.write_long(frame_max)
         args.write_short(heartbeat or 0)
-        self._send_method(spec.Connection.TuneOk, args)
+        self._send_method(Method(spec.Connection.TuneOk, args.getvalue()))
         self._wait_tune_ok = False
 
     @property
