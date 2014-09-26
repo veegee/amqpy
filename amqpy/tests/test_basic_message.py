@@ -9,7 +9,7 @@ class TestBasicMessage:
     def check_proplist(self, msg):
         """Check roundtrip processing of a single object
         """
-        raw_properties = msg._serialize_properties()
+        raw_properties = msg.serialize_properties()
 
         new_msg = Message()
         new_msg._load_properties(raw_properties)

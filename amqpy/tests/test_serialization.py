@@ -2,8 +2,9 @@ import pytest
 from datetime import datetime
 from decimal import Decimal
 from random import randint
+from amqpy.message import GenericContent
 
-from ..serialization import AMQPReader, AMQPWriter, GenericContent, FrameSyntaxError
+from ..serialization import AMQPReader, AMQPWriter, FrameSyntaxError
 
 
 def assert_equal_binary(b, s):
