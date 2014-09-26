@@ -162,7 +162,11 @@ class Message(GenericContent):
             msg = Message('hello world', content_type='text/plain', application_headers={'foo': 7})
         """
         super().__init__(**properties)
-        self.body = body
+        if isinstance(body, bytearray):
+            # TODO: temporary measure to make tests that expect an instance of bytes pass, but reassess this
+            self.body = bytes(body)
+        else:
+            self.body = body
         self.channel = channel
 
     def __eq__(self, other):

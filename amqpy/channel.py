@@ -127,7 +127,7 @@ class Channel(AbstractChannel):
             args.write_shortstr(reply_text)
             args.write_short(method_sig[0])  # class_id
             args.write_short(method_sig[1])  # method_id
-            self._send_method(Method(spec.Channel.Close, args.getvalue()))
+            self._send_method(Method(spec.Channel.Close, args))
             return self.wait(allowed_methods=[spec.Channel.Close, spec.Channel.CloseOk])
         finally:
             self.connection = None
@@ -233,7 +233,7 @@ class Channel(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_bit(active)
-        self._send_method(Method(spec.Channel.Flow, args.getvalue()))
+        self._send_method(Method(spec.Channel.Flow, args))
         return self.wait(allowed_methods=[spec.Channel.FlowOk])
 
     def _flow(self, args):
@@ -288,7 +288,7 @@ class Channel(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_bit(active)
-        self._send_method(Method(spec.Channel.FlowOk, args.getvalue()))
+        self._send_method(Method(spec.Channel.FlowOk, args))
 
     def _flow_ok(self, args):
         """Confirm a flow method
@@ -307,7 +307,7 @@ class Channel(AbstractChannel):
 
         args = AMQPWriter()
         args.write_shortstr('')  # out_of_band: deprecated
-        self._send_method(Method(spec.Channel.Open, args.getvalue()))
+        self._send_method(Method(spec.Channel.Open, args))
         return self.wait(allowed_methods=[spec.Channel.OpenOk])
 
     def _open_ok(self, args):
@@ -428,7 +428,7 @@ class Channel(AbstractChannel):
         args.write_bit(False)  # internal: deprecated
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method(Method(spec.Exchange.Declare, args.getvalue()))
+        self._send_method(Method(spec.Exchange.Declare, args))
 
         if auto_delete:
             msg = 'The auto_delete flag for exchanges has been deprecated and will be removed from py-amqpy v1.5.0.'
@@ -485,7 +485,7 @@ class Channel(AbstractChannel):
         args.write_shortstr(exchange)
         args.write_bit(if_unused)
         args.write_bit(nowait)
-        self._send_method(Method(spec.Exchange.Delete, args.getvalue()))
+        self._send_method(Method(spec.Exchange.Delete, args))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.DeleteOk])
@@ -564,7 +564,7 @@ class Channel(AbstractChannel):
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method(Method(spec.Exchange.Bind, args.getvalue()))
+        self._send_method(Method(spec.Exchange.Bind, args))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.BindOk])
@@ -622,7 +622,7 @@ class Channel(AbstractChannel):
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method(Method(spec.Exchange.Unbind, args.getvalue()))
+        self._send_method(Method(spec.Exchange.Unbind, args))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.UnbindOk])
@@ -729,7 +729,7 @@ class Channel(AbstractChannel):
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method(Method(spec.Queue.Bind, args.getvalue()))
+        self._send_method(Method(spec.Queue.Bind, args))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.BindOk])
@@ -796,7 +796,7 @@ class Channel(AbstractChannel):
         args.write_shortstr(routing_key)
         # args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method(Method(spec.Queue.Unbind, args.getvalue()))
+        self._send_method(Method(spec.Queue.Unbind, args))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.UnbindOk])
@@ -937,7 +937,7 @@ class Channel(AbstractChannel):
         args.write_bit(auto_delete)
         args.write_bit(nowait)
         args.write_table(arguments)
-        self._send_method(Method(spec.Queue.Declare, args.getvalue()))
+        self._send_method(Method(spec.Queue.Declare, args))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.DeclareOk])
@@ -1027,7 +1027,7 @@ class Channel(AbstractChannel):
         args.write_bit(if_unused)
         args.write_bit(if_empty)
         args.write_bit(nowait)
-        self._send_method(Method(spec.Queue.Delete, args.getvalue()))
+        self._send_method(Method(spec.Queue.Delete, args))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.DeleteOk])
@@ -1096,7 +1096,7 @@ class Channel(AbstractChannel):
         args.write_short(0)
         args.write_shortstr(queue)
         args.write_bit(nowait)
-        self._send_method(Method(spec.Queue.Purge, args.getvalue()))
+        self._send_method(Method(spec.Queue.Purge, args))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.PurgeOk])
@@ -1156,7 +1156,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
         args.write_bit(multiple)
-        self._send_method(Method(spec.Basic.Ack, args.getvalue()))
+        self._send_method(Method(spec.Basic.Ack, args))
 
     def basic_cancel(self, consumer_tag, nowait=False):
         """End a queue consumer
@@ -1195,7 +1195,7 @@ class Channel(AbstractChannel):
             args = AMQPWriter()
             args.write_shortstr(consumer_tag)
             args.write_bit(nowait)
-            self._send_method(Method(spec.Basic.Cancel, args.getvalue()))
+            self._send_method(Method(spec.Basic.Cancel, args))
             return self.wait(allowed_methods=[spec.Basic.CancelOk])
 
     def _basic_cancel_notify(self, args):
@@ -1329,7 +1329,7 @@ class Channel(AbstractChannel):
         args.write_bit(exclusive)
         args.write_bit(nowait)
         args.write_table(arguments or {})
-        self._send_method(Method(spec.Basic.Consume, args.getvalue()))
+        self._send_method(Method(spec.Basic.Consume, args))
 
         if not nowait:
             consumer_tag = self.wait(allowed_methods=[spec.Basic.ConsumeOk])
@@ -1479,7 +1479,7 @@ class Channel(AbstractChannel):
         args.write_short(0)
         args.write_shortstr(queue)
         args.write_bit(no_ack)
-        self._send_method(Method(spec.Basic.Get, args.getvalue()))
+        self._send_method(Method(spec.Basic.Get, args))
         return self.wait(allowed_methods=[spec.Basic.GetOk, spec.Basic.GetEmpty])
 
     def _basic_get_empty(self, args):
@@ -1578,7 +1578,7 @@ class Channel(AbstractChannel):
         args.write_bit(mandatory)
         args.write_bit(immediate)
 
-        self._send_method(Method(spec.Basic.Publish, args.getvalue(), msg))
+        self._send_method(Method(spec.Basic.Publish, args, msg))
 
     def basic_publish_confirm(self, *args, **kwargs):
         if not self._confirm_selected:
@@ -1640,7 +1640,7 @@ class Channel(AbstractChannel):
         args.write_long(prefetch_size)
         args.write_short(prefetch_count)
         args.write_bit(a_global)
-        self._send_method(Method(spec.Basic.Qos, args.getvalue()))
+        self._send_method(Method(spec.Basic.Qos, args))
         return self.wait(allowed_methods=[spec.Basic.QosOk])
 
     def _basic_qos_ok(self, args):
@@ -1677,12 +1677,12 @@ class Channel(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_bit(requeue)
-        self._send_method(Method(spec.Basic.Recover, args.getvalue()))
+        self._send_method(Method(spec.Basic.Recover, args))
 
     def basic_recover_async(self, requeue=False):
         args = AMQPWriter()
         args.write_bit(requeue)
-        self._send_method(Method(spec.Basic.RecoverAsync, args.getvalue()))
+        self._send_method(Method(spec.Basic.RecoverAsync, args))
 
     def _basic_recover_ok(self, args):
         """In 0-9-1 the deprecated recover solicits a response
@@ -1748,7 +1748,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
         args.write_bit(requeue)
-        self._send_method(Method(spec.Basic.Reject, args.getvalue()))
+        self._send_method(Method(spec.Basic.Reject, args))
 
     def _basic_return(self, args, msg):
         """Return a failed message
@@ -1847,7 +1847,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_bit(nowait)
 
-        self._send_method(Method(spec.Confirm.Select, args.getvalue()))
+        self._send_method(Method(spec.Confirm.Select, args))
         if not nowait:
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
 

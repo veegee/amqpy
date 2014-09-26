@@ -3,18 +3,16 @@ import socket
 import ssl
 from abc import ABCMeta, abstractmethod
 from socket import SOL_TCP
-from ssl import SSLError
 from struct import pack, unpack
 
 from .exceptions import UnexpectedFrame
 from .utils import get_errno
+from .spec import FrameType, Frame
 
 
 _UNAVAIL = errno.EAGAIN, errno.EINTR, errno.ENOENT
 
-
-# Yes, Advanced Message Queuing Protocol Protocol is redundant
-AMQP_PROTOCOL_HEADER = 'AMQP\x01\x01\x00\x09'.encode('latin_1')
+AMQP_PROTOCOL_HEADER = b'AMQP\x00\x00\x09\x01'  # bytes([65, 77, 81, 80, 0, 0, 9, 1])
 
 
 class AbstractTransport(metaclass=ABCMeta):
@@ -58,7 +56,7 @@ class AbstractTransport(metaclass=ABCMeta):
 
             self._setup_transport()
 
-            self._write(AMQP_PROTOCOL_HEADER)
+            self.write(AMQP_PROTOCOL_HEADER)
         except (OSError, IOError, socket.error) as exc:
             if get_errno(exc) not in _UNAVAIL:
                 self.connected = False
@@ -76,7 +74,7 @@ class AbstractTransport(metaclass=ABCMeta):
             self.sock = None
 
     @abstractmethod
-    def _read(self, n, initial=False):
+    def read(self, n, initial=False):
         """Read exactly `n` bytes from the peer
 
         :param n: number of bytes to read
@@ -87,7 +85,7 @@ class AbstractTransport(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def _write(self, s):
+    def write(self, s):
         """Completely write a string to the peer
         """
 
@@ -106,34 +104,44 @@ class AbstractTransport(metaclass=ABCMeta):
             self.sock = None
         self.connected = False
 
-    def read_frame(self, unpack=unpack):
-        read_frame_buffer = bytes()
+    def read_frame(self):
+        """Read frame from connection
+
+        :return: frame
+        :rtype: amqpy.spec.Frame
+        """
+        frame = Frame()
         try:
-            frame_header = self._read(7, True)
-            read_frame_buffer += frame_header
-            frame_type, channel, size = unpack('>BHI', frame_header)
-            payload = self._read(size)
-            read_frame_buffer += payload
-            ch = ord(self._read(1))
+            # read frame header: 7 bytes
+            frame_header = self.read(7, True)
+            frame.data.extend(frame_header)
+
+            # read frame payload
+            payload = self.read(frame.payload_size)
+            frame.data.extend(payload)
+
+            # read frame terminator byte
+            frame_terminator = self.read(1)
+            frame.data.extend(frame_terminator)
         except socket.timeout:
-            self._read_buffer = read_frame_buffer + self._read_buffer
+            self._read_buffer = frame.data + self._read_buffer
             raise
         except (OSError, IOError, socket.error) as exc:
-            # don't disconnect for ssl read time outs http://bugs.python.org/issue10272
-            if isinstance(exc, SSLError) and 'timed out' in str(exc):
-                raise socket.timeout()
             if get_errno(exc) not in _UNAVAIL:
                 self.connected = False
             raise
-        if ch == 206:  # '\xce'
-            return frame_type, channel, payload
+        if frame_terminator[0] == FrameType.END:
+            return frame
         else:
-            raise UnexpectedFrame('Received 0x{0:02x} while expecting 0xce'.format(ch))
+            raise UnexpectedFrame('Received 0x{0:02x} while expecting 0xCE (FrameType.END)'.format(frame_terminator))
 
-    def write_frame(self, frame_type, channel, payload):
-        size = len(payload)
+    def write_frame(self, frame):
+        """
+        :param frame: frame
+        :type frame: amqpy.spec.Frame
+        """
         try:
-            self._write(pack('>BHI%dsB' % size, frame_type, channel, size, payload, 0xce))
+            self.write(frame.data)
         except socket.timeout:
             raise
         except (OSError, IOError, socket.error) as exc:
@@ -157,11 +165,11 @@ class SSLTransport(AbstractTransport):
         self.sock = ssl.wrap_socket(self.sock, **self.ssl_opts)
         self._quick_recv = self.sock.read
 
-    def _read(self, n, initial=False, _errnos=(errno.ENOENT, errno.EAGAIN, errno.EINTR)):
+    def read(self, n, initial=False, _errnos=(errno.ENOENT, errno.EAGAIN, errno.EINTR)):
         """Read from socket
 
         According to SSL_read(3), it can at most return 16kb of data. Thus, we use an internal read buffer like
-        TCPTransport._read to get the exact number of bytes wanted.
+        TCPTransport.read to get the exact number of bytes wanted.
 
         :param n: number of bytes to read
         :type n: int
@@ -188,7 +196,7 @@ class SSLTransport(AbstractTransport):
         result, self._read_buffer = rbuf[:n], rbuf[n:]
         return result
 
-    def _write(self, s):
+    def write(self, s):
         """Write a string out to the SSL socket fully
         """
         try:
@@ -209,12 +217,12 @@ class TCPTransport(AbstractTransport):
     """
 
     def _setup_transport(self):
-        """Setup to _write() directly to the socket, and do our own buffered reads
+        """Setup to write() directly to the socket, and do our own buffered reads
         """
         self._read_buffer = bytes()
         self._quick_recv = self.sock.recv
 
-    def _read(self, n, initial=False, _errnos=(errno.EAGAIN, errno.EINTR)):
+    def read(self, n, initial=False, _errnos=(errno.EAGAIN, errno.EINTR)):
         """Read exactly n bytes from the socket
         """
         recv = self._quick_recv
@@ -237,7 +245,7 @@ class TCPTransport(AbstractTransport):
         result, self._read_buffer = rbuf[:n], rbuf[n:]
         return result
 
-    def _write(self, s):
+    def write(self, s):
         self.sock.sendall(s)
 
 

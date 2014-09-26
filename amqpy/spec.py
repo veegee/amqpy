@@ -1,4 +1,6 @@
 from collections import namedtuple
+import struct
+from .serialization import AMQPReader, AMQPWriter
 
 
 queue_declare_ok_t = namedtuple('queue_declare_ok_t', ('queue', 'message_count', 'consumer_count'))
@@ -6,26 +8,14 @@ queue_declare_ok_t = namedtuple('queue_declare_ok_t', ('queue', 'message_count',
 basic_return_t = namedtuple('basic_return_t', ('reply_code', 'reply_text', 'exchange', 'routing_key', 'message'))
 
 
-class Method:
-    def __init__(self, method_tup, args=bytes(), content=None):
-        """
-        :param method_tup: method tuple consisting of class_id and method_id
-        :param args: method args
-        :param content: content
-        :type method_tup: tuple(int, int)
-        :type args: bytes
-        :type content: amqp.message.GenericContent
-        """
-        self.method_tup = method_tup
-        self.args = args
-        self.content = content
-
-
 class FrameType:
-    METHOD = 1
-    HEADER = 2
-    BODY = 3
-    HEARTBEAT = 8
+    """Frame constants
+    """
+    METHOD = 1  # method frame
+    HEADER = 2  # content header frame
+    BODY = 3  # content body frame
+    HEARTBEAT = 8  # heartbeat frame
+    END = 206  # not actually a frame type; this is the frame terminator byte
 
 
 class Connection:
@@ -122,3 +112,112 @@ class Tx:
     CommitOk = (90, 21)
     Rollback = (90, 30)
     RollbackOk = (90, 31)
+
+
+class Frame:
+    """AMQP Frame
+
+        offset:     0      1         3         7                      size+7      size+8
+                    +------+---------+---------+    +-------------+     +-----------+
+                    | type | channel |  size   |    |   payload   |     | frame-end |
+                    +------+---------+---------+    +-------------+     +-----------+
+        bytes           1       2         4              size                 1
+    """
+
+    def __init__(self, frame_type=None, channel=0, payload=bytes()):
+        """Create new Frame
+
+        Leave all three parameters as default to create an empty frame whose `data` can be manually written to
+        afterwards.
+
+        :param frame_type: frame type
+        :param channel: associated channel number
+        :param payload: frame payload
+        :type frame_type: int
+        :type channel: int
+        :type payload: bytes or bytearray
+        """
+        self.data = bytearray()
+
+        self._frame_type = None
+        self._channel = None
+        self._payload_size = None
+
+        # create bytearray from provided data
+        if frame_type is not None:
+            self._frame_type = frame_type
+            self._channel = channel
+            self._payload_size = len(payload)
+            frame_format = '>BHI{}sB'.format(self._payload_size)
+            self.data = struct.pack(frame_format, frame_type, channel, self._payload_size, payload, FrameType.END)
+
+    @property
+    def frame_type(self):
+        """Get frame type
+
+        :return: frame type
+        :rtype: int
+        """
+        if self._frame_type is not None:
+            return self._frame_type
+        else:
+            self._frame_type = struct.unpack_from('>B', self.data)[0]
+            return self._frame_type
+
+    @property
+    def channel(self):
+        """Get frame channel number
+
+        :return: channel number
+        :rtype: int
+        """
+        if self._channel is not None:
+            return self._channel
+        else:
+            self._channel = struct.unpack_from('>H', self.data, 1)[0]
+            return self._channel
+
+    @property
+    def payload_size(self):
+        """Get frame payload size
+
+        :return: payload size
+        :rtype: int
+        """
+        if self._payload_size is not None:
+            return self._payload_size
+        else:
+            self._payload_size = struct.unpack_from('>I', self.data, 3)[0]
+            return self._payload_size
+
+    @property
+    def payload(self):
+        """Get frame payload
+
+        :return: payload
+        :rtype: bytearray
+        """
+        return self.data[7:-1]
+
+
+class Method:
+    def __init__(self, method_tup, args=None, content=None, channel=None):
+        """
+        :param method_tup: method tuple consisting of class_id and method_id
+        :param args: method args
+        :param content: content
+        :param channel: the associated channel, if any
+        :type method_tup: tuple(int, int)
+        :type args: AMQPReader or AMQPWriter or None
+        :type content: amqp.message.GenericContent
+        :type channel: int or None
+        """
+        self.method_tup = method_tup
+        if isinstance(args, AMQPReader) or isinstance(args, AMQPWriter):
+            self.args = args
+        elif args is None:
+            self.args = AMQPWriter()
+        else:
+            raise ValueError('args must be an `AMQPReader` or `AMQPWriter` instance')
+        self.content = content
+        self.channel = channel

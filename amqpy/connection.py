@@ -12,7 +12,7 @@ from .channel import Channel
 from .exceptions import ChannelError, ResourceError, ConnectionError, error_for_code, AMQPNotImplementedError
 from .transport import create_transport
 from . import spec
-from .spec import Method
+from .spec import Method, Frame, FrameType
 
 
 __all__ = ['Connection']
@@ -256,7 +256,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(reply_text)
         args.write_short(method_tup[0])  # class_id
         args.write_short(method_tup[1])  # method_id
-        self._send_method(Method(spec.Connection.Close, args.getvalue()))
+        self._send_method(Method(spec.Connection.Close, args))
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 
     def _close(self, args):
@@ -321,7 +321,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(virtual_host)
         args.write_shortstr(capabilities)
         args.write_bit(False)
-        self._send_method(Method(spec.Connection.Open, args.getvalue()))
+        self._send_method(Method(spec.Connection.Open, args))
         return self.wait(allowed_methods=[spec.Connection.OpenOk])
 
     def _open_ok(self, args):
@@ -358,7 +358,7 @@ class Connection(AbstractChannel):
         """
         args = AMQPWriter()
         args.write_longstr(response)
-        self._send_method(Method(spec.Connection.SecureOk, args.getvalue()))
+        self._send_method(Method(spec.Connection.SecureOk, args))
 
     def _start(self, args):
         """Start connection negotiation
@@ -446,7 +446,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(mechanism)
         args.write_longstr(response)
         args.write_shortstr(locale)
-        self._send_method(Method(spec.Connection.StartOk, args.getvalue()))
+        self._send_method(Method(spec.Connection.StartOk, args))
 
     def _tune(self, args):
         """Propose connection tuning parameters
@@ -491,7 +491,7 @@ class Connection(AbstractChannel):
         self._x_tune_ok(self.channel_max, self.frame_max, self.heartbeat)
 
     def send_heartbeat(self):
-        self.transport.write_frame(8, 0, bytes())
+        self.transport.write_frame(Frame(FrameType.HEARTBEAT))
 
     def _x_tune_ok(self, channel_max, frame_max, heartbeat):
         """Negotiate connection tuning parameters
@@ -524,7 +524,7 @@ class Connection(AbstractChannel):
         args.write_short(channel_max)
         args.write_long(frame_max)
         args.write_short(heartbeat or 0)
-        self._send_method(Method(spec.Connection.TuneOk, args.getvalue()))
+        self._send_method(Method(spec.Connection.TuneOk, args))
         self._wait_tune_ok = False
 
     @property

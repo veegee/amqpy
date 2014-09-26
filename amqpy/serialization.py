@@ -20,21 +20,24 @@ class AMQPReader:
     def __init__(self, source):
         """
         :param source: source bytes or file-like object
-        :type source: io.BufferedIOBase or str or bytes
+        :type source: io.BytesIO or bytes or bytearray
         """
-        if isinstance(source, bytes):
+        if isinstance(source, bytes) or isinstance(source, bytearray):
             self.input = io.BytesIO(source)
-        elif isinstance(source, io.BufferedIOBase):
+        elif isinstance(source, io.BytesIO):
             self.input = source
         else:
-            raise TypeError('AMQPReader needs an `io.BufferedIOBase` or `bytes`')
+            raise TypeError('AMQPReader needs an `io.BytesIO` or `bytes` or `bytearray`')
 
         self.bit_count = self.bits = 0
 
     def close(self):
         self.input.close()
 
-    def read(self, n):
+    def getvalue(self):
+        return self.input.getvalue()
+
+    def read(self, n=-1):
         """Read n bytes
         """
         self.bit_count = self.bits = 0
@@ -200,15 +203,15 @@ class AMQPWriter:
         """
         Note: dest must also implement `getvalue()`, such as :class:`io.BytesIO`
 
-        :param dest: any file-like object which implements :class:`io.IOBase`, or None create one
+        :param dest: io.BytesIO object, or None create one
         :type dest: io.IOBase or None
         """
-        if isinstance(dest, io.IOBase):
+        if isinstance(dest, io.BytesIO):
             self.out = dest
         elif dest is None:
             self.out = io.BytesIO()
         else:
-            raise TypeError('AMQPWriter needs in `io.IOBase` or `None`')
+            raise TypeError('AMQPWriter needs an `io.BytesIO` or `None`')
 
         self.bits = []
         self.bitcount = 0

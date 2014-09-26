@@ -71,8 +71,9 @@ class AbstractChannel(metaclass=ABCMeta):
 
                 # nothing queued, need to wait for a method from the peer
         while True:
-            channel, method_tup, args, content = self.connection.method_reader.read_method()
-            method = Method(method_tup, args, content)
+            method = self.connection.method_reader.read_method()
+            channel = method.channel
+            method_tup = method.method_tup
 
             if channel == self.channel_id \
                     and (allowed_methods is None or method_tup in allowed_methods or method_tup == spec.Channel.Close):
@@ -112,8 +113,8 @@ class AbstractChannel(metaclass=ABCMeta):
 
         # nothing queued, need to wait for a method from the peer
         while True:
-            channel, method_tup, args, content = self.connection.method_reader.read_method(timeout)
-            method = Method(method_tup, args, content)
+            method = self.connection.method_reader.read_method(timeout)
+            method_tup = method.method_tup
 
             if channel in channels \
                     and (allowed_methods is None or method_tup in allowed_methods or method_tup == spec.Channel.Close):
