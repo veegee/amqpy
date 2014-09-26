@@ -3,8 +3,8 @@
 from abc import ABCMeta, abstractmethod
 
 from .exceptions import AMQPNotImplementedError, RecoverableConnectionError
-from .serialization import AMQPWriter
 from .spec import Method
+from . import spec
 
 
 __all__ = ['AbstractChannel']
@@ -49,9 +49,70 @@ class AbstractChannel(metaclass=ABCMeta):
 
         The default value of None means match any method.
         """
-        method = self.connection._wait_method(self.channel_id, allowed_methods)
+        method = self._wait_method(allowed_methods)
 
         return self.dispatch_method(method)
+
+    def _wait_method(self, allowed_methods):
+        """Wait for a method from the server destined for a particular channel
+        """
+        # check the channel's deferred methods
+        method_queue = self.connection.channels[self.channel_id].method_queue
+
+        for queued_method in method_queue:
+            method_sig = queued_method[0]
+            if (allowed_methods is None) or (method_sig in allowed_methods) or (method_sig == spec.Channel.Close):
+                method_queue.remove(queued_method)
+                return Method(*queued_method)
+
+                # nothing queued, need to wait for a method from the peer
+        while True:
+            channel, method_sig, args, content = self.connection.method_reader.read_method()
+            method = Method(method_sig, args, content)
+
+            if channel == self.channel_id \
+                    and (allowed_methods is None or method_sig in allowed_methods or method_sig == spec.Channel.Close):
+                return method
+
+            # certain methods like basic_return should be dispatched immediately rather than being queued, even if
+            # they're not one of the 'allowed_methods' we're looking for
+            if channel and method_sig in self.connection.Channel._IMMEDIATE_METHODS:
+                self.connection.channels[channel].dispatch_method(method)
+                continue
+
+            # not the channel and/or method we were looking for; queue this method for later
+            self.connection.hannels[channel].method_queue.append((method_sig, args, content))
+
+            # If we just queued up a method for channel 0 (the Connection itself) it's probably a close method in
+            # reaction to some error, so deal with it right away.
+            if not channel:
+                self.wait()
+
+    def _wait_multiple(self, channels, allowed_methods, timeout=None):
+        for channel_id, channel in channels.items():
+            method_queue = channel.method_queue
+            for queued_method in method_queue:
+                method_sig = queued_method[0]
+                if allowed_methods is None or method_sig in allowed_methods or method_sig == spec.Channel.Close:
+                    method_queue.remove(queued_method)
+                    method_sig, args, content = queued_method
+                    return channel_id, Method(method_sig, args, content)
+
+        # nothing queued, need to wait for a method from the peer
+        while True:
+            channel, method_sig, args, content = self.connection.method_reader.read_method(timeout)
+
+            if channel in channels \
+                    and (allowed_methods is None or method_sig in allowed_methods or method_sig == spec.Channel.Close):
+                return channel, Method(method_sig, args, content)
+
+            # not the channel and/or method we were looking for; queue this method for later
+            channels[channel].method_queue.append((method_sig, args, content))
+
+            # if we just queued up a method for channel 0 (the Connection itself) it's probably a close method in
+            # reaction to some error, so deal with it right away
+            if channel == 0:
+                self.wait()
 
     def dispatch_method(self, method):
         content = method.content
