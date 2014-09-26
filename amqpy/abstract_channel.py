@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 
 from .exceptions import AMQPNotImplementedError, RecoverableConnectionError
 from .serialization import AMQPWriter
+from .spec import Method
 
 
 __all__ = ['AbstractChannel']
@@ -37,7 +38,7 @@ class AbstractChannel(metaclass=ABCMeta):
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
-    def _send_method(self, method_sig, args=bytes(), content=None):
+    def _send_method(self, method_tup, args=bytes(), content=None):
         """Send a method to the server in the current channel
         """
         if self.connection is None:
@@ -46,7 +47,8 @@ class AbstractChannel(metaclass=ABCMeta):
         if isinstance(args, AMQPWriter):
             args = args.getvalue()
 
-        self.connection.method_writer.write_method(self.channel_id, method_sig, args, content)
+        method = Method(method_tup, args, content)
+        self.connection.method_writer.write_method(self.channel_id, method)
 
     def wait(self, allowed_methods=None):
         """Wait for a method that matches our allowed_methods parameter and dispatch to it

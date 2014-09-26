@@ -209,34 +209,30 @@ class MethodWriter:
         self.frame_max = frame_max
         self.bytes_sent = 0
 
-    def write_method(self, channel, method_tup, args, content=None):
+    def write_method(self, channel, method):
         """Write method
 
         :param channel: channel
-        :param method_tup: method tuple
-        :param args: method args
-        :param content: content payload
+        :param method: method to write
         :type channel: int
-        :type method_tup: tuple(int, int)
-        :type args: bytes
-        :type content: amqpy.message.GenericContent
+        :type method: amqp.Method
         """
         # check content first so we can raise an exception if there's a problem before sending the first frame
-        if content:
-            body = content.body
-            if isinstance(content.body, str):
+        if method.content:
+            body = method.content.body
+            if isinstance(body, str):
                 # encode body to bytes
-                coding = content.properties.setdefault('content_encoding', 'UTF-8')
-                body = content.body.encode(coding)
-            properties = content.serialize_properties()
+                coding = method.content.properties.setdefault('content_encoding', 'UTF-8')
+                body = method.content.body.encode(coding)
+            properties = method.content.serialize_properties()
 
         # write frame method
-        payload_frame_method = pack('>HH', method_tup[0], method_tup[1]) + args
+        payload_frame_method = pack('>HH', method.method_tup[0], method.method_tup[1]) + method.args
         self.dest.write_frame(FrameType.METHOD, channel, payload_frame_method)
 
-        if content:
+        if method.content:
             # write frame header
-            payload_frame_header = pack('>HHQ', method_tup[0], 0, len(body)) + properties
+            payload_frame_header = pack('>HHQ', method.method_tup[0], 0, len(body)) + properties
             self.dest.write_frame(FrameType.HEADER, channel, payload_frame_header)
 
             # write frame body

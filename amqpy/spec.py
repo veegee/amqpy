@@ -7,8 +7,16 @@ basic_return_t = namedtuple('basic_return_t', ('reply_code', 'reply_text', 'exch
 
 
 class Method:
-    def __init__(self, method_id, args, content):
-        self.method_id = method_id
+    def __init__(self, method_tup, args, content):
+        """
+        :param method_tup: method tuple consisting of class_id and method_id
+        :param args: method args
+        :param content: content
+        :type method_tup: tuple(int, int)
+        :type args: bytes
+        :type content: amqp.message.GenericContent
+        """
+        self.method_tup = method_tup
         self.args = args
         self.content = content
 
