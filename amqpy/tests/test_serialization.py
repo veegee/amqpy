@@ -1,9 +1,10 @@
-import pytest
 from datetime import datetime
 from decimal import Decimal
 from random import randint
-from amqpy.message import GenericContent
 
+import pytest
+
+from ..message import GenericContent
 from ..serialization import AMQPReader, AMQPWriter, FrameSyntaxError
 
 
