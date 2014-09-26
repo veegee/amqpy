@@ -233,6 +233,9 @@ class AMQPWriter:
 
     def getvalue(self):
         """Get what's been encoded so far if we're working with a BytesIO
+
+        :return: bytes
+        :rtype: bytes
         """
         self._flushbits()
         return self.out.getvalue()
