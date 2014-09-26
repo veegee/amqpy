@@ -38,35 +38,23 @@ class AbstractChannel(metaclass=ABCMeta):
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
-    def _send_method_2(self, method_tup, args=bytes(), content=None):
-        """Send a method to the server in the current channel
-        """
-        if self.connection is None:
-            raise RecoverableConnectionError('connection already closed')
-
-        if isinstance(args, AMQPWriter):
-            args = args.getvalue()
-
-        method = Method(method_tup, args, content)
-        self.connection.method_writer.write_method(self.channel_id, method)
-
     def _send_method(self, method):
         if self.connection is None:
             raise RecoverableConnectionError('connection already closed')
 
         self.connection.method_writer.write_method(self.channel_id, method)
 
-
     def wait(self, allowed_methods=None):
         """Wait for a method that matches our allowed_methods parameter and dispatch to it
 
         The default value of None means match any method.
         """
-        method_sig, args, content = self.connection._wait_method(self.channel_id, allowed_methods)
+        method = self.connection._wait_method(self.channel_id, allowed_methods)
 
-        return self.dispatch_method(method_sig, args, content)
+        return self.dispatch_method(method)
 
-    def dispatch_method(self, method_sig, args, content):
+    def dispatch_method(self, method):
+        content = method.content
         if content and self.auto_decode and hasattr(content, 'content_encoding'):
             try:
                 content.body = content.body.decode(content.content_encoding)
@@ -74,11 +62,11 @@ class AbstractChannel(metaclass=ABCMeta):
                 pass
 
         try:
-            amqp_method = self._METHOD_MAP[method_sig]
+            callback = self._METHOD_MAP[method.method_tup]
         except KeyError:
-            raise AMQPNotImplementedError('Unknown AMQP method {0}'.format(method_sig))
+            raise AMQPNotImplementedError('Unknown AMQP method {0}'.format(method.method_tup))
 
         if content is None:
-            return amqp_method(self, args)
+            return callback(self, method.args)
         else:
-            return amqp_method(self, args, content)
+            return callback(self, method.args, method.content)

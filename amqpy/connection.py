@@ -178,20 +178,21 @@ class Connection(AbstractChannel):
             method_sig = queued_method[0]
             if (allowed_methods is None) or (method_sig in allowed_methods) or (method_sig == spec.Channel.Close):
                 method_queue.remove(queued_method)
-                return queued_method
+                return Method(*queued_method)
 
-        # nothing queued, need to wait for a method from the peer
+                # nothing queued, need to wait for a method from the peer
         while True:
             channel, method_sig, args, content = self.method_reader.read_method()
+            method = Method(method_sig, args, content)
 
             if channel == channel_id \
                     and (allowed_methods is None or method_sig in allowed_methods or method_sig == spec.Channel.Close):
-                return method_sig, args, content
+                return method
 
             # certain methods like basic_return should be dispatched immediately rather than being queued, even if
             # they're not one of the 'allowed_methods' we're looking for
             if channel and method_sig in self.Channel._IMMEDIATE_METHODS:
-                self.channels[channel].dispatch_method(method_sig, args, content)
+                self.channels[channel].dispatch_method(method)
                 continue
 
             # not the channel and/or method we were looking for; queue this method for later
