@@ -168,7 +168,6 @@ class Connection(AbstractChannel):
             raise ConnectionError(
                 'Channel %r already open' % (channel_id, ))
 
-
     def channel(self, channel_id=None):
         """Fetch a Channel object identified by the numeric channel_id, or create that object if it doesn't already
         exist
@@ -200,11 +199,10 @@ class Connection(AbstractChannel):
         :type timeout: float or None
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
-        chanmap = self.channels
-        chanid, method = self._wait_multiple(chanmap, None, timeout=timeout)
+        chanid, method = self._wait_multiple(self.channels, None, timeout=timeout)
         content = method.content
 
-        channel = chanmap[chanid]
+        channel = self.channels[chanid]
 
         if content and channel.auto_decode and hasattr(content, 'content_encoding'):
             try:
@@ -222,7 +220,6 @@ class Connection(AbstractChannel):
         else:
             return callback(channel, method.args, content)
 
-
     def _dispatch_basic_return(self, channel, args, msg):
         reply_code = args.read_short()
         reply_text = args.read_shortstr()
@@ -236,50 +233,19 @@ class Connection(AbstractChannel):
         for callback in handlers:
             callback(exc, exchange, routing_key, msg)
 
-    def close(self, reply_code=0, reply_text='', method_sig=(0, 0)):
+    def close(self, reply_code=0, reply_text='', method_tup=(0, 0)):
         """Request a connection close
 
         This method indicates that the sender wants to close the connection. This may be due to internal conditions
-        (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception.  When a close is due
+        (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a close is due
         to an exception, the sender provides the class and method id of the method which caused the exception.
 
-        RULE:
-
-            After sending this method any received method except the Close-OK method MUST be discarded.
-
-        RULE:
-
-            The peer sending this method MAY use a counter or timeout to detect failure of the other peer to respond
-            correctly with the Close-OK method.
-
-        RULE:
-
-            When a server receives the Close method from a client it MUST delete all server-side resources associated
-            with the client's context.  A client CANNOT reconnect to a context after sending or receiving a Close
-            method.
-
-        PARAMETERS:
-
-            reply_code: short
-
-                The reply code. The AMQ reply codes are defined in AMQ RFC 011.
-
-            reply_text: shortstr
-
-                The localised reply text.  This text can be logged as an aid to resolving issues.
-
-            class_id: short
-
-                failing method class
-
-                When the close is provoked by a method exception, this is the class of the method.
-
-            method_id: short
-
-                failing method ID
-
-                When the close is provoked by a method exception, this is the ID of the method.
-
+        :param reply_code: the reply code
+        :param reply_text: localized reply text
+        :param method_tup: if close is triggered by a failing method, this is the method that caused it
+        :type reply_code: int
+        :type reply_text: str
+        :type method_tup: tuple(int, int)
         """
         if self.transport is None:
             # already closed
@@ -288,8 +254,8 @@ class Connection(AbstractChannel):
         args = AMQPWriter()
         args.write_short(reply_code)
         args.write_shortstr(reply_text)
-        args.write_short(method_sig[0])  # class_id
-        args.write_short(method_sig[1])  # method_id
+        args.write_short(method_tup[0])  # class_id
+        args.write_short(method_tup[1])  # method_id
         self._send_method(Method(spec.Connection.Close, args.getvalue()))
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 
@@ -299,53 +265,19 @@ class Connection(AbstractChannel):
         This method indicates that the sender wants to close the connection. This may be due to internal conditions
         (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception.  When a close is due
         to an exception, the sender provides the class and method id of the method which caused the exception.
-
-        RULE:
-
-            After sending this method any received method except the Close-OK method MUST be discarded.
-
-        RULE:
-
-            The peer sending this method MAY use a counter or timeout to detect failure of the other peer to respond
-            correctly with the Close-OK method.
-
-        RULE:
-
-            When a server receives the Close method from a client it MUST delete all server-side resources associated
-            with the client's context.  A client CANNOT reconnect to a context after sending or receiving a Close
-            method.
-
-        PARAMETERS: reply_code: short
-
-                The reply code. The AMQ reply codes are defined in AMQ RFC 011.
-
-            reply_text: shortstr
-
-                The localised reply text.  This text can be logged as an aid to resolving issues.
-
-            class_id: short
-
-                failing method class
-
-                When the close is provoked by a method exception, this is the class of the method.
-
-            method_id: short
-
-                failing method ID
-
-                When the close is provoked by a method exception, this is the ID of the method.
         """
-        reply_code = args.read_short()
-        reply_text = args.read_shortstr()
-        class_id = args.read_short()
-        method_id = args.read_short()
+        reply_code = args.read_short()  # the AMQP reply code
+        reply_text = args.read_shortstr()  # the localized reply text
+        class_id = args.read_short()  # class_id of method
+        method_id = args.read_short()  # method_id of method
 
         self._x_close_ok()
 
         raise error_for_code(reply_code, reply_text, (class_id, method_id), ConnectionError)
 
     def _blocked(self, args):
-        """RabbitMQ Extension."""
+        """RabbitMQ Extension
+        """
         reason = args.read_shortstr()
         if self.on_blocked:
             return self.on_blocked(reason)
