@@ -38,16 +38,15 @@ class AbstractChannel(metaclass=ABCMeta):
         self.close()
 
     def _send_method(self, method_sig, args=bytes(), content=None):
-        """Send a method for our channel
+        """Send a method to the server in the current channel
         """
-        conn = self.connection
-        if conn is None:
+        if self.connection is None:
             raise RecoverableConnectionError('connection already closed')
 
         if isinstance(args, AMQPWriter):
             args = args.getvalue()
 
-        conn.method_writer.write_method(self.channel_id, method_sig, args, content)
+        self.connection.method_writer.write_method(self.channel_id, method_sig, args, content)
 
     def wait(self, allowed_methods=None):
         """Wait for a method that matches our allowed_methods parameter and dispatch to it

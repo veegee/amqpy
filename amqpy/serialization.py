@@ -1,8 +1,8 @@
 """Convert between bytestreams and higher-level AMQP types
 """
+import io
 from datetime import datetime
 from decimal import Decimal
-from io import BytesIO
 from struct import pack, unpack
 from time import mktime
 
@@ -13,21 +13,23 @@ def byte(n):
     return bytes([n])
 
 
-class AMQPReader(object):
+class AMQPReader:
     """Read higher-level AMQP types from a bytestream
     """
 
     def __init__(self, source):
-        """Source should be either a file-like object with a read() method, or a plain (non-unicode) string
+        """
+        :param source: source bytes or file-like object
+        :type source: io.BufferedIOBase or str or bytes
         """
         if isinstance(source, bytes):
-            self.input = BytesIO(source)
-        elif hasattr(source, 'read'):
+            self.input = io.BytesIO(source)
+        elif isinstance(source, io.BufferedIOBase):
             self.input = source
         else:
-            raise ValueError('AMQPReader needs a file-like object or plain string')
+            raise TypeError('AMQPReader needs an `io.BufferedIOBase` or `bytes`')
 
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
 
     def close(self):
         self.input.close()
@@ -35,47 +37,47 @@ class AMQPReader(object):
     def read(self, n):
         """Read n bytes
         """
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         return self.input.read(n)
 
     def read_bit(self):
         """Read a single boolean value
         """
-        if not self.bitcount:
+        if not self.bit_count:
             self.bits = ord(self.input.read(1))
-            self.bitcount = 8
+            self.bit_count = 8
         result = (self.bits & 1) == 1
         self.bits >>= 1
-        self.bitcount -= 1
+        self.bit_count -= 1
         return result
 
     def read_octet(self):
         """Read one byte, return as an integer
         """
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         return unpack('B', self.input.read(1))[0]
 
     def read_short(self):
         """Read an unsigned 16-bit integer
         """
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         return unpack('>H', self.input.read(2))[0]
 
     def read_long(self):
         """Read an unsigned 32-bit integer
         """
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         return unpack('>I', self.input.read(4))[0]
 
     def read_longlong(self):
         """Read an unsigned 64-bit integer
         """
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         return unpack('>Q', self.input.read(8))[0]
 
     def read_float(self):
         """Read float value."""
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         return unpack('>d', self.input.read(8))[0]
 
     def read_shortstr(self):
@@ -83,7 +85,7 @@ class AMQPReader(object):
 
         The encoding isn't specified in the AMQP spec, so assume it's utf-8
         """
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         slen = unpack('B', self.input.read(1))[0]
         return self.input.read(slen).decode('utf-8')
 
@@ -92,14 +94,14 @@ class AMQPReader(object):
 
         The encoding isn't specified in the AMQP spec, so assume it's utf-8
         """
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         slen = unpack('>I', self.input.read(4))[0]
         return self.input.read(slen).decode('utf-8')
 
     def read_table(self):
         """Read an AMQP table, and return as a Python dictionary
         """
-        self.bitcount = self.bits = 0
+        self.bit_count = self.bits = 0
         tlen = unpack('>I', self.input.read(4))[0]
         table_data = AMQPReader(self.input.read(tlen))
         result = {}
@@ -190,15 +192,24 @@ class AMQPReader(object):
         return datetime.fromtimestamp(self.read_longlong())
 
 
-class AMQPWriter(object):
+class AMQPWriter:
     """Convert higher-level AMQP types to bytestreams
     """
 
     def __init__(self, dest=None):
-        """`dest` may be a file-type object (with a write() method). If None then a BytesIO is created, and the contents
-        can be accessed with this class's getvalue() method
         """
-        self.out = BytesIO() if dest is None else dest
+        Note: dest must also implement `getvalue()`, such as :class:`io.BytesIO`
+
+        :param dest: any file-like object which implements :class:`io.IOBase`, or None create one
+        :type dest: io.IOBase or None
+        """
+        if isinstance(dest, io.IOBase):
+            self.out = dest
+        elif dest is None:
+            self.out = io.BytesIO()
+        else:
+            raise TypeError('AMQPWriter needs in `io.IOBase` or `None`')
+
         self.bits = []
         self.bitcount = 0
 
@@ -213,18 +224,12 @@ class AMQPWriter(object):
     def close(self):
         """Pass through if possible to any file-like destinations
         """
-        try:
-            self.out.close()
-        except AttributeError:
-            pass
+        self.out.close()
 
     def flush(self):
         """Pass through if possible to any file-like destinations
         """
-        try:
-            self.out.flush()
-        except AttributeError:
-            pass
+        self.out.flush()
 
     def getvalue(self):
         """Get what's been encoded so far if we're working with a BytesIO
@@ -380,7 +385,7 @@ class AMQPWriter(object):
         self.out.write(pack('>q', int(mktime(v.timetuple()))))
 
 
-class GenericContent(object):
+class GenericContent:
     """Abstract base class for AMQP content
 
     Subclasses should override the PROPERTIES attribute.
@@ -431,7 +436,7 @@ class GenericContent(object):
 
         # read 16-bit shorts until we get one with a low bit set to zero
         flags = []
-        while 1:
+        while True:
             flag_bits = r.read_short()
             flags.append(flag_bits)
             if flag_bits & 1 == 0:
@@ -439,6 +444,7 @@ class GenericContent(object):
 
         shift = 0
         d = {}
+        flag_bits = None
         for key, proptype in self.PROPERTIES:
             if shift == 0:
                 if not flags:
