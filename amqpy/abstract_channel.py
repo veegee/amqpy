@@ -134,7 +134,8 @@ class AbstractChannel(metaclass=ABCMeta):
                 self.wait()
 
     def dispatch_method(self, method):
-        content = method.content  # GenericContent or Message
+        #: :type: GenericContent
+        content = method.content
 
         if content and self.auto_decode and hasattr(content, 'content_encoding'):
             # try to decode message body

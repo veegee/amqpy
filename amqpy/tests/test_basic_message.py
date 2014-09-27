@@ -12,7 +12,7 @@ class TestBasicMessage:
         raw_properties = msg.serialize_properties()
 
         new_msg = Message()
-        new_msg._load_properties(raw_properties)
+        new_msg.load_properties(raw_properties)
         new_msg.body = msg.body
 
         assert msg == new_msg

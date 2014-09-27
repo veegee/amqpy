@@ -47,7 +47,7 @@ class PartialMessage:
         :type payload: bytes
         """
         class_id, weight, self.expected_body_size = struct.unpack('>HHQ', payload[:12])
-        self.msg._load_properties(payload[12:])
+        self.msg.load_properties(payload[12:])
 
     def add_payload(self, payload):
         """Add content to partial message

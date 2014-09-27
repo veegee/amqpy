@@ -363,13 +363,12 @@ class TestSerialization:
         r = AMQPReader(s)
         assert r.read_table() == val
 
-    #
-    # GenericContent
-    #
+
+class TestGenericContent:
     def test_generic_content_eq(self):
-        msg_1 = GenericContent(dummy='foo')
-        msg_2 = GenericContent(dummy='foo')
-        msg_3 = GenericContent(dummy='bar')
+        msg_1 = GenericContent({'dummy': 'foo'})
+        msg_2 = GenericContent({'dummy': 'foo'})
+        msg_3 = GenericContent({'dummy': 'bar'})
 
         assert msg_1 == msg_1
         assert msg_1 == msg_2

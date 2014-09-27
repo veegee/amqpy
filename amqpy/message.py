@@ -5,33 +5,26 @@ from amqpy.serialization import AMQPReader, AMQPWriter
 
 __all__ = ['Message']
 
-# TODO: see if we can merge GenericContent into Message
 
 class GenericContent:
     """Abstract base class for AMQP content
 
     Subclasses should override the PROPERTIES attribute.
     """
-    PROPERTIES = [('dummy', 'shortstr')]
+    # TODO: see if we can merge GenericContent into Message; why do we need this specific class?
+    PROPERTIES = []
 
-    def __init__(self, **props):
+    def __init__(self, properties):
         """Save the properties appropriate to this AMQP content type in a 'properties' dictionary
-        """
-        d = {}
-        for propname, _ in self.PROPERTIES:
-            if propname in props:
-                d[propname] = props[propname]
-                # FIXME: should we ignore unknown properties?
 
-        self.properties = d
+        :param dict properties: content properties
+        """
+        self.properties = properties
 
     def __eq__(self, other):
         """Check if this object has the same properties as another content object
         """
-        try:
-            return self.properties == other.properties
-        except AttributeError:
-            return False
+        return self.properties == other.properties
 
     def __getattr__(self, name):
         """Look for additional properties in the 'properties' dictionary, and if present - the 'delivery_info'
@@ -44,13 +37,12 @@ class GenericContent:
         if name in self.properties:
             return self.properties[name]
 
-        if 'delivery_info' in self.__dict__ \
-                and name in self.delivery_info:
+        if 'delivery_info' in self.properties and name in self.delivery_info:
             return self.delivery_info[name]
 
         raise AttributeError(name)
 
-    def _load_properties(self, raw_bytes):
+    def load_properties(self, raw_bytes):
         """Given the raw bytes containing the property-flags and property-list from a content-frame-header, parse and
         insert into a dictionary stored in this object as an attribute named 'properties'
         """
@@ -162,13 +154,15 @@ class Message(GenericContent):
 
             msg = Message('hello world', content_type='text/plain', application_headers={'foo': 7})
         """
-        super().__init__(**properties)
+        super().__init__(properties)
+        # TODO: collapse **properties into a dict parameter
         if isinstance(body, bytearray):
             # TODO: temporary measure to make tests that expect an instance of bytes pass, but reassess this
             self.body = bytes(body)
         else:
             self.body = body
-        self.channel = channel
+        self.channel = channel  # associated channel
+        self.delivery_info = {}  # delivery info, set after receiving a message
 
     def __eq__(self, other):
         """Check if the properties and bodies of this Message and another Message are the same
