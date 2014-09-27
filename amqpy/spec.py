@@ -122,11 +122,11 @@ class Frame:
 
     The format of the AMQP frame is as follows::
 
-        offset:     0      1         3         7                      size+7      size+8
-                    +------+---------+---------+    +-------------+     +-----------+
-                    | type | channel |  size   |    |   payload   |     | frame-end |
-                    +------+---------+---------+    +-------------+     +-----------+
-        bytes           1       2         4              size                 1
+        offset:         0      1         3         7                 size+7      size+8
+                        +------+---------+---------+-------------------+-----------+
+                        | type | channel |  size   |  --- payload ---  | frame-end |
+                        +------+---------+---------+-------------------+-----------+
+        size (bytes)        1       2         4             size             1
     """
 
     def __init__(self, frame_type=None, channel=0, payload=bytes()):
@@ -210,11 +210,11 @@ class Method:
 
     The format of the method frame `FrameType.METHOD` payload is as follows::
 
-        0          2           4
-        +----------+-----------+-------------- - -
-        | class-id | method-id | arguments...
-        +----------+-----------+-------------- - -
-              2          2           ...
+        offset:         0          2           4
+                        +----------+-----------+-------------- - -
+                        | class-id | method-id | arguments...
+                        +----------+-----------+-------------- - -
+        size (bytes):         2          2           ...
     """
 
     def __init__(self, method_type, args=None, content=None, channel=None):
