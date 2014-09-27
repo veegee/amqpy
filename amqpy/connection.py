@@ -255,7 +255,7 @@ class Connection(AbstractChannel):
         class_id = args.read_short()  # class_id of method
         method_id = args.read_short()  # method_id of method
 
-        self._x_close_ok()
+        self._x_close_ok()  # send a close-ok to the server, to confirm that we've acknowledged the close request
 
         method_type = method_t(class_id, method_id)
         raise error_for_code(reply_code, reply_text, method_type, ConnectionError)
@@ -272,7 +272,7 @@ class Connection(AbstractChannel):
             return self.on_unblocked()
 
     def _x_close_ok(self):
-        """Confirm a connection close
+        """Confirm a connection close that has been requested by the server
 
         This method confirms a Connection.Close method and tells the recipient that it is safe to release resources for
         the connection and close the socket. RULE: A peer that detects a socket closure without having received a
@@ -284,9 +284,8 @@ class Connection(AbstractChannel):
     def _close_ok(self, method):
         """Confirm a connection close
 
-        This method confirms a Connection.Close method and tells the recipient that it is safe to release resources for
-        the connection and close the socket. A peer that detects a socket closure without having received a Close-Ok
-        handshake method SHOULD log the error.
+        This method is called when the server send a close-ok in response to our close request. It is now safe to
+        close the underlying connection.
         """
         self._do_close()
 
