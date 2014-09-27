@@ -12,7 +12,7 @@ from .channel import Channel
 from .exceptions import ChannelError, ResourceError, ConnectionError, error_for_code, AMQPNotImplementedError
 from .transport import create_transport
 from . import spec
-from .spec import Method, Frame, FrameType
+from .spec import Method, Frame, FrameType, method_t
 
 
 __all__ = ['Connection']
@@ -210,10 +210,10 @@ class Connection(AbstractChannel):
             except Exception:
                 pass
 
-        callback = self._method_override.get(method.method_tup) or channel._METHOD_MAP.get(method.method_tup, None)
+        callback = self._method_override.get(method.method_type) or channel._METHOD_MAP.get(method.method_type, None)
 
         if callback is None:
-            raise AMQPNotImplementedError('Unknown AMQP method {0!r}'.format(method.method_tup))
+            raise AMQPNotImplementedError('Unknown AMQP method {0!r}'.format(method.method_type))
 
         if content is None:
             return callback(channel, method.args)
@@ -233,7 +233,7 @@ class Connection(AbstractChannel):
         for callback in handlers:
             callback(exc, exchange, routing_key, msg)
 
-    def close(self, reply_code=0, reply_text='', method_tup=(0, 0)):
+    def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Request a connection close
 
         This method indicates that the sender wants to close the connection. This may be due to internal conditions
@@ -242,10 +242,10 @@ class Connection(AbstractChannel):
 
         :param reply_code: the reply code
         :param reply_text: localized reply text
-        :param method_tup: if close is triggered by a failing method, this is the method that caused it
+        :param method_type: if close is triggered by a failing method, this is the method that caused it
         :type reply_code: int
         :type reply_text: str
-        :type method_tup: tuple(int, int)
+        :type method_type: amqpy.spec.method_t
         """
         if self.transport is None:
             # already closed
@@ -254,8 +254,8 @@ class Connection(AbstractChannel):
         args = AMQPWriter()
         args.write_short(reply_code)
         args.write_shortstr(reply_text)
-        args.write_short(method_tup[0])  # class_id
-        args.write_short(method_tup[1])  # method_id
+        args.write_short(method_type.class_id)
+        args.write_short(method_type.method_id)
         self._send_method(Method(spec.Connection.Close, args))
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 

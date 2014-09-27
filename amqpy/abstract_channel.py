@@ -64,8 +64,8 @@ class AbstractChannel(metaclass=ABCMeta):
         for queued_method in method_queue:
             assert isinstance(queued_method, Method)
             if allowed_methods is None \
-                    or queued_method.method_tup in allowed_methods \
-                    or queued_method.method_tup == spec.Channel.Close:
+                    or queued_method.method_type in allowed_methods \
+                    or queued_method.method_type == spec.Channel.Close:
                 method_queue.remove(queued_method)
                 return queued_method
 
@@ -73,15 +73,15 @@ class AbstractChannel(metaclass=ABCMeta):
         while True:
             method = self.connection.method_reader.read_method()
             channel = method.channel
-            method_tup = method.method_tup
+            m_type = method.method_type
 
             if channel == self.channel_id \
-                    and (allowed_methods is None or method_tup in allowed_methods or method_tup == spec.Channel.Close):
+                    and (allowed_methods is None or m_type in allowed_methods or m_type == spec.Channel.Close):
                 return method
 
             # certain methods like basic_return should be dispatched immediately rather than being queued, even if
             # they're not one of the 'allowed_methods' we're looking for
-            if channel and method_tup in self.connection.Channel._IMMEDIATE_METHODS:
+            if channel and m_type in self.connection.Channel._IMMEDIATE_METHODS:
                 self.connection.channels[channel].dispatch_method(method)
                 continue
 
@@ -106,18 +106,18 @@ class AbstractChannel(metaclass=ABCMeta):
             for queued_method in method_queue:
                 assert isinstance(queued_method, Method)
                 if allowed_methods is None \
-                        or queued_method.method_tup in allowed_methods \
-                        or queued_method.method_tup == spec.Channel.Close:
+                        or queued_method.method_type in allowed_methods \
+                        or queued_method.method_type == spec.Channel.Close:
                     method_queue.remove(queued_method)
                     return channel_id, queued_method
 
         # nothing queued, need to wait for a method from the peer
         while True:
             method = self.connection.method_reader.read_method(timeout)
-            method_tup = method.method_tup
+            m_type = method.method_type
 
             if channel in channels \
-                    and (allowed_methods is None or method_tup in allowed_methods or method_tup == spec.Channel.Close):
+                    and (allowed_methods is None or m_type in allowed_methods or m_type == spec.Channel.Close):
                 return channel, method
 
             # not the channel and/or method we were looking for; queue this method for later
@@ -137,9 +137,9 @@ class AbstractChannel(metaclass=ABCMeta):
                 pass
 
         try:
-            callback = self._METHOD_MAP[method.method_tup]
+            callback = self._METHOD_MAP[method.method_type]
         except KeyError:
-            raise AMQPNotImplementedError('Unknown AMQP method {0}'.format(method.method_tup))
+            raise AMQPNotImplementedError('Unknown AMQP method {0}'.format(method.method_type))
 
         if content is None:
             return callback(self, method.args)

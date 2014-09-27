@@ -1,12 +1,13 @@
 import socket
 from collections import defaultdict, deque
-from struct import pack, unpack
+from queue import Queue
+import struct
 
 from .message import Message
 from .exceptions import AMQPError, UnexpectedFrame, Timeout
 from .serialization import AMQPReader
 from . import spec
-from .spec import FrameType, Frame, Method
+from .spec import FrameType, Frame, Method, method_t
 
 
 __all__ = ['MethodReader']
@@ -23,16 +24,16 @@ class PartialMessage:
     """Helper class to build up a multi-frame `Method` with a complete `Message`
     """
 
-    def __init__(self, method_sig, args, channel):
+    def __init__(self, method_type, args, channel):
         """
-        :param method_sig: method tuple
+        :param method_type: method type
         :param args: method args
         :param channel: associated channel
-        :type method_sig: tuple(int, int)
+        :type method_type: method_t
         :type args: AMQPReader, AMQPWriter
         :tye channel: int
         """
-        self.method_sig = method_sig
+        self.method_type = method_type
         self.args = args
         self.channel = channel
         self.msg = Message()
@@ -45,7 +46,7 @@ class PartialMessage:
         :param payload: frame payload of a `FrameType.HEADER` frame
         :type payload: bytes
         """
-        class_id, weight, self.expected_body_size = unpack('>HHQ', payload[:12])
+        class_id, weight, self.expected_body_size = struct.unpack('>HHQ', payload[:12])
         self.msg._load_properties(payload[12:])
 
     def add_payload(self, payload):
@@ -129,16 +130,16 @@ class MethodReader:
         """
         payload = frame.payload
         channel = frame.channel
-        method_tup = unpack('>HH', payload[:4])
+        method_type = method_t(*struct.unpack('>HH', payload[:4]))
         args = AMQPReader(payload[4:])
 
-        if method_tup in _CONTENT_METHODS:
+        if method_type in _CONTENT_METHODS:
             # save what we've got so far and wait for the content-header
-            self.partial_messages[channel] = PartialMessage(method_tup, args, channel)
+            self.partial_messages[channel] = PartialMessage(method_type, args, channel)
             self.expected_types[channel] = spec.FrameType.HEADER
         else:
             # this is a complete method
-            method = Method(method_tup, args, None, channel)
+            method = Method(method_type, args, None, channel)
             self.queue.append(method)
 
     def _process_content_header(self, frame):
@@ -149,7 +150,7 @@ class MethodReader:
 
         if partial.complete:
             # a bodyless message, we're done
-            method = Method(partial.method_sig, partial.args, partial.msg, frame.channel)
+            method = Method(partial.method_type, partial.args, partial.msg, frame.channel)
             self.queue.append(method)
             self.partial_messages.pop(frame.channel, None)
             self.expected_types[frame.channel] = FrameType.METHOD  # set expected frame type back to default
@@ -165,7 +166,7 @@ class MethodReader:
 
         if partial.complete:
             # message is complete, append it to the queue
-            method = Method(partial.method_sig, partial.args, partial.msg, frame.channel)
+            method = Method(partial.method_type, partial.args, partial.msg, frame.channel)
             self.queue.append(method)
             self.partial_messages.pop(frame.channel, None)
             self.expected_types[frame.channel] = FrameType.METHOD  # set expected frame type back to default
@@ -227,35 +228,31 @@ class MethodWriter:
     def write_method(self, channel, method):
         """Write method
 
+        This implementation uses a queue internally to prepare all frames before writing in order to detect issues.
+
         :param channel: channel
         :param method: method to write
         :type channel: int
         :type method: amqpy.spec.Method
         """
-        # check content first so we can raise an exception if there's a problem before sending the first frame
-        if method.content:
-            body = method.content.body
-            if isinstance(body, str):
-                # encode body to bytes
-                coding = method.content.properties.setdefault('content_encoding', 'UTF-8')
-                body = method.content.body.encode(coding)
-            properties = method.content.serialize_properties()
+        frames = Queue()
 
-        # write frame method
-        payload_frame_method = pack('>HH', method.method_tup[0], method.method_tup[1]) + method.args.getvalue()
-        frame = Frame(FrameType.METHOD, channel, payload_frame_method)
-        self.dest.write_frame(frame)
+        # prepare method frame
+        frame = Frame(FrameType.METHOD, channel, method.pack_method())
+        frames.put(frame)
 
         if method.content:
-            # write frame header
-            payload_frame_header = pack('>HHQ', method.method_tup[0], 0, len(body)) + properties
-            frame = Frame(FrameType.HEADER, channel, payload_frame_header)
-            self.dest.write_frame(frame)
+            # prepare header frame
+            frame = Frame(FrameType.HEADER, channel, method.pack_header())
+            frames.put(frame)
 
-            # write frame body
+            # prepare body frame(s)
             chunk_size = self.frame_max - 8
-            for i in range(0, len(body), chunk_size):
-                frame = Frame(FrameType.BODY, channel, body[i:i + chunk_size])
-                self.dest.write_frame(frame)
+            for payload in method.pack_body(chunk_size):
+                frame = Frame(FrameType.BODY, channel, payload)
+                frames.put(frame)
+
+        while not frames.empty():
+            self.dest.write_frame(frames.get())
 
         self.bytes_sent += 1
