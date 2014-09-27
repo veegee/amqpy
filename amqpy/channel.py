@@ -370,7 +370,7 @@ class Channel(AbstractChannel):
         * If `exch_name` does not exist, the server must raise a channel exception with reply code 404 (not found).
 
         :param str queue_name: name of queue to bind; blank refers to the last declared queue for this channel
-        :param str exchange_name: name of exchange to bind to
+        :param str exch_name: name of exchange to bind to
         :param str routing_key: routing key for the binding
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
         :param dict arguments: binding arguments, specific to the exchange class
