@@ -26,25 +26,10 @@ class GenericContent:
         """
         return self.properties == other.properties
 
-    def __getattr__(self, name):
-        """Look for additional properties in the 'properties' dictionary, and if present - the 'delivery_info'
-        dictionary
-        """
-        if name == '__setstate__':
-            # allows pickling/unpickling to work
-            raise AttributeError('__setstate__')
-
-        if name in self.properties:
-            return self.properties[name]
-
-        if 'delivery_info' in self.properties and name in self.delivery_info:
-            return self.delivery_info[name]
-
-        raise AttributeError(name)
-
     def load_properties(self, raw_bytes):
-        """Given the raw bytes containing the property-flags and property-list from a content-frame-header, parse and
-        insert into a dictionary stored in this object as an attribute named 'properties'
+        """Load raw bytes into `self.properites`
+
+        The `raw_bytes` are the payload of a `FrameType.HEADER` frame, starting at a byte-offset of 12.
         """
         r = AMQPReader(raw_bytes)
 
@@ -72,8 +57,7 @@ class GenericContent:
         self.properties = d
 
     def serialize_properties(self):
-        """Serialize the 'properties' attribute (a dictionary) into the raw bytes making up a set of property flags and
-        a property list, suitable for putting into a content frame header
+        """Serialize `self.properties` into raw bytes suitable to append to the payload of `FrameType.HEADER` frames
         """
         shift = 15
         flag_bits = 0
@@ -175,7 +159,7 @@ class Message(GenericContent):
             return False
 
     @property
-    def headers(self):
+    def application_headers(self):
         return self.properties.get('application_headers')
 
     @property

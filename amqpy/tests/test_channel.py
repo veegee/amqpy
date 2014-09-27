@@ -40,14 +40,14 @@ class TestChannel:
         msg = Message('hello world')
         ch.basic_publish(msg, 'amq.direct', routing_key=my_routing_key)
         msg2 = ch.basic_get(qname, no_ack=True)
-        assert msg2.content_encoding == 'UTF-8'
+        assert msg2.properties['content_encoding'] == 'UTF-8'
         assert msg2.body == 'hello world'
 
         # Explicit latin_1 encoding, still comes back as unicode
         msg = Message('hello world', content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=my_routing_key)
         msg2 = ch.basic_get(qname, no_ack=True)
-        assert msg2.content_encoding == 'latin_1'
+        assert msg2.properties['content_encoding'] == 'latin_1'
         assert msg2.body == 'hello world'
 
         # plain string with specified encoding comes back as unicode
@@ -55,7 +55,7 @@ class TestChannel:
         ch.basic_publish(msg, 'amq.direct', routing_key=my_routing_key)
         msg2 = ch.basic_get(qname, no_ack=True)
 
-        assert msg2.content_encoding == 'latin_1'
+        assert msg2.properties['content_encoding'] == 'latin_1'
         assert msg2.body == 'hello w\u00f6rld'
 
         # plain string (bytes in Python 3.x) with bogus encoding
@@ -64,7 +64,7 @@ class TestChannel:
         msg = Message(test_bytes, content_encoding='I made this up')
         ch.basic_publish(msg, 'amq.direct', routing_key=my_routing_key)
         msg2 = ch.basic_get(qname, no_ack=True)
-        assert msg2.content_encoding == 'I made this up'
+        assert msg2.properties['content_encoding'] == 'I made this up'
         assert isinstance(msg2.body, bytes)
         assert msg2.body == test_bytes
 
@@ -75,7 +75,7 @@ class TestChannel:
         msg = Message('hello w\u00f6rld')
         ch.basic_publish(msg, 'amq.direct', routing_key=my_routing_key)
         msg2 = ch.basic_get(qname, no_ack=True)
-        assert msg2.content_encoding == 'UTF-8'
+        assert msg2.properties['content_encoding'] == 'UTF-8'
         assert isinstance(msg2.body, bytes)
         assert msg2.body == 'hello w\xc3\xb6rld'.encode('latin_1')
 
@@ -83,7 +83,7 @@ class TestChannel:
         msg = Message('hello w\xf6rld', content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=my_routing_key)
         msg2 = ch.basic_get(qname, no_ack=True)
-        assert msg2.content_encoding == 'latin_1'
+        assert msg2.properties['content_encoding'] == 'latin_1'
         assert isinstance(msg2.body, bytes)
         assert msg2.body == 'hello w\xf6rld'.encode('latin_1')
 
@@ -91,7 +91,7 @@ class TestChannel:
         msg = Message('hello w\u00f6rld', content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=my_routing_key)
         msg2 = ch.basic_get(qname, no_ack=True)
-        assert msg2.content_encoding == 'latin_1'
+        assert msg2.properties['content_encoding'] == 'latin_1'
         assert isinstance(msg2.body, bytes)
         assert msg2.body == 'hello w\xf6rld'.encode('latin_1')
 

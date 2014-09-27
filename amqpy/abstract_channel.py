@@ -137,10 +137,10 @@ class AbstractChannel(metaclass=ABCMeta):
         #: :type: GenericContent
         content = method.content
 
-        if content and self.auto_decode and hasattr(content, 'content_encoding'):
+        if content and self.auto_decode and 'content_encoding' in content.properties:
             # try to decode message body
             try:
-                content.body = content.body.decode(content.content_encoding)
+                content.body = content.body.decode(content.properties['content_encoding'])
             except Exception:
                 pass
 

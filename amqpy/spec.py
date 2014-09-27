@@ -240,7 +240,7 @@ class Method:
         self.channel = channel
 
     def pack_method(self):
-        """Pack this method into a bytes object suitable for using as a `Frame` payload for `FrameType.METHOD` frames
+        """Pack this method into a bytes object suitable for using as a payload for `FrameType.METHOD` frames
 
         :return: bytes
         :rtype: bytes
@@ -248,7 +248,7 @@ class Method:
         return struct.pack('>HH', self.method_type.class_id, self.method_type.method_id) + self.args.getvalue()
 
     def pack_header(self):
-        """Pack this method into a bytes object suitable for using as a `Frame` payload for `FrameType.HEADER` frames
+        """Pack this method into a bytes object suitable for using as a payload for `FrameType.HEADER` frames
 
         :return: bytes
         :rtype: bytes
@@ -265,7 +265,7 @@ class Method:
         return struct.pack('>HHQ', self.method_type.class_id, 0, len(self._body_bytes)) + properties
 
     def pack_body(self, chunk_size):
-        """Pack this method into a bytes object suitable for using as a `Frame` payload for `FrameType.BODY` frames
+        """Pack this method into a bytes object suitable for using as a payload for `FrameType.BODY` frames
 
         :param chunk_size: split up body into pices that are at most `chunk_size` bytes each
         :type chunk_size: int
