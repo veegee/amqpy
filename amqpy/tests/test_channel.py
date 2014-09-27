@@ -184,7 +184,7 @@ class TestChannel:
         ch.exchange_declare(source_exchange, 'topic', auto_delete=True)
 
         qname, _, _ = ch.queue_declare()
-        ch.exchange_bind(destination=dest_exchange, source=source_exchange, routing_key=test_routing_key)
+        ch.exchange_bind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
         ch.queue_bind(qname, dest_exchange, routing_key=test_routing_key)
 
         msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
@@ -202,6 +202,6 @@ class TestChannel:
         ch.exchange_declare(dest_exchange, 'topic', auto_delete=True)
         ch.exchange_declare(source_exchange, 'topic', auto_delete=True)
 
-        ch.exchange_bind(destination=dest_exchange, source=source_exchange, routing_key=test_routing_key)
+        ch.exchange_bind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
 
-        ch.exchange_unbind(destination=dest_exchange, source=source_exchange, routing_key=test_routing_key)
+        ch.exchange_unbind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)

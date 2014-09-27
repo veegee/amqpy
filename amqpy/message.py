@@ -5,6 +5,7 @@ from amqpy.serialization import AMQPReader, AMQPWriter
 
 __all__ = ['Message']
 
+# TODO: see if we can merge GenericContent into Message
 
 class GenericContent:
     """Abstract base class for AMQP content

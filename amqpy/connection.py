@@ -9,7 +9,7 @@ from .serialization import AMQPWriter
 from . import __version__
 from .abstract_channel import AbstractChannel
 from .channel import Channel
-from .exceptions import ChannelError, ResourceError, ConnectionError, error_for_code, AMQPNotImplementedError
+from .exceptions import ResourceError, ConnectionError, error_for_code, AMQPNotImplementedError
 from .transport import create_transport
 from . import spec
 from .spec import Method, Frame, FrameType, method_t
@@ -92,13 +92,12 @@ class Connection(AbstractChannel):
         # at the beginning
 
         d = dict(LIBRARY_PROPERTIES, **client_properties or {})
-        self._method_override = {spec.Basic.Return: self._dispatch_basic_return}
 
+        # map of {channel int: channel Channel}
         self.channels = {}
+
         # the connection object itself is treated as channel 0
         super().__init__(self, 0)
-
-        self.transport = None
 
         # properties set in the Tune method
         self.channel_max = channel_max
@@ -146,8 +145,8 @@ class Connection(AbstractChannel):
         try:
             self.transport.close()
 
-            temp_list = [x for x in self.channels.values() if x is not self]
-            for ch in temp_list:
+            channels = [x for x in self.channels.values() if x is not self]
+            for ch in channels:
                 ch._do_close()
         except socket.error:
             pass  # connection already closed on the other end
@@ -169,13 +168,12 @@ class Connection(AbstractChannel):
                 'Channel %r already open' % (channel_id, ))
 
     def channel(self, channel_id=None):
-        """Fetch a Channel object identified by the numeric channel_id, or create that object if it doesn't already
-        exist
+        """Fetch a Channel object specified by `channel_id`, or create that object if it doesn't already exist
+
+        :param channel_id: channel ID number
+        :type channel_id: int
         """
-        try:
-            return self.channels[channel_id]
-        except KeyError:
-            return self.Channel(self, channel_id)
+        return self.channels.get(channel_id, self.Channel(self, channel_id))
 
     def is_alive(self):
         if hasattr(socket, 'MSG_PEEK'):
@@ -199,10 +197,10 @@ class Connection(AbstractChannel):
         :type timeout: float or None
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
-        chanid, method = self._wait_multiple(self.channels, None, timeout=timeout)
+        chan_id, method = self._wait_multiple(self.channels, None, timeout=timeout)
         content = method.content
 
-        channel = self.channels[chanid]
+        channel = self.channels[chan_id]
 
         if content and channel.auto_decode and hasattr(content, 'content_encoding'):
             try:
@@ -210,28 +208,12 @@ class Connection(AbstractChannel):
             except Exception:
                 pass
 
-        callback = self._method_override.get(method.method_type) or channel._METHOD_MAP.get(method.method_type, None)
+        callback = channel._METHOD_MAP.get(method.method_type)
 
         if callback is None:
-            raise AMQPNotImplementedError('Unknown AMQP method {0!r}'.format(method.method_type))
+            raise AMQPNotImplementedError('Unknown AMQP method {} (ch: {})'.format(method.method_type, chan_id))
 
-        if content is None:
-            return callback(channel, method.args)
-        else:
-            return callback(channel, method.args, content)
-
-    def _dispatch_basic_return(self, channel, args, msg):
-        reply_code = args.read_short()
-        reply_text = args.read_shortstr()
-        exchange = args.read_shortstr()
-        routing_key = args.read_shortstr()
-
-        exc = error_for_code(reply_code, reply_text, (50, 60), ChannelError)
-        handlers = channel.events.get('basic_return')
-        if not handlers:
-            raise exc
-        for callback in handlers:
-            callback(exc, exchange, routing_key, msg)
+        return callback(channel, method)
 
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Request a connection close
@@ -259,7 +241,7 @@ class Connection(AbstractChannel):
         self._send_method(Method(spec.Connection.Close, args))
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 
-    def _close(self, args):
+    def _close(self, method):
         """Respond to a connection close
 
         This method indicates that the sender (server) wants to close the connection. This may be due to internal
@@ -267,6 +249,7 @@ class Connection(AbstractChannel):
         close is due to an exception, the sender provides the class and method id of the method which caused the
         exception.
         """
+        args = method.args
         reply_code = args.read_short()  # the AMQP reply code
         reply_text = args.read_shortstr()  # the localized reply text
         class_id = args.read_short()  # class_id of method
@@ -274,16 +257,17 @@ class Connection(AbstractChannel):
 
         self._x_close_ok()
 
-        raise error_for_code(reply_code, reply_text, (class_id, method_id), ConnectionError)
+        method_type = method_t(class_id, method_id)
+        raise error_for_code(reply_code, reply_text, method_type, ConnectionError)
 
-    def _blocked(self, args):
+    def _blocked(self, method):
         """RabbitMQ Extension
         """
-        reason = args.read_shortstr()
+        reason = method.args.read_shortstr()
         if self.on_blocked:
             return self.on_blocked(reason)
 
-    def _unblocked(self, *args):
+    def _unblocked(self, method):
         if self.on_unblocked:
             return self.on_unblocked()
 
@@ -297,7 +281,7 @@ class Connection(AbstractChannel):
         self._send_method(Method(spec.Connection.CloseOk))
         self._do_close()
 
-    def _close_ok(self, args):
+    def _close_ok(self, method):
         """Confirm a connection close
 
         This method confirms a Connection.Close method and tells the recipient that it is safe to release resources for
@@ -325,14 +309,14 @@ class Connection(AbstractChannel):
         self._send_method(Method(spec.Connection.Open, args))
         return self.wait(allowed_methods=[spec.Connection.OpenOk])
 
-    def _open_ok(self, args):
+    def _open_ok(self, method):
         """Signal that the connection is ready
 
         This method signals to the client that the connection is ready for use.
         """
         log.debug('Open OK')
 
-    def _secure(self, args):
+    def _secure(self, method):
         """Security mechanism challenge
 
         The SASL protocol works by exchanging challenges and responses until both peers have received sufficient
@@ -343,7 +327,7 @@ class Connection(AbstractChannel):
                 security challenge data
                 Challenge information, a block of opaque binary data passed to the security mechanism.
         """
-        challenge = args.read_longstr()
+        challenge = method.args.read_longstr()
 
     def _x_secure_ok(self, response):
         """Security mechanism response
@@ -361,8 +345,8 @@ class Connection(AbstractChannel):
         args.write_longstr(response)
         self._send_method(Method(spec.Connection.SecureOk, args))
 
-    def _start(self, args):
-        """Start connection negotiation
+    def _start(self, method):
+        """Start connection negotiation callback
 
         This method starts the connection negotiation process by telling the client the protocol version that the server
         proposes, along with a list of security mechanisms which the client can use for authentication.
@@ -396,6 +380,7 @@ class Connection(AbstractChannel):
                 RULE:
                     All servers MUST support at least the en_US locale.
         """
+        args = method.args
         self.version_major = args.read_octet()
         self.version_minor = args.read_octet()
         self.server_properties = args.read_table()
@@ -449,7 +434,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(locale)
         self._send_method(Method(spec.Connection.StartOk, args))
 
-    def _tune(self, args):
+    def _tune(self, method):
         """Propose connection tuning parameters
         This method proposes a set of connection configuration values to the client.  The client can accept and/or
         adjust these.
@@ -473,6 +458,7 @@ class Connection(AbstractChannel):
                 The delay, in seconds, of the connection heartbeat that the server wants.  Zero means the server does
                 not want a heartbeat.
         """
+        args = method.args
         client_heartbeat = self.client_heartbeat or 0
         self.channel_max = args.read_short() or self.channel_max
         self.frame_max = args.read_long() or self.frame_max

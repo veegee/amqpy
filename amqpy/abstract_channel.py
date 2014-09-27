@@ -45,12 +45,12 @@ class AbstractChannel(metaclass=ABCMeta):
         self.connection.method_writer.write_method(self.channel_id, method)
 
     def wait(self, allowed_methods=None, callback=None):
-        """Wait for a method that matches any one of `allowed_methods` and then call `callback(method)`
+        """Wait for a method that matches any one of `allowed_methods` and then call `callback(channel, method)`
 
         :param allowed_methods: list of possible methods to wait for, or `None` to wait for any method
-        :param callback: callable with the following signature: callable(Method)
+        :param callback: callable with the following signature: callable(AbstractChannel, Method)
         :type allowed_methods: list or None
-        :type callback: callable(Method)
+        :type callback: callable(AbstractChannel, Method)
         """
         method = self._wait_method(allowed_methods)
         return self.dispatch_method(method)
@@ -97,10 +97,12 @@ class AbstractChannel(metaclass=ABCMeta):
                 self.wait()
 
     def _wait_multiple(self, channels, allowed_methods, timeout=None):
-        """
-        :param channels: channels
+        """Wait for events on multiple channels
+
+        :param channels: dict of channels to wait on
         :param allowed_methods: list of allowed methods
         :param timeout: timeout
+        :type channels: dict[channel_id int: channel Channel]
         :return: tuple of channel_id and method
         :rtype: tuple(int, Method)
         """
@@ -132,8 +134,10 @@ class AbstractChannel(metaclass=ABCMeta):
                 self.wait()
 
     def dispatch_method(self, method):
-        content = method.content
+        content = method.content  # GenericContent or Message
+
         if content and self.auto_decode and hasattr(content, 'content_encoding'):
+            # try to decode message body
             try:
                 content.body = content.body.decode(content.content_encoding)
             except Exception:
@@ -144,7 +148,4 @@ class AbstractChannel(metaclass=ABCMeta):
         except KeyError:
             raise AMQPNotImplementedError('Unknown AMQP method {0}'.format(method.method_type))
 
-        if content is None:
-            return callback(self, method.args)
-        else:
-            return callback(self, method.args, method.content)
+        return callback(self, method)

@@ -12,6 +12,8 @@ from . import spec
 from .spec import Method, method_t
 
 
+# TODO: finish cleaning up the documentation in this module
+
 __all__ = ['Channel']
 
 log = logging.getLogger('amqpy')
@@ -57,8 +59,8 @@ class Channel(AbstractChannel):
         self._x_open()
 
     def _do_close(self):
-        """Tear down this object, after we've agreed to close
-        with the server."""
+        """Tear down this object, after we've agreed to close with the server
+        """
         log.debug('Closed channel #%d', self.channel_id)
         self.is_open = False
         channel_id, self.channel_id = self.channel_id, None
@@ -103,7 +105,7 @@ class Channel(AbstractChannel):
         finally:
             self.connection = None
 
-    def _close(self, args):
+    def _close(self, method):
         """Respond to a channel close
 
         This method indicates that the sender (server) wants to close the channel. This may be due to internal
@@ -111,7 +113,7 @@ class Channel(AbstractChannel):
         close is due to an exception, the sender provides the class and method id of the method which caused the
         exception.
         """
-
+        args = method.args
         reply_code = args.read_short()
         reply_text = args.read_shortstr()
         class_id = args.read_short()
@@ -120,9 +122,10 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Channel.CloseOk))
         self._do_revive()
 
-        raise error_for_code(reply_code, reply_text, (class_id, method_id), ChannelError)
+        method_type = method_t(class_id, method_id)
+        raise error_for_code(reply_code, reply_text, method_type, ChannelError)
 
-    def _close_ok(self, args):
+    def _close_ok(self, method):
         """Confirm a channel close
 
         This method confirms a Channel.Close method and tells the recipient that it is safe to release resources for the
@@ -147,7 +150,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Channel.Flow, args))
         return self.wait(allowed_methods=[spec.Channel.FlowOk])
 
-    def _flow(self, args):
+    def _flow(self, method):
         """Enable/disable flow from peer
 
         This method asks the peer to pause or restart the flow of content data. This is a simple flow-control mechanism
@@ -155,10 +158,8 @@ class Channel(AbstractChannel):
         can process. Note that this method is not intended for window control.  The peer that receives a request to stop
         sending content should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.
-
-        :param args: method args
-        :param args: AMQPReader
         """
+        args = method.args
         self.active = args.read_bit()
         self._x_flow_ok(self.active)
 
@@ -174,14 +175,12 @@ class Channel(AbstractChannel):
         args.write_bit(active)
         self._send_method(Method(spec.Channel.FlowOk, args))
 
-    def _flow_ok(self, args):
+    def _flow_ok(self, method):
         """Confirm a flow method
 
         Confirms to the peer that a flow command was received and processed.
-
-        :param args: method args
-        :param args: AMQPReader
         """
+        args = method.args
         return args.read_bit()
 
     def _x_open(self):
@@ -197,10 +196,10 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Channel.Open, args))
         return self.wait(allowed_methods=[spec.Channel.OpenOk])
 
-    def _open_ok(self, args):
+    def _open_ok(self, method):
         """Signal that the channel is ready
 
-        This method signals to the client that the channel is ready for use.
+        The server sends this method to signal to the client that this channel is ready for use.
         """
         self.is_open = True
         log.debug('Channel open')
@@ -209,27 +208,23 @@ class Channel(AbstractChannel):
                          arguments=None):
         """Declare exchange, create if needed
 
-        This method creates an exchange if it does not already exist, and if the exchange exists, verifies that it is of
-        the correct and expected class.
+        * This method creates an exchange if it does not already exist, and if the exchange exists, verifies that it
+          is of the correct and expected class.
+        * If `passive` is enabled, and the exchange does not exist, the server must raise a channel exception with
+          reply code 404 (not found).
+        * The server must ignore the `durable` field if the exchange already exists.
+        * The server must ignore the `auto_delete` field if the exchange already exists.
+        * If `nowait` is enabled and the server could not complete the method, it will raise a channel or connection
+          exception.
+        * `arguments` is ignored if passive is True.
 
-        If `passive` is enabled, and the exchange does not exist, the server must raise a channel exception with
-        reply code 404 (not found).
-
-        The server must ignore the `durable` field if the exchange already exists.
-
-        The server must ignore the `auto_delete` field if the exchange already exists.
-
-        If `nowait` is enabled and the server could not complete the method, it will raise a channel or connection
-        exception.
-
-        `arguments` is ignored if passive is True.
-
-        :param exch_name: exchange name
-        :param exch_type: exchange type (direct, fanout, topic, etc.)
-        :param passive: do not create exchange; client can use this to check whether an exchange exists
-        :param durable: mark exchange as durable (remain active after server restarts)
-        :param auto_delete: auto-delete exchange when all queues have finished using it
-        :param nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param str exch_name: exchange name
+        :param str exch_type: exchange type (direct, fanout, topic, etc.)
+        :param bool passive: do not create exchange; client can use this to check whether an exchange exists
+        :param bool durable: mark exchange as durable (remain active after server restarts)
+        :param bool auto_delete: auto-delete exchange when all queues have finished using it
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param dict arguments: exchange declare arguments
         """
         arguments = arguments or {}
         args = AMQPWriter()
@@ -247,52 +242,30 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.DeclareOk])
 
-    def _exchange_declare_ok(self, args):
+    def _exchange_declare_ok(self, method):
         """Confirms an exchange declaration
 
-        This method confirms a Declare method and confirms the name of the exchange, essential for automatically-named
-        exchanges.
+        The server sends this method to confirm a Declare method and confirms the name of the exchange, essential for
+        automatically-named exchanges.
         """
         pass
 
-    def exchange_delete(self, exchange, if_unused=False, nowait=False):
+    def exchange_delete(self, exch_name, if_unused=False, nowait=False):
         """Delete an exchange
 
-        This method deletes an exchange.  When an exchange is deleted all queue bindings on the exchange are cancelled.
+        This method deletes an exchange.
 
-        PARAMETERS:
+        * If the exchange does not exist, the server must raise a channel exception. When an exchange is deleted,
+          all queue bindings on the exchange are cancelled.
+        * If `if_unused` is set, and the exchange has queue bindings, the server must raise a channel exception.
 
-            exchange: shortstr
-
-                RULE:
-
-                    The exchange MUST exist. Attempting to delete a non-existing exchange causes a channel exception.
-
-            if_unused: boolean
-
-                delete only if unused
-
-                If set, the server will only delete the exchange if it has no queue bindings. If the exchange has queue
-                bindings the server does not delete it but raises a channel exception instead.
-
-                RULE:
-
-                    If set, the server SHOULD delete the exchange but only if it has no queue bindings.
-
-                RULE:
-
-                    If set, the server SHOULD raise a channel exception if the exchange is in use.
-
-            nowait: boolean
-
-                do not send a reply method
-
-                If set, the server will not respond to the method. The client should not wait for a reply method.  If
-                the server could not complete the method it will raise a channel or connection exception.
+        :param str exch_name: exchange name
+        :param bool if_unused: delete only if unused (has no queue bindings)
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
         """
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(exchange)
+        args.write_shortstr(exch_name)
         args.write_bit(if_unused)
         args.write_bit(nowait)
         self._send_method(Method(spec.Exchange.Delete, args))
@@ -300,77 +273,35 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.DeleteOk])
 
-    def _exchange_delete_ok(self, args):
+    def _exchange_delete_ok(self, method):
         """Confirm deletion of an exchange
 
-        This method confirms the deletion of an exchange.
+        The server sends this method to confirm that the deletion of an exchange was successful.
         """
         pass
 
-    def exchange_bind(self, destination, source='', routing_key='', nowait=False, arguments=None):
-        """This method binds an exchange to an exchange.
+    def exchange_bind(self, dest_exch, source_exch='', routing_key='', nowait=False, arguments=None):
+        """Bind an exchange to an exchange
 
-        RULE:
+        * Both the `dest_exch` and `source_exch` must already exist. Blank exchange names mean the default exchange.
+        * A server MUST allow and ignore duplicate bindings - that is, two or more bind methods for a specific
+          exchanges, with identical arguments - without treating these as an error.
+        * A server MUST allow cycles of exchange bindings to be created including allowing an exchange to be bound to
+          itself.
+        * A server MUST not deliver the same message more than once to a destination exchange, even if the topology of
+          exchanges and bindings results in multiple (even infinite) routes to that exchange.
 
-            A server MUST allow and ignore duplicate bindings - that is, two or more bind methods for a specific
-            exchanges, with identical arguments - without treating these as an error.
-
-        RULE:
-
-            A server MUST allow cycles of exchange bindings to be created including allowing an exchange to be bound to
-            itself.
-
-        RULE:
-
-            A server MUST not deliver the same message more than once to a destination exchange, even if the topology of
-            exchanges and bindings results in multiple (even infinite) routes to that exchange.
-
-        PARAMETERS:
-
-            reserved-1: short
-
-            destination: shortstr
-
-                Specifies the name of the destination exchange to bind.
-
-                RULE:
-
-                    A client MUST NOT be allowed to bind a non- existent destination exchange.
-
-                RULE:
-
-                    The server MUST accept a blank exchange name to mean the default exchange.
-
-            source: shortstr
-
-                Specifies the name of the source exchange to bind.
-
-                RULE:
-
-                    A client MUST NOT be allowed to bind a non- existent source exchange.
-
-                RULE:
-
-                    The server MUST accept a blank exchange name to mean the default exchange.
-
-            routing-key: shortstr
-
-                Specifies the routing key for the binding. The routing key is used for routing messages depending on the
-                exchange configuration. Not all exchanges use a routing key - refer to the specific exchange
-                documentation.
-
-            no-wait: bit
-
-            arguments: table
-
-                A set of arguments for the binding. The syntax and semantics of these arguments depends on the exchange
-                class.
+        :param str dest_exch: name of destination exchange to bind
+        :param str source_exch: name of source exchange to bind
+        :param str routing_key: routing key for the binding (note: not all exchanges use a routing key)
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(destination)
-        args.write_shortstr(source)
+        args.write_shortstr(dest_exch)
+        args.write_shortstr(source_exch)
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
@@ -379,56 +310,24 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.BindOk])
 
-    def exchange_unbind(self, destination, source='', routing_key='', nowait=False, arguments=None):
-        """This method unbinds an exchange from an exchange.
+    def exchange_unbind(self, dest_exch, source_exch='', routing_key='', nowait=False, arguments=None):
+        """Unbind an exchange from an exchange
 
-        RULE:
+        * If the unbind fails, the server must raise a connection exception. The server must not attempt to unbind an
+          exchange that does not exist from an exchange.
+        * Blank exchange names mean the default exchange.
 
-            If a unbind fails, the server MUST raise a connection exception.
-
-        PARAMETERS:
-
-            reserved-1: short
-
-            destination: shortstr
-
-                Specifies the name of the destination exchange to unbind.
-
-                RULE:
-
-                    The client MUST NOT attempt to unbind an exchange that does not exist from an exchange.
-
-                RULE:
-
-                    The server MUST accept a blank exchange name to mean the default exchange.
-
-            source: shortstr
-
-                Specifies the name of the source exchange to unbind.
-
-                RULE:
-
-                    The client MUST NOT attempt to unbind an exchange from an exchange that does not exist.
-
-                RULE:
-
-                    The server MUST accept a blank exchange name to mean the default exchange.
-
-            routing-key: shortstr
-
-                Specifies the routing key of the binding to unbind.
-
-            no-wait: bit
-
-            arguments: table
-
-                Specifies the arguments of the binding to unbind.
+        :param str dest_exch: destination exchange name
+        :param str source_exch: source exchange name
+        :param str routing_key: routing key to unbind
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(destination)
-        args.write_shortstr(source)
+        args.write_shortstr(dest_exch)
+        args.write_shortstr(source_exch)
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
@@ -437,105 +336,50 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.UnbindOk])
 
-    def _exchange_bind_ok(self, args):
+    def _exchange_bind_ok(self, method):
         """Confirm bind successful
 
-        This method confirms that the bind was successful.
+        The server sends this method to confirm that the bind was successful.
         """
         pass
 
-    def _exchange_unbind_ok(self, args):
+    def _exchange_unbind_ok(self, method):
         """Confirm unbind successful
 
-        This method confirms that the unbind was successful.
+        The server sends this method to confirm that the unbind was successful.
         """
         pass
 
-    def queue_bind(self, queue, exchange='', routing_key='', nowait=False, arguments=None):
+    def queue_bind(self, queue_name, exch_name='', routing_key='', nowait=False, arguments=None):
         """Bind queue to an exchange
 
-        This method binds a queue to an exchange.  Until a queue is bound it will not receive any messages.  In a
-        classic messaging model, store-and-forward queues are bound to a dest exchange and subscription queues are bound
-        to a dest_wild exchange.
+        This method binds a queue to an exchange. Until a queue is bound it will not receive any messages. In a classic
+        messaging model, store-and-forward queues are bound to a dest exchange and subscription queues are bound to a
+        dest_wild exchange.
 
-        RULE:
+        * The server must allow and ignore duplicate bindings without treating these as an error.
+        * If a bind fails, the server must raise a connection exception.
+        * The server must not allow a durable queue to bind to a transient exchange. If a client attempts this,
+          the server must raise a channel exception.
+        * The server should support at least 4 bindings per queue, and ideally, impose no limit except as defined by
+          available resources.
 
-            A server MUST allow ignore duplicate bindings - that is, two or more bind methods for a specific queue, with
-            identical arguments - without treating these as an error.
+        * If the client did not previously declare a queue, and the `queue_name` is empty, the server must raise a
+          connection exception with reply code 530 (not allowed).
+        * If `queue_name` does not exist, the server must raise a channel exception with reply code 404 (not found).
+        * If `exch_name` does not exist, the server must raise a channel exception with reply code 404 (not found).
 
-        RULE:
-
-            If a bind fails, the server MUST raise a connection exception.
-
-        RULE:
-
-            The server MUST NOT allow a durable queue to bind to a transient exchange. If the client attempts this the
-            server MUST raise a channel exception.
-
-        RULE:
-
-            Bindings for durable queues are automatically durable and the server SHOULD restore such bindings after a
-            server restart.
-
-        RULE:
-
-            The server SHOULD support at least 4 bindings per queue, and ideally, impose no limit except as defined by
-            available resources.
-
-        PARAMETERS:
-
-            queue: shortstr
-
-                Specifies the name of the queue to bind.  If the queue name is empty, refers to the current queue for
-                the channel, which is the last declared queue.
-
-                RULE:
-
-                    If the client did not previously declare a queue, and the queue name in this method is empty, the
-                    server MUST raise a connection exception with reply code 530 (not allowed).
-
-                RULE:
-
-                    If the queue does not exist the server MUST raise a channel exception with reply code 404 (not
-                    found).
-
-            exchange: shortstr
-
-                The name of the exchange to bind to.
-
-                RULE:
-
-                    If the exchange does not exist the server MUST raise a channel exception with reply code 404 (not
-                    found).
-
-            routing_key: shortstr
-
-                message routing key
-
-                Specifies the routing key for the binding.  The routing key is used for routing messages depending on
-                the exchange configuration. Not all exchanges use a routing key - refer to the specific exchange
-                documentation.  If the routing key is empty and the queue name is empty, the routing key will be the
-                current queue for the channel, which is the last declared queue.
-
-            nowait: boolean
-
-                do not send a reply method
-
-                If set, the server will not respond to the method. The client should not wait for a reply method.  If
-                the server could not complete the method it will raise a channel or connection exception.
-
-            arguments: table
-
-                arguments for binding
-
-                A set of arguments for the binding.  The syntax and semantics of these arguments depends on the exchange
-                class.
+        :param str queue_name: name of queue to bind; blank refers to the last declared queue for this channel
+        :param str exchange_name: name of exchange to bind to
+        :param str routing_key: routing key for the binding
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(queue)
-        args.write_shortstr(exchange)
+        args.write_shortstr(queue_name)
+        args.write_shortstr(exch_name)
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
@@ -544,65 +388,32 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.BindOk])
 
-    def _queue_bind_ok(self, args):
+    def _queue_bind_ok(self, method):
         """Confirm bind successful
 
-        This method confirms that the bind was successful.
+        The server sends this method to confirm that the bind was successful.
         """
         pass
 
-    def queue_unbind(self, queue, exchange, routing_key='', nowait=False, arguments=None):
+    def queue_unbind(self, queue_name, exch_name, routing_key='', nowait=False, arguments=None):
         """Unbind a queue from an exchange
 
         This method unbinds a queue from an exchange.
 
-        RULE:
+        * If a unbind fails, the server MUST raise a connection exception.
+        * The client must not attempt to unbind a queue that does not exist.
+        * The client must not attempt to unbind a queue from an exchange that does not exist.
 
-            If a unbind fails, the server MUST raise a connection exception.
-
-        PARAMETERS:
-
-            queue: shortstr
-
-                Specifies the name of the queue to unbind.
-
-                RULE:
-
-                    The client MUST either specify a queue name or have previously declared a queue on the same channel
-
-                RULE:
-
-                    The client MUST NOT attempt to unbind a queue that does not exist.
-
-            exchange: shortstr
-
-                The name of the exchange to unbind from.
-
-                RULE:
-
-                    The client MUST NOT attempt to unbind a queue from an exchange that does not exist.
-
-                RULE:
-
-                    The server MUST accept a blank exchange name to mean the default exchange.
-
-            routing_key: shortstr
-
-                routing key of binding
-
-                Specifies the routing key of the binding to unbind.
-
-            arguments: table
-
-                arguments of binding
-
-                Specifies the arguments of the binding to unbind.
+        :param str queue_name: name of queue to unbind, leave blank to refer to the last declared queue on this channel
+        :param str exch_name: name of exchange to unbind, leave blank to refer to default exchange
+        :param str routing_key: routing key of binding
+        :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(queue)
-        args.write_shortstr(exchange)
+        args.write_shortstr(queue_name)
+        args.write_shortstr(exch_name)
         args.write_shortstr(routing_key)
         # args.write_bit(nowait)
         args.write_table(arguments)
@@ -611,7 +422,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.UnbindOk])
 
-    def _queue_unbind_ok(self, args):
+    def _queue_unbind_ok(self, method):
         """Confirm unbind successful
 
         This method confirms that the unbind was successful.
@@ -752,7 +563,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.DeclareOk])
 
-    def _queue_declare_ok(self, args):
+    def _queue_declare_ok(self, method):
         """Confirms a queue definition
 
         This method confirms a Declare method and confirms the name of the queue, essential for automatically-named
@@ -777,6 +588,7 @@ class Channel(AbstractChannel):
                 Reports the number of active consumers for the queue. Note that consumers can suspend activity
                 (Channel.Flow) in which case they do not appear in this count.
         """
+        args = method.args
         return queue_declare_ok_t(args.read_shortstr(), args.read_long(), args.read_long())
 
     def queue_delete(self, queue='', if_unused=False, if_empty=False, nowait=False):
@@ -842,7 +654,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.DeleteOk])
 
-    def _queue_delete_ok(self, args):
+    def _queue_delete_ok(self, method):
         """Confirm deletion of a queue
 
         This method confirms the deletion of a queue.
@@ -854,6 +666,7 @@ class Channel(AbstractChannel):
 
                 Reports the number of messages purged.
         """
+        args = method.args
         return args.read_long()
 
     def queue_purge(self, queue='', nowait=False):
@@ -911,7 +724,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.PurgeOk])
 
-    def _queue_purge_ok(self, args):
+    def _queue_purge_ok(self, method):
         """Confirms a queue purge
 
         This method confirms the purge of a queue.
@@ -923,6 +736,7 @@ class Channel(AbstractChannel):
 
                 Reports the number of messages purged.
         """
+        args = method.args
         return args.read_long()
 
     def basic_ack(self, delivery_tag, multiple=False):
@@ -1008,11 +822,12 @@ class Channel(AbstractChannel):
             self._send_method(Method(spec.Basic.Cancel, args))
             return self.wait(allowed_methods=[spec.Basic.CancelOk])
 
-    def _basic_cancel_notify(self, args):
+    def _basic_cancel_notify(self, method):
         """Consumer cancelled by server.
 
         Most likely the queue was deleted.
         """
+        args = method.args
         consumer_tag = args.read_shortstr()
         callback = self._on_cancel(consumer_tag)
         if callback:
@@ -1020,7 +835,7 @@ class Channel(AbstractChannel):
         else:
             raise ConsumerCancelled(consumer_tag, spec.Basic.Cancel)
 
-    def _basic_cancel_ok(self, args):
+    def _basic_cancel_ok(self, method):
         """Confirm a cancelled consumer
 
         This method confirms that the cancellation was completed.
@@ -1036,6 +851,7 @@ class Channel(AbstractChannel):
                     The consumer tag is valid only within the channel from which the consumer was created. I.e. a client
                     MUST NOT create a consumer in one channel and then use it in another.
         """
+        args = method.args
         consumer_tag = args.read_shortstr()
         self._on_cancel(consumer_tag)
 
@@ -1154,7 +970,7 @@ class Channel(AbstractChannel):
 
         return consumer_tag
 
-    def _basic_consume_ok(self, args):
+    def _basic_consume_ok(self, method):
         """Confirm a new consumer
 
         The server provides the client with a consumer tag, which is used by the client for methods called on the
@@ -1166,9 +982,10 @@ class Channel(AbstractChannel):
 
                 Holds the consumer tag specified by the client or provided by the server.
         """
+        args = method.args
         return args.read_shortstr()
 
-    def _basic_deliver(self, args, msg):
+    def _basic_deliver(self, method):
         """Notify the client of a consumer message
 
         This method delivers a message to the client, via a consumer. In the asynchronous message delivery model, the
@@ -1177,11 +994,6 @@ class Channel(AbstractChannel):
 
         This method can be called in a "classmethod" style static-context and is done so by
         :meth:`~amqpy.connection.Connection.drain_events()`.
-
-        :param args: AMQP reader
-        :param msg: message
-        :type args: amqp.serialization.AMQPReader
-        :type msg: amqp.message.Message
 
         RULE:
 
@@ -1235,6 +1047,9 @@ class Channel(AbstractChannel):
 
                 Specifies the routing key name specified when the message was published.
         """
+        args = method.args
+        msg = method.content
+
         consumer_tag = args.read_shortstr()
         delivery_tag = args.read_longlong()
         redelivered = args.read_bit()
@@ -1254,7 +1069,7 @@ class Channel(AbstractChannel):
         if callback:
             callback(msg)
         else:
-            print('No callback available for consumer tag: {}'.format(consumer_tag))
+            raise Exception('No callback available for consumer tag: {}'.format(consumer_tag))
 
     def basic_get(self, queue='', no_ack=False):
         """Direct access to a queue
@@ -1292,15 +1107,16 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Basic.Get, args))
         return self.wait(allowed_methods=[spec.Basic.GetOk, spec.Basic.GetEmpty])
 
-    def _basic_get_empty(self, args):
+    def _basic_get_empty(self, method):
         """Indicate no messages available
 
         This method tells the client that the queue has no messages
         available for the client.
         """
+        args = method.args
         cluster_id = args.read_shortstr()  # noqa
 
-    def _basic_get_ok(self, args, msg):
+    def _basic_get_ok(self, method):
         """Provide client with a message
 
         This method delivers a message to the client following a get method.  A message delivered by 'get-ok' must be
@@ -1349,6 +1165,9 @@ class Channel(AbstractChannel):
                 Note that this figure is indicative, not reliable, and can change arbitrarily as messages are added to
                 the queue and removed by other clients.
         """
+        args = method.args
+        msg = method.content
+
         delivery_tag = args.read_longlong()
         redelivered = args.read_bit()
         exchange = args.read_shortstr()
@@ -1453,7 +1272,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Basic.Qos, args))
         return self.wait(allowed_methods=[spec.Basic.QosOk])
 
-    def _basic_qos_ok(self, args):
+    def _basic_qos_ok(self, method):
         """Confirm the requested qos
 
         This method tells the client that the requested QoS levels could be handled by the server.  The requested QoS
@@ -1494,7 +1313,7 @@ class Channel(AbstractChannel):
         args.write_bit(requeue)
         self._send_method(Method(spec.Basic.RecoverAsync, args))
 
-    def _basic_recover_ok(self, args):
+    def _basic_recover_ok(self, method):
         """In 0-9-1 the deprecated recover solicits a response
         """
         pass
@@ -1560,7 +1379,7 @@ class Channel(AbstractChannel):
         args.write_bit(requeue)
         self._send_method(Method(spec.Basic.Reject, args))
 
-    def _basic_return(self, args, msg):
+    def _basic_return(self, method):
         """Return a failed message
 
         This method returns an undeliverable message that was published with the "immediate" flag set, or an unroutable
@@ -1587,6 +1406,8 @@ class Channel(AbstractChannel):
 
                 Specifies the routing key name specified when the message was published.
         """
+        args = method.args
+        msg = method.content
         self.returned_messages.put(basic_return_t(
             args.read_short(),
             args.read_shortstr(),
@@ -1604,7 +1425,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Tx.Commit))
         return self.wait(allowed_methods=[spec.Tx.CommitOk])
 
-    def _tx_commit_ok(self, args):
+    def _tx_commit_ok(self, method):
         """Confirm a successful commit
 
         This method confirms to the client that the commit succeeded. Note that if a commit fails, the server raises a
@@ -1622,7 +1443,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Tx.Rollback))
         return self.wait(allowed_methods=[spec.Tx.RollbackOk])
 
-    def _tx_rollback_ok(self, args):
+    def _tx_rollback_ok(self, method):
         """Confirm a successful rollback
 
         This method confirms to the client that the rollback succeeded. Note that if an rollback fails, the server
@@ -1639,7 +1460,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Tx.Select))
         return self.wait(allowed_methods=[spec.Tx.SelectOk])
 
-    def _tx_select_ok(self, args):
+    def _tx_select_ok(self, method):
         """Confirm transaction mode
 
         This method confirms to the client that the channel was successfully set to use standard transactions.
@@ -1661,46 +1482,47 @@ class Channel(AbstractChannel):
         if not nowait:
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
 
-    def _confirm_select_ok(self, args):
+    def _confirm_select_ok(self, method):
         """With this method the broker confirms to the client that the channel is now using publisher confirms
         """
         pass
 
-    def _basic_ack_recv(self, args):
+    def _basic_ack_recv(self, method):
+        args = method.args
         delivery_tag = args.read_longlong()
         multiple = args.read_bit()
         for callback in self.events['basic_ack']:
             callback(delivery_tag, multiple)
 
     _METHOD_MAP = {
-        (20, 11): _open_ok,
-        (20, 20): _flow,
-        (20, 21): _flow_ok,
-        (20, 40): _close,
-        (20, 41): _close_ok,
-        (40, 11): _exchange_declare_ok,
-        (40, 21): _exchange_delete_ok,
-        (40, 31): _exchange_bind_ok,
-        (40, 51): _exchange_unbind_ok,
-        (50, 11): _queue_declare_ok,
-        (50, 21): _queue_bind_ok,
-        (50, 31): _queue_purge_ok,
-        (50, 41): _queue_delete_ok,
-        (50, 51): _queue_unbind_ok,
-        (60, 11): _basic_qos_ok,
-        (60, 21): _basic_consume_ok,
-        (60, 30): _basic_cancel_notify,
-        (60, 31): _basic_cancel_ok,
-        (60, 50): _basic_return,
+        spec.Channel.OpenOk: _open_ok,
+        spec.Channel.Flow: _flow,
+        spec.Channel.FlowOk: _flow_ok,
+        spec.Channel.Close: _close,
+        spec.Channel.CloseOk: _close_ok,
+        spec.Exchange.DeclareOk: _exchange_declare_ok,
+        spec.Exchange.DeleteOk: _exchange_delete_ok,
+        spec.Exchange.BindOk: _exchange_bind_ok,
+        spec.Exchange.UnbindOk: _exchange_unbind_ok,
+        spec.Queue.DeclareOk: _queue_declare_ok,
+        spec.Queue.BindOk: _queue_bind_ok,
+        spec.Queue.PurgeOk: _queue_purge_ok,
+        spec.Queue.DeleteOk: _queue_delete_ok,
+        spec.Queue.UnbindOk: _queue_unbind_ok,
+        spec.Basic.QosOk: _basic_qos_ok,
+        spec.Basic.ConsumeOk: _basic_consume_ok,
+        spec.Basic.Cancel: _basic_cancel_notify,
+        spec.Basic.CancelOk: _basic_cancel_ok,
+        spec.Basic.Return: _basic_return,
         spec.Basic.Deliver: _basic_deliver,
-        (60, 71): _basic_get_ok,
-        (60, 72): _basic_get_empty,
-        (60, 80): _basic_ack_recv,
-        (60, 111): _basic_recover_ok,
-        (85, 11): _confirm_select_ok,
-        (90, 11): _tx_select_ok,
-        (90, 21): _tx_commit_ok,
-        (90, 31): _tx_rollback_ok,
+        spec.Basic.GetOk: _basic_get_ok,
+        spec.Basic.GetEmpty: _basic_get_empty,
+        spec.Basic.Ack: _basic_ack_recv,
+        spec.Basic.RecoverOk: _basic_recover_ok,
+        spec.Confirm.SelectOk: _confirm_select_ok,
+        spec.Tx.SelectOk: _tx_select_ok,
+        spec.Tx.CommitOk: _tx_commit_ok,
+        spec.Tx.RollbackOk: _tx_rollback_ok,
     }
 
     _IMMEDIATE_METHODS = [
