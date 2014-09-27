@@ -194,7 +194,8 @@ def error_for_code(code, text, method_type, default):
     :rtype: Exception
     """
     try:
-        return ERROR_MAP[code](text, method_type, reply_code=code)
+        exc = ERROR_MAP[code]
+        return exc(text, method_type, reply_code=code)
     except KeyError:
         return default(text, method_type, reply_code=code)
 
@@ -264,6 +265,8 @@ METHOD_NAME_MAP = {
     method_t(85, 11): 'confirm.select-ok',
 }
 
+
+# insert keys which are 4-byte unsigned int representations of a method type for easy lookups
 for method_type, name in list(METHOD_NAME_MAP.items()):
     data = struct.pack('>HH', *method_type)
     METHOD_NAME_MAP[struct.unpack('>I', data)[0]] = name
