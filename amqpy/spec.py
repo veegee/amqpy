@@ -217,16 +217,16 @@ class Method:
         size (bytes):         2          2           ...
     """
 
-    def __init__(self, method_type, args=None, content=None, channel=None):
+    def __init__(self, method_type, args=None, content=None, channel_id=None):
         """
         :param method_type: method type
         :param args: method args
         :param content: content
-        :param channel: the associated channel, if any
+        :param channel_id: the associated channel ID, if any
         :type method_type: method_t
         :type args: AMQPReader or AMQPWriter or None
         :type content: amqp.message.GenericContent or None
-        :type channel: int or None
+        :type channel_id: int or None
         """
         self.method_type = method_type
         assert isinstance(method_type, method_t)
@@ -237,7 +237,7 @@ class Method:
         else:
             raise ValueError('args must be an instance of `AMQPReader` or `AMQPWriter`')
         self.content = content
-        self.channel = channel
+        self.channel_id = channel_id
 
     def pack_method(self):
         """Pack this method into a bytes object suitable for using as a payload for `FrameType.METHOD` frames

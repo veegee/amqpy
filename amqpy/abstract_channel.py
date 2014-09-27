@@ -75,25 +75,25 @@ class AbstractChannel(metaclass=ABCMeta):
                 # nothing queued, need to wait for a method from the peer
         while True:
             method = self.connection.method_reader.read_method()
-            channel = method.channel
+            ch_id = method.channel_id
             m_type = method.method_type
 
-            if channel == self.channel_id \
-                    and (allowed_methods is None or m_type in allowed_methods or m_type == spec.Channel.Close):
+            if ch_id == self.channel_id and (allowed_methods is None or m_type in allowed_methods
+                                             or m_type == spec.Channel.Close):
                 return method
 
             # certain methods like basic_return should be dispatched immediately rather than being queued, even if
             # they're not one of the 'allowed_methods' we're looking for
-            if channel and m_type in self.connection.Channel._IMMEDIATE_METHODS:
-                self.connection.channels[channel].dispatch_method(method)
+            if ch_id and m_type in self.connection.Channel._IMMEDIATE_METHODS:
+                self.connection.channels[ch_id].dispatch_method(method)
                 continue
 
             # not the channel and/or method we were looking for; queue this method for later
-            self.connection.channels[channel].method_queue.append(method)
+            self.connection.channels[ch_id].method_queue.append(method)
 
             # If we just queued up a method for channel 0 (the Connection itself) it's probably a close method in
             # reaction to some error, so deal with it right away.
-            if not channel:
+            if not ch_id:
                 self.wait()
 
     def _wait_multiple(self, channels, allowed_methods, timeout=None):
