@@ -44,10 +44,13 @@ class AbstractChannel(metaclass=ABCMeta):
 
         self.connection.method_writer.write_method(self.channel_id, method)
 
-    def wait(self, allowed_methods=None):
-        """Wait for a method that matches our allowed_methods parameter and dispatch to it
+    def wait(self, allowed_methods=None, callback=None):
+        """Wait for a method that matches any one of `allowed_methods` and then call `callback(method)`
 
-        The default value of None means match any method.
+        :param allowed_methods: list of possible methods to wait for, or `None` to wait for any method
+        :param callback: callable with the following signature: callable(Method)
+        :type allowed_methods: list or None
+        :type callback: callable(Method)
         """
         method = self._wait_method(allowed_methods)
         return self.dispatch_method(method)
