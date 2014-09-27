@@ -1,3 +1,5 @@
+debug*.py
+
 # local databases
 *.db
 
