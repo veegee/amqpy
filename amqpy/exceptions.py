@@ -1,3 +1,11 @@
+"""Error Handling
+
+AMQP uses exceptions to handle errors.
+* Any operational error (message queue not found, insufficient access rights, etc.) results in a channel exception.
+* Any structural error (invalid argument, bad sequence of methods, etc.) results in a connection exception.
+
+An exception closes the associated channel or connection, and returns a reply code and reply text to the client.
+"""
 import struct
 from collections import namedtuple
 
@@ -42,7 +50,7 @@ class AMQPError(Exception):
         self.message = reply_text
         self.reply_code = reply_code or self.code
         self.reply_text = reply_text
-        self.method_sig = method_type
+        self.method_type = method_type
         self.method_name = method_name or ''
         if method_type and not self.method_name:
             self.method_name = METHOD_NAME_MAP.get(method_type, '')
@@ -55,7 +63,7 @@ class AMQPError(Exception):
 
     @property
     def method(self):
-        return self.method_name or self.method_sig
+        return self.method_name or self.method_type
 
 
 class ConnectionError(AMQPError):
@@ -189,7 +197,7 @@ def error_for_code(code, text, method_type, default):
     :type code: int
     :type text: str
     :type method_type: amqpy.spec.method_t
-    :type default: Exception
+    :type default: Callable
     :return: Exception object
     :rtype: Exception
     """
