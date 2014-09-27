@@ -2,7 +2,6 @@
 """
 import logging
 from collections import defaultdict
-from warnings import warn
 from queue import Queue
 
 from .abstract_channel import AbstractChannel
@@ -10,16 +9,12 @@ from .exceptions import ChannelError, ConsumerCancelled, error_for_code
 from .spec import basic_return_t, queue_declare_ok_t
 from .serialization import AMQPWriter
 from . import spec
-from .spec import Method
+from .spec import Method, method_t
 
 
 __all__ = ['Channel']
 
 log = logging.getLogger('amqpy')
-
-
-class VDeprecationWarning(DeprecationWarning):
-    pass
 
 
 class Channel(AbstractChannel):
@@ -80,43 +75,19 @@ class Channel(AbstractChannel):
         self.is_open = False
         self._x_open()
 
-    def close(self, reply_code=0, reply_text='', method_sig=(0, 0)):
+    def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Request a channel close
 
         This method indicates that the sender wants to close the channel. This may be due to internal conditions (e.g. a
         forced shut-down) or due to an error handling a specific method, i.e. an exception.  When a close is due to an
         exception, the sender provides the class and method id of the method which caused the exception.
 
-        RULE:
-
-            After sending this method any received method except Channel.Close-OK MUST be discarded.
-
-        RULE:
-
-            The peer sending this method MAY use a counter or timeout to detect failure of the other peer to respond
-            correctly with Channel.Close-OK..
-
-        PARAMETERS:
-
-            reply_code: short
-
-                The reply code. The AMQ reply codes are defined in AMQ RFC 011.
-
-            reply_text: shortstr
-
-                The localised reply text.  This text can be logged as an aid to resolving issues.
-
-            class_id: short
-
-                failing method class
-
-                When the close is provoked by a method exception, this is the class of the method.
-
-            method_id: short
-
-                failing method ID
-
-                When the close is provoked by a method exception, this is the ID of the method.
+        :param reply_code: the reply code
+        :param reply_text: localized reply text
+        :param method_type: if close is triggered by a failing method, this is the method that caused it
+        :type reply_code: int
+        :type reply_text: str
+        :type method_type: amqpy.spec.method_t
         """
         try:
             if not self.is_open or self.connection is None:
@@ -125,50 +96,20 @@ class Channel(AbstractChannel):
             args = AMQPWriter()
             args.write_short(reply_code)
             args.write_shortstr(reply_text)
-            args.write_short(method_sig[0])  # class_id
-            args.write_short(method_sig[1])  # method_id
+            args.write_short(method_type.class_id)
+            args.write_short(method_type.method_id)
             self._send_method(Method(spec.Channel.Close, args))
             return self.wait(allowed_methods=[spec.Channel.Close, spec.Channel.CloseOk])
         finally:
             self.connection = None
 
     def _close(self, args):
-        """Request a channel close
+        """Respond to a channel close
 
-        This method indicates that the sender wants to close the channel. This may be due to internal conditions (e.g. a
-        forced shut-down) or due to an error handling a specific method, i.e. an exception.  When a close is due to an
-        exception, the sender provides the class and method id of the method which caused the exception.
-
-        RULE:
-
-            After sending this method any received method except Channel.Close-OK MUST be discarded.
-
-        RULE:
-
-            The peer sending this method MAY use a counter or timeout to detect failure of the other peer to respond
-            correctly with Channel.Close-OK..
-
-        PARAMETERS:
-
-            reply_code: short
-
-                The reply code. The AMQ reply codes are defined in AMQ RFC 011.
-
-            reply_text: shortstr
-
-                The localised reply text.  This text can be logged as an aid to resolving issues.
-
-            class_id: short
-
-                failing method class
-
-                When the close is provoked by a method exception, this is the class of the method.
-
-            method_id: short
-
-                failing method ID
-
-                When the close is provoked by a method exception, this is the ID of the method.
+        This method indicates that the sender (server) wants to close the channel. This may be due to internal
+        conditions (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a
+        close is due to an exception, the sender provides the class and method id of the method which caused the
+        exception.
         """
 
         reply_code = args.read_short()
@@ -186,11 +127,6 @@ class Channel(AbstractChannel):
 
         This method confirms a Channel.Close method and tells the recipient that it is safe to release resources for the
         channel and close the socket.
-
-        RULE:
-
-            A peer that detects a socket closure without having received a Channel.Close-Ok handshake method SHOULD log
-            the error.
         """
         self._do_close()
 
@@ -203,33 +139,8 @@ class Channel(AbstractChannel):
         sending content should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.
 
-        RULE:
-
-            When a new channel is opened, it is active.  Some applications assume that channels are inactive until
-            started.  To emulate this behaviour a client MAY open the channel, then pause it.
-
-        RULE:
-
-            When sending content data in multiple frames, a peer SHOULD monitor the channel for incoming methods and
-            respond to a Channel.Flow as rapidly as possible.
-
-        RULE:
-
-            A peer MAY use the Channel.Flow method to throttle incoming content data for internal reasons, for example,
-            when exchangeing data over a slower connection.
-
-        RULE:
-
-            The peer that requests a Channel.Flow method MAY disconnect and/or ban a peer that does not respect the
-            request.
-
-        PARAMETERS:
-
-            active: boolean
-
-                start/stop content frames
-
-                If True, the peer starts sending content frames.  If False, the peer stops sending content frames.
+        :param active: True: peer starts sending content frames; False: peer stops sending content frames
+        :type active: bool
         """
         args = AMQPWriter()
         args.write_bit(active)
@@ -245,31 +156,8 @@ class Channel(AbstractChannel):
         sending content should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.
 
-        RULE:
-
-            When a new channel is opened, it is active.  Some applications assume that channels are inactive until
-            started.  To emulate this behaviour a client MAY open the channel, then pause it.
-
-        RULE:
-
-            When sending content data in multiple frames, a peer SHOULD monitor the channel for incoming methods and
-            respond to a Channel.Flow as rapidly as possible.
-
-        RULE:
-
-            A peer MAY use the Channel.Flow method to throttle incoming content data for internal reasons, for example,
-            when exchangeing data over a slower connection.
-
-        RULE:
-
-            The peer that requests a Channel.Flow method MAY disconnect and/or ban a peer that does not respect the
-            request.
-
-        PARAMETERS: active: boolean
-
-                start/stop content frames
-
-                If True, the peer starts sending content frames.  If False, the peer stops sending content frames.
+        :param args: method args
+        :param args: AMQPReader
         """
         self.active = args.read_bit()
         self._x_flow_ok(self.active)
@@ -279,12 +167,8 @@ class Channel(AbstractChannel):
 
         Confirms to the peer that a flow command was received and processed.
 
-        PARAMETERS: active: boolean
-
-                current flow setting
-
-                Confirms the setting of the processed flow method: True means the peer will start sending or continue to
-                send content frames; False means it will not.
+        :param active: True: peer starts sending content frames; False: peer stops sending content frames
+        :type active: bool
         """
         args = AMQPWriter()
         args.write_bit(active)
@@ -294,6 +178,9 @@ class Channel(AbstractChannel):
         """Confirm a flow method
 
         Confirms to the peer that a flow command was received and processed.
+
+        :param args: method args
+        :param args: AMQPReader
         """
         return args.read_bit()
 
@@ -318,110 +205,37 @@ class Channel(AbstractChannel):
         self.is_open = True
         log.debug('Channel open')
 
-    def exchange_declare(self, exchange, type, passive=False, durable=False, auto_delete=False, nowait=False,
+    def exchange_declare(self, exch_name, exch_type, passive=False, durable=False, auto_delete=False, nowait=False,
                          arguments=None):
         """Declare exchange, create if needed
 
         This method creates an exchange if it does not already exist, and if the exchange exists, verifies that it is of
         the correct and expected class.
 
-        RULE:
+        If `passive` is enabled, and the exchange does not exist, the server must raise a channel exception with
+        reply code 404 (not found).
 
-            The server SHOULD support a minimum of 16 exchanges per virtual host and ideally, impose no limit except as
-            defined by available resources.
+        The server must ignore the `durable` field if the exchange already exists.
 
-        PARAMETERS:
+        The server must ignore the `auto_delete` field if the exchange already exists.
 
-            exchange: shortstr
+        If `nowait` is enabled and the server could not complete the method, it will raise a channel or connection
+        exception.
 
-                RULE:
+        `arguments` is ignored if passive is True.
 
-                    Exchange names starting with "amq." are reserved for predeclared and standardised exchanges.  If the
-                    client attempts to create an exchange starting with "amq.", the server MUST raise a channel
-                    exception with reply code 403 (access refused).
-
-            type: shortstr
-
-                exchange type
-
-                Each exchange belongs to one of a set of exchange types implemented by the server.  The exchange types
-                define the functionality of the exchange - i.e. how messages are routed through it.  It is not valid or
-                meaningful to attempt to change the type of an existing exchange.
-
-                RULE:
-
-                    If the exchange already exists with a different type, the server MUST raise a connection exception
-                    with a reply code 507 (not allowed).
-
-                RULE:
-
-                    If the server does not support the requested exchange type it MUST raise a connection exception with
-                    a reply code 503 (command invalid).
-
-            passive: boolean
-
-                do not create exchange
-
-                If set, the server will not create the exchange.  The client can use this to check whether an exchange
-                exists without modifying the server state.
-
-                RULE:
-
-                    If set, and the exchange does not already exist, the server MUST raise a channel exception with
-                    reply code 404 (not found).
-
-            durable: boolean
-
-                request a durable exchange
-
-                If set when creating a new exchange, the exchange will be marked as durable.  Durable exchanges remain
-                active when a server restarts. Non-durable exchanges (transient exchanges) are purged if/when a server
-                restarts.
-
-                RULE:
-
-                    The server MUST support both durable and transient exchanges.
-
-                RULE:
-
-                    The server MUST ignore the durable field if the exchange already exists.
-
-            auto_delete: boolean
-
-                auto-delete when unused
-
-                If set, the exchange is deleted when all queues have finished using it.
-
-                RULE:
-
-                    The server SHOULD allow for a reasonable delay between the point when it determines that an exchange
-                    is not being used (or no longer used), and the point when it deletes the exchange.  At the least it
-                    must allow a client to create an exchange and then bind a queue to it, with a small but non-zero
-                    delay between these two actions.
-
-                RULE:
-
-                    The server MUST ignore the auto-delete field if the exchange already exists.
-
-            nowait: boolean
-
-                do not send a reply method
-
-                If set, the server will not respond to the method. The client should not wait for a reply method.  If
-                the server could not complete the method it will raise a channel or connection exception.
-
-            arguments: table
-
-                arguments for declaration
-
-                A set of arguments for the declaration. The syntax and semantics of these arguments depends on the
-                server implementation.  This field is ignored if passive is True.
+        :param exch_name: exchange name
+        :param exch_type: exchange type (direct, fanout, topic, etc.)
+        :param passive: do not create exchange; client can use this to check whether an exchange exists
+        :param durable: mark exchange as durable (remain active after server restarts)
+        :param auto_delete: auto-delete exchange when all queues have finished using it
+        :param nowait: if set, the server will not respond to the method and the client should not wait for a reply
         """
-        arguments = {} if arguments is None else arguments
+        arguments = arguments or {}
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(exchange)
-        args.write_shortstr(type)
+        args.write_shortstr(exch_name)
+        args.write_shortstr(exch_type)
         args.write_bit(passive)
         args.write_bit(durable)
         args.write_bit(auto_delete)
@@ -429,10 +243,6 @@ class Channel(AbstractChannel):
         args.write_bit(nowait)
         args.write_table(arguments)
         self._send_method(Method(spec.Exchange.Declare, args))
-
-        if auto_delete:
-            msg = 'The auto_delete flag for exchanges has been deprecated and will be removed from py-amqpy v1.5.0.'
-            warn(VDeprecationWarning(msg))
 
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.DeclareOk])

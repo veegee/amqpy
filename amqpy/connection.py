@@ -260,11 +260,12 @@ class Connection(AbstractChannel):
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 
     def _close(self, args):
-        """Request a connection close
+        """Respond to a connection close
 
-        This method indicates that the sender wants to close the connection. This may be due to internal conditions
-        (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception.  When a close is due
-        to an exception, the sender provides the class and method id of the method which caused the exception.
+        This method indicates that the sender (server) wants to close the connection. This may be due to internal
+        conditions (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a
+        close is due to an exception, the sender provides the class and method id of the method which caused the
+        exception.
         """
         reply_code = args.read_short()  # the AMQP reply code
         reply_text = args.read_shortstr()  # the localized reply text
