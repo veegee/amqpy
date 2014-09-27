@@ -233,13 +233,13 @@ class Channel(AbstractChannel):
         """
         arguments = arguments or {}
         args = AMQPWriter()
-        args.write_short(0)
-        args.write_shortstr(exch_name)
-        args.write_shortstr(exch_type)
-        args.write_bit(passive)
-        args.write_bit(durable)
-        args.write_bit(auto_delete)
-        args.write_bit(False)  # internal: deprecated
+        args.write_short(0)  # reserved-1
+        args.write_shortstr(exch_name)  # exchange name
+        args.write_shortstr(exch_type)  # exchange type
+        args.write_bit(passive)  # passive
+        args.write_bit(durable)  # durable
+        args.write_bit(auto_delete)  # auto-delete
+        args.write_bit(False)  # internal
         args.write_bit(nowait)
         args.write_table(arguments)
         self._send_method(Method(spec.Exchange.Declare, args))
