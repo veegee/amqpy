@@ -17,7 +17,7 @@ class AbstractChannel(metaclass=ABCMeta):
     """
 
     # : Placeholder, implementations must override this
-    _METHOD_MAP = {}
+    METHOD_MAP = {}
 
     def __init__(self, connection, channel_id):
         self.connection = connection
@@ -78,13 +78,13 @@ class AbstractChannel(metaclass=ABCMeta):
             ch_id = method.channel_id
             m_type = method.method_type
 
-            if ch_id == self.channel_id and (allowed_methods is None or m_type in allowed_methods
-                                             or m_type == spec.Channel.Close):
+            if method.channel_id == self.channel_id and (allowed_methods is None or m_type in allowed_methods
+                                                         or m_type == spec.Channel.Close):
                 return method
 
             # certain methods like basic_return should be dispatched immediately rather than being queued, even if
-            # they're not one of the 'allowed_methods' we're looking for
-            if ch_id and m_type in self.connection.Channel._IMMEDIATE_METHODS:
+            # they're not one of the `allowed_methods` we're looking for
+            if ch_id and m_type in self.connection.Channel.IMMEDIATE_METHODS:
                 self.connection.channels[ch_id].dispatch_method(method)
                 continue
 
@@ -145,7 +145,7 @@ class AbstractChannel(metaclass=ABCMeta):
                 pass
 
         try:
-            callback = self._METHOD_MAP[method.method_type]
+            callback = self.METHOD_MAP[method.method_type]
         except KeyError:
             raise AMQPNotImplementedError('Unknown AMQP method {0}'.format(method.method_type))
 

@@ -522,7 +522,7 @@ class Connection(AbstractChannel):
     def server_capabilities(self):
         return self.server_properties.get('capabilities') or {}
 
-    _METHOD_MAP = {
+    METHOD_MAP = {
         spec.Connection.Start: _start,
         spec.Connection.Secure: _secure,
         spec.Connection.Tune: _tune,

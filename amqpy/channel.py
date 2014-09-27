@@ -38,17 +38,24 @@ class Channel(AbstractChannel):
         else:
             channel_id = connection._get_free_channel_id()
 
-        log.debug('using channel_id: %d', channel_id)
-
-        super(Channel, self).__init__(connection, channel_id)
+        super().__init__(connection, channel_id)
 
         self.is_open = False
-        self.active = True  # Flow control
+        self.active = True  # flow control
+
+        # returned messages that the server was unable to deliver
         self.returned_messages = Queue()
+
+        # consumer callbacks dict[consumer_tag str: callable]
         self.callbacks = {}
+
+        # consumer cancel callbacks dict dict[consumer_tag str: callable]
         self.cancel_callbacks = {}
-        self.auto_decode = auto_decode
-        self.events = defaultdict(set)
+
+        self.auto_decode = auto_decode  # auto decode received messages
+        self.events = defaultdict(set)  # TODO: find out what this is used for
+
+        # set of consumers that have opted for `no_ack` delivery (server will not expect an ack for delivered messages)
         self.no_ack_consumers = set()
 
         # set first time basic_publish_confirm is called and publisher confirms are enabled for this channel.
@@ -857,7 +864,6 @@ class Channel(AbstractChannel):
 
     def _on_cancel(self, consumer_tag):
         """
-
         :param consumer_tag:
         :return: callback, if any
         :rtype: callable or None
@@ -1382,29 +1388,9 @@ class Channel(AbstractChannel):
     def _basic_return(self, method):
         """Return a failed message
 
-        This method returns an undeliverable message that was published with the "immediate" flag set, or an unroutable
-        message published with the "mandatory" flag set. The reply code and text provide information about the reason
+        This method returns an undeliverable message that was published with the `immediate` flag set, or an unroutable
+        message published with the `mandatory` flag set. The reply code and text provide information about the reason
         that the message was undeliverable.
-
-        PARAMETERS:
-
-            reply_code: short
-
-                The reply code. The AMQ reply codes are defined in AMQ RFC 011.
-
-            reply_text: shortstr
-
-                The localised reply text.  This text can be logged as an aid to resolving issues.
-
-            exchange: shortstr
-
-                Specifies the name of the exchange that the message was originally published to.
-
-            routing_key: shortstr
-
-                Message routing key
-
-                Specifies the routing key name specified when the message was published.
         """
         args = method.args
         msg = method.content
@@ -1483,18 +1469,22 @@ class Channel(AbstractChannel):
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
 
     def _confirm_select_ok(self, method):
-        """With this method the broker confirms to the client that the channel is now using publisher confirms
+        """With this method, the broker confirms to the client that the channel is now using publisher confirms
         """
         pass
 
     def _basic_ack_recv(self, method):
+        """Callback for receiving a `spec.Basic.Ack`
+
+        This will be called when the server acknowledges a published message (RabbitMQ extension).
+        """
         args = method.args
         delivery_tag = args.read_longlong()
         multiple = args.read_bit()
         for callback in self.events['basic_ack']:
             callback(delivery_tag, multiple)
 
-    _METHOD_MAP = {
+    METHOD_MAP = {
         spec.Channel.OpenOk: _open_ok,
         spec.Channel.Flow: _flow,
         spec.Channel.FlowOk: _flow_ok,
@@ -1525,6 +1515,6 @@ class Channel(AbstractChannel):
         spec.Tx.RollbackOk: _tx_rollback_ok,
     }
 
-    _IMMEDIATE_METHODS = [
+    IMMEDIATE_METHODS = [
         spec.Basic.Return,
     ]
