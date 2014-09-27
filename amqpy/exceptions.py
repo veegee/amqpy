@@ -206,7 +206,7 @@ METHOD_NAME_MAP = {
     method_t(40, 30): 'Exchange.bind',
     method_t(40, 31): 'Exchange.bind_ok',
     method_t(40, 40): 'Exchange.unbind',
-    method_t(40, 41): 'Exchange.unbind_ok',
+    method_t(40, 51): 'Exchange.unbind_ok',
     method_t(50, 10): 'Queue.declare',
     method_t(50, 11): 'Queue.declare_ok',
     method_t(50, 20): 'Queue.bind',
