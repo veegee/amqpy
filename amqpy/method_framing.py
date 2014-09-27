@@ -224,7 +224,7 @@ class MethodWriter:
         """
         self.dest = dest
         self.frame_max = frame_max
-        self.bytes_sent = 0
+        self.methods_sent = 0  # keep track of number of methods sent
 
     def write_method(self, channel, method):
         """Write method
@@ -257,4 +257,4 @@ class MethodWriter:
         while not frames.empty():
             self.dest.write_frame(frames.get())
 
-        self.bytes_sent += 1
+        self.methods_sent += 1
