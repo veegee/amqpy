@@ -118,11 +118,11 @@ class TestChannel:
             ch.basic_publish(msg, routing_key=qname)
 
     def test_large(self, ch):
-        """Test sending some extra large messages.
+        """Test sending some extra large messages
         """
         qname, _, _ = ch.queue_declare()
 
-        for multiplier in [100, 1000, 10000]:
+        for multiplier in [100, 1000, 10000, 50000, 100000, 500000]:
             msg = Message('funtest message' * multiplier, content_type='text/plain',
                           application_headers={'foo': 7, 'bar': 'baz'})
 
