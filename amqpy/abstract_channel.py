@@ -86,7 +86,7 @@ class AbstractChannel(metaclass=ABCMeta):
                 continue
 
             # not the channel and/or method we were looking for; queue this method for later
-            self.connection.hannels[channel].method_queue.append(method)
+            self.connection.channels[channel].method_queue.append(method)
 
             # If we just queued up a method for channel 0 (the Connection itself) it's probably a close method in
             # reaction to some error, so deal with it right away.
