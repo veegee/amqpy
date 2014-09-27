@@ -31,7 +31,7 @@ class PartialMessage:
         :param channel: associated channel
         :type method_type: method_t
         :type args: AMQPReader, AMQPWriter
-        :tye channel: int
+        :type channel: int
         """
         self.method_type = method_type
         self.args = args
