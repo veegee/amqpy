@@ -230,7 +230,7 @@ class Method:
         """
         self.method_type = method_type
         assert isinstance(method_type, method_t)
-        if isinstance(args, AMQPReader) or isinstance(args, AMQPWriter):
+        if isinstance(args, (AMQPReader, AMQPWriter)):
             self.args = args
         elif args is None:
             self.args = AMQPWriter()
