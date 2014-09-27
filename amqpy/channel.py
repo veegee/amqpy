@@ -138,6 +138,7 @@ class Channel(AbstractChannel):
         This method confirms a Channel.Close method and tells the recipient that it is safe to release resources for the
         channel and close the socket.
         """
+        assert method
         self._do_close()
 
     def flow(self, active):
@@ -208,6 +209,7 @@ class Channel(AbstractChannel):
 
         The server sends this method to signal to the client that this channel is ready for use.
         """
+        assert method
         self.is_open = True
         log.debug('Channel open')
 
@@ -226,7 +228,7 @@ class Channel(AbstractChannel):
         * `arguments` is ignored if passive is True.
 
         :param str exch_name: exchange name
-        :param str exch_type: exchange type (direct, fanout, topic, etc.)
+        :param str exch_type: exchange type (direct, fanout, etc.)
         :param bool passive: do not create exchange; client can use this to check whether an exchange exists
         :param bool durable: mark exchange as durable (remain active after server restarts)
         :param bool auto_delete: auto-delete exchange when all queues have finished using it
@@ -1120,7 +1122,7 @@ class Channel(AbstractChannel):
         available for the client.
         """
         args = method.args
-        cluster_id = args.read_shortstr()  # noqa
+        cluster_id = args.read_shortstr()
 
     def _basic_get_ok(self, method):
         """Provide client with a message
