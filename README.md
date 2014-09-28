@@ -1,7 +1,7 @@
 Python 3 AMQP >= 0.9.1 client library
 =====================================
 
-* Version: 0.3.2
+* Version: 0.3.3
 * Web: http://amqpy.readthedocs.org/
 * Download: http://pypi.python.org/pypi/amqpy/
 * Source: http://github.com/veegee/amqpy
@@ -11,12 +11,18 @@ Python 3 AMQP >= 0.9.1 client library
 About
 =====
 
-amqpy is an AMQP >= 0.9.1 library for Python >= 3.2.0 (including PyPy3) with a focus on
-stability, well-tested and thoroughly documented code, and clean, correct
-design. This library is actively maintained. Please submit issues and pull
-requests.
+amqpy is an AMQP >= 0.9.1 library for Python >= 3.2.0 (including PyPy3) with a
+focus on:
 
-The current API is not final, but will get progressively more stable as version
+* stability
+* well-tested and thoroughly documented code
+* clean, correct design
+* 100% compliance with the AMQP protocol specification
+
+This library is actively maintained. Please submit issues and pull requests.
+Bugs will be fixed as quickly as possible.
+
+The current API is not final, but will progressively get more stable as version
 1.0.0 is approached.
 
 This library is NOT Python 2 compatible, and will never support Python 2. If you
@@ -41,19 +47,34 @@ Features
         * `Channel.events['basic_ack'].append(my_callback)` adds a callback to
           be called when a message is confirmed. This callback is then called
           with the signature `(delivery_tag, multiple)`
-    * Exchange to exchange bindings: `exchange_bind` / `exchange_unbind`
+    * Exchange to exchange bindings: `exchange_bind()` and `exchange_unbind()`
         * `Channel.confirm_select()` enables publisher confirms
         * `Channel.events['basic_ack'].append(my_callback)` adds a callback to
           be called when a message is confirmed. This callback is then called
           with the signature `(delivery_tag, multiple)`
 
 
-To do
-=====
+To do (goals for version 1.0.0)
+===============================
 
-* Add support for automatic heartbeats
-* Completely document all functions and create Sphinx docs
-* Asynchronous operation
-* Python 3.4 asyncio support
-* Automatic heartbeats as long as the amqpy `Connection` is alive
+* Completely thread-safe for all public methods
+* AMQP 1.0
+* Add support for automatic heartbeats in a separate thread
+* [Kombu](https://github.com/celery/kombu) compatibility
+* Publish on PyPi
 
+# Tests
+
+* Test for strict protocol compliance and behaviour
+* Test for thread safety, use PyTest monkey patching facilities to patch
+  `socket` to slow down reads and writes
+*
+
+# Documentation
+
+* Ensure all public methods and fields have consistent and complete docstrings
+* Create Sphinx documents, then publish on readthedocs
+
+# Low priority
+
+* Asynchronous operation, Python 3.4 asyncio support

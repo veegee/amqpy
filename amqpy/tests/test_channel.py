@@ -123,7 +123,7 @@ class TestChannel:
         qname, _, _ = ch.queue_declare()
 
         for multiplier in [100, 1000, 10000, 50000, 100000, 500000]:
-            msg = Message('funtest message' * multiplier, content_type='text/plain',
+            msg = Message('this is a test message' * multiplier, content_type='text/plain',
                           application_headers={'foo': 7, 'bar': 'baz'})
 
             ch.basic_publish(msg, routing_key=qname)
@@ -135,7 +135,6 @@ class TestChannel:
         ch.exchange_declare('funtest.fanout', 'fanout', auto_delete=True)
         msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
         ch.basic_publish(msg, 'funtest.fanout')
-
 
     def test_basic_return(self, ch):
         ch.exchange_declare('funtest.fanout', 'fanout', auto_delete=True)
@@ -156,8 +155,13 @@ class TestQueue:
     def test_queue_delete_nonexistent(self, ch):
         """Test to ensure that deleting a nonexistent queue raises `NotFound`
 
-        Note: starting with RabbitMQ 3.2 (?), queue.delete on a nonexistent queue does not raise a 404 NOT FOUND
-        channel exception. See https://www.rabbitmq.com/specification.html
+        Note: starting with RabbitMQ 3.2 (?), queue.delete is an idempotent assertion that the queue must not exist.
+
+            We have made exchange.delete into an idempotent assertion that the exchange must not exist, in the same way
+            that exchange.declare asserts that it must. See https://www.rabbitmq.com/specification.html
+
+        This means that the RabbitMQ server will not raise a 404 NOT FOUND channel exception when attempting to
+        delete a nonexistent queue.
         """
         server_props = get_server_props(ch.connection)
         if server_props[0] == 'RabbitMQ' and server_props[1] >= (3, 2, 0):
@@ -185,6 +189,25 @@ class TestQueue:
         ch.queue_bind(qname, 'amq.direct', routing_key=my_routing_key)
         ch.queue_unbind(qname, 'amq.direct', routing_key=my_routing_key)
 
+    def test_unbind_nonexistent(self, ch, rand_exch, rand_queue, rand_rk):
+        """Test to ensure that unbinding a nonexistent binding raises `NotFound`
+
+        Note: starting with RabbitMQ 3.2 (?), queue.delete is an idempotent assertion that the queue must not exist.
+
+            We have made exchange.delete into an idempotent assertion that the exchange must not exist, in the same way
+            that exchange.declare asserts that it must. See https://www.rabbitmq.com/specification.html
+
+        This means that the RabbitMQ server will not raise a 404 NOT FOUND channel exception when attempting to
+        delete a nonexistent queue.
+        """
+        server_props = get_server_props(ch.connection)
+
+        if server_props[0] == 'RabbitMQ' and server_props[1] >= (3, 2, 0):
+            ch.queue_unbind(rand_queue, rand_exch, rand_rk)
+        else:
+            with pytest.raises(NotFound):
+                ch.queue_unbind(rand_queue, rand_exch, rand_rk)
+
 
 class TestExchange:
     def test_exchange_declare_and_delete(self, ch):
@@ -197,35 +220,37 @@ class TestExchange:
             exch_name = 'test_exchange_{}'.format(uuid.uuid4())
             ch.exchange_declare(exch_name, 'direct', passive=True)
 
-    def test_exchange_delete_nonexistent_raises(self, ch):
+    def test_exchange_delete_nonexistent_raises(self, ch, rand_exch):
         """Test to ensure that deleting a nonexistent exchange raises `NotFound`
 
-        Note: starting with RabbitMQ 3.2 (?), exchange.delete on a nonexistent queue does not raise a 404 NOT FOUND
-        channel exception. See https://www.rabbitmq.com/specification.html
+        Note: starting with RabbitMQ 3.2 (?), exchange.delete is an idempotent assertion that the exchange must not
+        exist.
+
+             We have made queue.delete into an idempotent assertion that the queue must not exist, in the same way that
+             queue.declare asserts that it must. See https://www.rabbitmq.com/specification.html
+
+        This means that the RabbitMQ server will not raise a 404 NOT FOUND channel exception when attempting to
+        delete a nonexistent exchange.
         """
         server_props = get_server_props(ch.connection)
-        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
 
         if server_props[0] == 'RabbitMQ' and server_props[1] >= (3, 2, 0):
-            ch.queue_delete('bogus_queue_that_does_not_exist')
+            ch.exchange_delete(rand_exch)
         else:
             with pytest.raises(NotFound):
-                ch.exchange_delete(exch_name)
+                ch.exchange_delete(rand_exch)
 
     def test_exchange_delete_default(self, ch):
         with pytest.raises(AccessRefused):
             ch.exchange_delete('')
 
-    def test_exchange_delete_in_use(self, ch):
-        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
-        queue_name = 'test_queue_{}'.format(uuid.uuid4())
-        routing_key = 'test_routing_key'
-        ch.exchange_declare(exch_name, 'direct')
-        ch.queue_declare(queue_name)
-        ch.queue_bind(queue_name, exch_name, routing_key)
+    def test_exchange_delete_in_use(self, ch, rand_exch, rand_queue, rand_rk):
+        ch.exchange_declare(rand_exch, 'direct')
+        ch.queue_declare(rand_queue)
+        ch.queue_bind(rand_queue, rand_exch, rand_rk)
 
         with pytest.raises(PreconditionFailed):
-            ch.exchange_delete(exch_name, if_unused=True)
+            ch.exchange_delete(rand_exch, if_unused=True)
 
     def test_exchange_bind(self, ch):
         """Test exchange binding
