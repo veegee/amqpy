@@ -5,7 +5,7 @@ import struct
 import logging
 
 from .message import Message
-from .exceptions import AMQPError, UnexpectedFrame, Timeout, METHOD_NAME_MAP
+from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP
 from .serialization import AMQPReader
 from . import spec
 from .spec import FrameType, Frame, Method, method_t
@@ -76,11 +76,8 @@ class MethodReader:
     """Helper class to receive frames from the broker, combine them if necessary with content-headers and content-bodies
     into complete methods
 
-    Normally a method is represented as a tuple containing (channel, method_sig, args, content).
-
     In the case of a framing error, an :exc:`ConnectionError` is placed in the queue.
-
-    In the case of unexpected frames, a tuple made up of ``(channel, ChannelError)`` is placed in the queue.
+    In the case of unexpected frames, an :exc:`ChannelError` is placed in the queue.
     """
 
     def __init__(self, source):
@@ -113,9 +110,10 @@ class MethodReader:
             self.bytes_recv += 1
 
             if frame.frame_type not in (self.expected_types[frame.channel], 8):
+                #
                 msg = 'Received frame type {} while expecting type: {}' \
                     .format(frame.frame_type, self.expected_types[frame.channel])
-                self.queue.append((frame.channel, UnexpectedFrame(msg)))  # TODO: review type
+                self.queue.append(UnexpectedFrame(msg, channel_id=frame.channel))
             elif frame.frame_type == FrameType.METHOD:
                 self._process_method_frame(frame)
             elif frame.frame_type == FrameType.HEADER:
@@ -180,14 +178,16 @@ class MethodReader:
         :return: method
         :rtype: amqpy.spec.Method
         """
+        # fully read and process next method
         self._next_method()
-        m = self.queue.popleft()
-        if isinstance(m, Exception):
-            raise m
-        if isinstance(m, tuple) and isinstance(m[1], AMQPError):
-            raise m[1]
-        log.debug(' read: {}'.format(m.method_type, METHOD_NAME_MAP[m.method_type]))
-        return m
+        method = self.queue.popleft()
+
+        # `method` may sometimes be an `Exception`, raise it here
+        if isinstance(method, Exception):
+            raise method
+
+        log.debug('{:7} {} {}'.format('Read:', method.method_type, METHOD_NAME_MAP[method.method_type]))
+        return method
 
     def read_method(self, timeout=None):
         """Read method
@@ -239,7 +239,7 @@ class MethodWriter:
         :type channel: int
         :type method: amqpy.spec.Method
         """
-        log.debug('write: {}'.format(method.method_type, METHOD_NAME_MAP[method.method_type]))
+        log.debug('{:7} {} {}'.format('Write:', method.method_type, METHOD_NAME_MAP[method.method_type]))
         frames = Queue()
 
         # prepare method frame
