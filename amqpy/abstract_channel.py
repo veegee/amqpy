@@ -57,6 +57,7 @@ class AbstractChannel(metaclass=ABCMeta):
         :type allowed_methods: list or None
         :type callback: callable(AbstractChannel, Method)
         """
+        # TODO: implement callback parameter
         method = self._wait_method(allowed_methods)
         return self.handle_method(method)
 

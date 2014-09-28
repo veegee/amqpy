@@ -22,6 +22,7 @@ _CONTENT_METHODS = [
     spec.Basic.GetOk,
 ]
 
+# TODO: fix thread safety: threads must lock on a per-method basis or we will get unexpected frames
 
 class PartialMessage:
     """Helper class to build up a multi-frame `Method` with a complete `Message`
