@@ -3,6 +3,7 @@ import uuid
 import pytest
 
 from .. import ChannelError, Message, FrameSyntaxError, NotFound, AccessRefused, PreconditionFailed
+from .conftest import get_server_props
 
 
 class TestChannel:
@@ -155,10 +156,15 @@ class TestQueue:
     def test_queue_delete_nonexistent(self, ch):
         """Test to ensure that deleting a nonexistent queue raises `NotFound`
 
-        For now, the expected behaviour of RabbitMQ doesn't seem to be 100% complaint with the spec, and this method
-        simply returns 0.
+        Note: starting with RabbitMQ 3.2 (?), queue.delete on a nonexistent queue does not raise a 404 NOT FOUND
+        channel exception. See https://www.rabbitmq.com/specification.html
         """
-        assert ch.queue_delete('bogus_queue_that_does_not_exist') == 0
+        server_props = get_server_props(ch.connection)
+        if server_props[0] == 'RabbitMQ' and server_props[1] >= (3, 2, 0):
+            assert ch.queue_delete('bogus_queue_that_does_not_exist') == 0
+        else:
+            with pytest.raises(NotFound):
+                ch.queue_delete('bogus_queue_that_does_not_exist')
 
     def test_queue(self, ch):
         my_routing_key = 'funtest.test_queue'
@@ -194,11 +200,17 @@ class TestExchange:
     def test_exchange_delete_nonexistent_raises(self, ch):
         """Test to ensure that deleting a nonexistent exchange raises `NotFound`
 
-        For now, the expected behaviour of RabbitMQ doesn't seem to be 100% complaint with the spec, and this method
-        does not raise any exceptions.
+        Note: starting with RabbitMQ 3.2 (?), exchange.delete on a nonexistent queue does not raise a 404 NOT FOUND
+        channel exception. See https://www.rabbitmq.com/specification.html
         """
+        server_props = get_server_props(ch.connection)
         exch_name = 'test_exchange_{}'.format(uuid.uuid4())
-        ch.exchange_delete(exch_name)
+
+        if server_props[0] == 'RabbitMQ' and server_props[1] >= (3, 2, 0):
+            ch.queue_delete('bogus_queue_that_does_not_exist')
+        else:
+            with pytest.raises(NotFound):
+                ch.exchange_delete(exch_name)
 
     def test_exchange_delete_default(self, ch):
         with pytest.raises(AccessRefused):

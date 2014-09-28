@@ -113,7 +113,7 @@ class Connection(AbstractChannel):
 
         self._avail_channel_ids = array('H', range(self.channel_max, 0, -1))
 
-        # properties set in the Start method
+        # properties set in the start method, after a connection is established
         self.version_major = 0
         self.version_minor = 0
         self.server_properties = {}
