@@ -259,7 +259,7 @@ class Connection(AbstractChannel):
         self._x_close_ok()  # send a close-ok to the server, to confirm that we've acknowledged the close request
 
         method_type = method_t(class_id, method_id)
-        raise error_for_code(reply_code, reply_text, method_type, ConnectionError)
+        raise error_for_code(reply_code, reply_text, method_type, ConnectionError, self.channel_id)
 
     def _blocked(self, method):
         """RabbitMQ Extension

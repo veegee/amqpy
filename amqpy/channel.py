@@ -12,6 +12,7 @@ from . import spec
 from .spec import Method, method_t
 
 
+
 # TODO: finish cleaning up the documentation in this module
 # TODO: add :raise: and :return: directives in each docstring
 
@@ -131,7 +132,7 @@ class Channel(AbstractChannel):
         self._do_revive()
 
         method_type = method_t(class_id, method_id)
-        raise error_for_code(reply_code, reply_text, method_type, ChannelError)
+        raise error_for_code(reply_code, reply_text, method_type, ChannelError, self.channel_id)
 
     def _close_ok(self, method):
         """Confirm a channel close

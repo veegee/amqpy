@@ -190,25 +190,25 @@ ERROR_MAP = {
 }
 
 
-def error_for_code(code, text, method_type, default):
+def error_for_code(code, text, method_type, default, channel_id=None):
     """Get exception class associated with specified error code
 
-    :param code: AMQP reply code
-    :param text: localized reply text
+    :param int code: AMQP reply code
+    :param str text: localized reply text
     :param method_type: method type
     :param default: default exception class if error code cannot be matched with an exception class
-    :type code: int
-    :type text: str
+    :param channel_id: optional associated channel ID
     :type method_type: amqpy.spec.method_t
     :type default: Callable
+    :type channel_id: int or None
     :return: Exception object
     :rtype: Exception
     """
     try:
         exc = ERROR_MAP[code]
-        return exc(text, method_type, reply_code=code)
+        return exc(text, method_type, reply_code=code, channel_id=channel_id)
     except KeyError:
-        return default(text, method_type, reply_code=code)
+        return default(text, method_type, reply_code=code, channel_id=channel_id)
 
 
 METHOD_NAME_MAP = {
