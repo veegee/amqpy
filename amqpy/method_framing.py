@@ -128,10 +128,10 @@ class MethodReader:
     def _process_method_frame(self, frame):
         """Process method frame
         """
-        payload = frame.payload
         channel = frame.channel
-        method_type = method_t(*struct.unpack('>HH', payload[:4]))
-        args = AMQPReader(payload[4:])
+        # noinspection PyTypeChecker
+        method_type = method_t(*struct.unpack('>HH', frame.payload[:4]))
+        args = AMQPReader(frame.payload[4:])
 
         if method_type in _CONTENT_METHODS:
             # save what we've got so far and wait for the content-header
