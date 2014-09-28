@@ -222,8 +222,9 @@ class TestExchange:
 
     @pytest.mark.skipif(True, reason='The server seems to not raise a channel exception for some reason.')
     def test_exchange_delete_nonexistent_raises(self, ch):
+        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+
         with pytest.raises(NotFound):
-            exch_name = 'test_exchange_{}'.format(uuid.uuid4())
             ch.exchange_delete(exch_name)
 
     def test_exchange_delete_default(self, ch):
