@@ -3,7 +3,6 @@ import socket
 import ssl
 from abc import ABCMeta, abstractmethod
 from socket import SOL_TCP
-from struct import pack, unpack
 
 from .exceptions import UnexpectedFrame
 from .utils import get_errno
@@ -29,6 +28,7 @@ class AbstractTransport(metaclass=ABCMeta):
         :type connect_timeout: float or None
         """
         self.connected = True
+        self._read_buffer = bytes()
 
         self.sock = None
         last_err = None
@@ -156,7 +156,6 @@ class SSLTransport(AbstractTransport):
 
     def __init__(self, host, port, connect_timeout, ssl_opts):
         self.ssl_opts = ssl_opts
-        self._read_buffer = bytes()
         super().__init__(host, port, connect_timeout)
 
     def _setup_transport(self):
@@ -219,7 +218,6 @@ class TCPTransport(AbstractTransport):
     def _setup_transport(self):
         """Setup to write() directly to the socket, and do our own buffered reads
         """
-        self._read_buffer = bytes()
         self._quick_recv = self.sock.recv
 
     def read(self, n, initial=False, _errnos=(errno.EAGAIN, errno.EINTR)):
@@ -249,20 +247,20 @@ class TCPTransport(AbstractTransport):
         self.sock.sendall(s)
 
 
-def create_transport(host, port, connect_timeout, ssl):
+def create_transport(host, port, connect_timeout, ssl_opts=None):
     """Given a few parameters from the Connection constructor, select and create a subclass of AbstractTransport
 
-    If `ssl` is a dict, SSL will be used and `ssl` will be passed to :func:`ssl.wrap_socket()`. In all other cases,
-    SSL will not be used.
+    If `ssl_opts` is a dict, SSL will be used and `ssl_opts` will be passed to :func:`ssl.wrap_socket()`. In all other
+    cases, SSL will not be used.
 
     :param host: host
     :param connect_timeout: connect timeout
-    :param ssl: ssl options passed to :func:`ssl.wrap_socket()`
+    :param ssl_opts: ssl options passed to :func:`ssl.wrap_socket()`
     :type host: str
     :type connect_timeout: float or None
-    :type ssl: dict or None
+    :type ssl_opts: dict or None
     """
-    if isinstance(ssl, dict):
-        return SSLTransport(host, port, connect_timeout, ssl)
+    if isinstance(ssl_opts, dict):
+        return SSLTransport(host, port, connect_timeout, ssl_opts)
     else:
         return TCPTransport(host, port, connect_timeout)
