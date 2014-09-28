@@ -36,16 +36,18 @@ class Timeout(Exception):
 class AMQPError(Exception):
     code = 0
 
-    def __init__(self, reply_text=None, method_type=None, method_name=None, reply_code=None):
+    def __init__(self, reply_text=None, method_type=None, method_name=None, reply_code=None, channel_id=None):
         """
         :param reply_text: localized reply text
         :param method_type: method type
         :param method_name: method name
         :param reply_code: AMQP reply (exception) code
-        :type reply_text: str
-        :type method_type: amqpy.spec.method_t
-        :type method_name: str
-        :type reply_code: int
+        :param channel_id: associated channel ID, if any
+        :type reply_text: str or None
+        :type method_type: amqpy.spec.method_t or None
+        :type method_name: str or None
+        :type reply_code: int or None
+        :type channel_id: int or None
         """
         self.message = reply_text
         self.reply_code = reply_code or self.code
@@ -54,11 +56,12 @@ class AMQPError(Exception):
         self.method_name = method_name or ''
         if method_type and not self.method_name:
             self.method_name = METHOD_NAME_MAP.get(method_type, '')
-        super().__init__(self, reply_code, reply_text, method_type, self.method_name)
+        self.channel_id = channel_id
+        super().__init__(self, reply_code, reply_text, method_type, self.method_name, channel_id)
 
     def __str__(self):
         if self.method:
-            return '{0.method}: ({0.reply_code}) {0.reply_text}'.format(self)
+            return '{0.method} [ch: #{0.channel_id}]: ({0.reply_code}) {0.reply_text}'.format(self)
         return self.reply_text or '<AMQPError: unknown error>'
 
     @property
