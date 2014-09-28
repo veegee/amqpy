@@ -1,4 +1,5 @@
 debug*.py
+*.sh
 
 # local databases
 *.db
