@@ -27,6 +27,7 @@ Features
 * Draining events from multiple channels (`Connection.drain_events`)
 * Support for timeouts
 * Support for heartbeats (client must manually send heartbeats)
+* Thread-safe: all frame reads and writes acquire and release a lock
 * Supports RabbitMQ extensions:
     * Consumer Cancel Notifications
         * by default a cancel results in `ChannelError` being raised
@@ -45,10 +46,7 @@ Features
 To do
 =====
 
-* Rewrite `wait` and callback mechanism
 * Completely document all functions and create Sphinx docs
-
-* Thread safety (?)
 * Asynchronous operation
 * Python 3.4 asyncio support
 * Automatic heartbeats as long as the amqpy `Connection` is alive
