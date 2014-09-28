@@ -22,7 +22,6 @@ _CONTENT_METHODS = [
     spec.Basic.GetOk,
 ]
 
-# TODO: fix thread safety: threads must lock on a per-method basis or we will get unexpected frames
 
 class PartialMessage:
     """Helper class to build up a multi-frame `Method` with a complete `Message`
@@ -59,9 +58,10 @@ class PartialMessage:
         :param payload: frame payload of a `FrameType.BODY` frame
         :type payload: bytes
         """
-        self.body_parts.extend(payload)  # TODO: should we bother converting this to an immutable bytes object?
+        self.body_parts.extend(payload)
         if self.complete:
-            self.msg.body = bytes(self.body_parts)  # TODO: yes, to make tests pass, but reassess later
+            # TODO: should we bother converting this to an immutable bytes object just to make tests pass?
+            self.msg.body = bytes(self.body_parts)
 
     @property
     def complete(self):
@@ -111,7 +111,6 @@ class MethodReader:
             self.bytes_recv += 1
 
             if frame.frame_type not in (self.expected_types[frame.channel], 8):
-                #
                 msg = 'Received frame type {} while expecting type: {}' \
                     .format(frame.frame_type, self.expected_types[frame.channel])
                 self.queue.append(UnexpectedFrame(msg, channel_id=frame.channel))
