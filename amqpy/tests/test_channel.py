@@ -1,6 +1,8 @@
+import uuid
+
 import pytest
 
-from .. import ChannelError, Message, FrameSyntaxError
+from .. import ChannelError, Message, FrameSyntaxError, NotFound, AccessRefused, PreconditionFailed
 
 
 class TestChannel:
@@ -205,3 +207,37 @@ class TestChannel:
         ch.exchange_bind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
 
         ch.exchange_unbind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
+
+
+class TestExchange:
+    def test_exchange_declare_and_delete(self, ch):
+        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+        ch.exchange_declare(exch_name, 'direct')
+        ch.exchange_delete(exch_name)
+
+    def test_exchange_declare_passive_raises(self, ch):
+        with pytest.raises(NotFound):
+            exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+            ch.exchange_declare(exch_name, 'direct', passive=True)
+
+    @pytest.mark.skipif(True, reason='The server seems to not raise a channel exception for some reason.')
+    def test_exchange_delete_nonexistent_raises(self, ch):
+        with pytest.raises(NotFound):
+            exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+            ch.exchange_delete(exch_name)
+
+    def test_exchange_delete_default(self, ch):
+        with pytest.raises(AccessRefused):
+            ch.exchange_delete('')
+
+    def test_exchange_delete_in_use(self, ch):
+        with pytest.raises(PreconditionFailed):
+            exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+            queue_name = 'test_queue_{}'.format(uuid.uuid4())
+            routing_key = 'test_routing_key'
+            ch.exchange_declare(exch_name, 'direct')
+            ch.queue_declare(queue_name)
+            ch.queue_bind(queue_name, exch_name, routing_key)
+            ch.exchange_delete(exch_name, if_unused=True)
+
+

@@ -13,6 +13,7 @@ from .spec import Method, method_t
 
 
 # TODO: finish cleaning up the documentation in this module
+# TODO: add :raise: and :return: directives in each docstring
 
 __all__ = ['Channel']
 
@@ -219,8 +220,6 @@ class Channel(AbstractChannel):
 
         * This method creates an exchange if it does not already exist, and if the exchange exists, verifies that it
           is of the correct and expected class.
-        * If `passive` is enabled, and the exchange does not exist, the server must raise a channel exception with
-          reply code 404 (not found).
         * The server must ignore the `durable` field if the exchange already exists.
         * The server must ignore the `auto_delete` field if the exchange already exists.
         * If `nowait` is enabled and the server could not complete the method, it will raise a channel or connection
@@ -234,6 +233,8 @@ class Channel(AbstractChannel):
         :param bool auto_delete: auto-delete exchange when all queues have finished using it
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
         :param dict arguments: exchange declare arguments
+        :raise NotFound: if `passive` is enabled and the exchange does not exist
+        :return: None
         """
         arguments = arguments or {}
         args = AMQPWriter()
@@ -271,6 +272,9 @@ class Channel(AbstractChannel):
         :param str exch_name: exchange name
         :param bool if_unused: delete only if unused (has no queue bindings)
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :raise NotFound: if exchange with `exch_name` does not exist
+        :raise PreconditionFailed: if attempting to delete a queue with bindings and `if_unused` is set
+        :return: None
         """
         args = AMQPWriter()
         args.write_short(0)
@@ -600,61 +604,24 @@ class Channel(AbstractChannel):
         args = method.args
         return queue_declare_ok_t(args.read_shortstr(), args.read_long(), args.read_long())
 
-    def queue_delete(self, queue='', if_unused=False, if_empty=False, nowait=False):
+    def queue_delete(self, queue_name='', if_unused=False, if_empty=False, nowait=False):
         """Delete a queue
 
-        This method deletes a queue.  When a queue is deleted any pending messages are sent to a dead-letter queue if
+        This method deletes a queue. When a queue is deleted any pending messages are sent to a dead-letter queue if
         this is defined in the server configuration, and all consumers on the queue are cancelled.
 
-        RULE:
-
-            The server SHOULD use a dead-letter queue to hold messages that were pending on a deleted queue, and MAY
-            provide facilities for a system administrator to move these messages back to an active queue.
-
-        PARAMETERS:
-
-            queue: shortstr
-
-                Specifies the name of the queue to delete. If the queue name is empty, refers to the current queue for
-                the channel, which is the last declared queue.
-
-                RULE:
-
-                    If the client did not previously declare a queue, and the queue name in this method is empty, the
-                    server MUST raise a connection exception with reply code 530 (not allowed).
-
-                RULE:
-
-                    The queue must exist. Attempting to delete a non- existing queue causes a channel exception.
-
-            if_unused: boolean
-
-                delete only if unused
-
-                If set, the server will only delete the queue if it has no consumers. If the queue has consumers the
-                server does does not delete it but raises a channel exception instead.
-
-                RULE:
-
-                    The server MUST respect the if-unused flag when deleting a queue.
-
-            if_empty: boolean
-
-                delete only if empty
-
-                If set, the server will only delete the queue if it has no messages. If the queue is not empty the
-                server raises a channel exception.
-
-            nowait: boolean
-
-                do not send a reply method
-
-                If set, the server will not respond to the method. The client should not wait for a reply method.  If
-                the server could not complete the method it will raise a channel or connection exception.
+        :param str queue_name: name of queue to delete, empty string refers to last declared queue on this channel
+        :param bool if_unused: delete only if unused (has no consumers); raise a channel exception otherwise
+        :param bool if_empty: delete only if empty; raise a channel exception otherwise
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :raise NotFound: if `queue_name` does not exist
+        :raise PreconditionFailed: if `if_unused` or `if_empty` conditions are not met
+        :return: number of messages deleted
+        :rtype: int
         """
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(queue)
+        args.write_shortstr(queue_name)
         args.write_bit(if_unused)
         args.write_bit(if_empty)
         args.write_bit(nowait)
@@ -1122,7 +1089,7 @@ class Channel(AbstractChannel):
         available for the client.
         """
         args = method.args
-        cluster_id = args.read_shortstr()
+        args.read_shortstr()
 
     def _basic_get_ok(self, method):
         """Provide client with a message
