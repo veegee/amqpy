@@ -97,9 +97,6 @@ class TestChannel:
         assert isinstance(msg2.body, bytes)
         assert msg2.body == 'hello w\xf6rld'.encode('latin_1')
 
-    def test_queue_delete_empty(self, ch):
-        assert ch.queue_delete('bogus_queue_that_does_not_exist') == 0
-
     def test_survives_channel_error(self, ch):
         with pytest.raises(ChannelError) as execinfo:
             ch.queue_declare('krjqheewq_bogus', passive=True)
@@ -138,6 +135,31 @@ class TestChannel:
         msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
         ch.basic_publish(msg, 'funtest.fanout')
 
+
+    def test_basic_return(self, ch):
+        ch.exchange_declare('funtest.fanout', 'fanout', auto_delete=True)
+
+        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+
+        ch.basic_publish(msg, 'funtest.fanout')
+        ch.basic_publish(msg, 'funtest.fanout', mandatory=True)
+        ch.basic_publish(msg, 'funtest.fanout', mandatory=True)
+        ch.basic_publish(msg, 'funtest.fanout', mandatory=True)
+        ch.close()
+
+        # 3 of the 4 messages we sent should have been returned
+        assert ch.returned_messages.qsize() == 3
+
+
+class TestQueue:
+    def test_queue_delete_nonexistent(self, ch):
+        """Test to ensure that deleting a nonexistent queue raises `NotFound`
+
+        For now, the expected behaviour of RabbitMQ doesn't seem to be 100% complaint with the spec, and this method
+        simply returns 0.
+        """
+        assert ch.queue_delete('bogus_queue_that_does_not_exist') == 0
+
     def test_queue(self, ch):
         my_routing_key = 'funtest.test_queue'
         msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
@@ -157,19 +179,41 @@ class TestChannel:
         ch.queue_bind(qname, 'amq.direct', routing_key=my_routing_key)
         ch.queue_unbind(qname, 'amq.direct', routing_key=my_routing_key)
 
-    def test_basic_return(self, ch):
-        ch.exchange_declare('funtest.fanout', 'fanout', auto_delete=True)
 
-        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+class TestExchange:
+    def test_exchange_declare_and_delete(self, ch):
+        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+        ch.exchange_declare(exch_name, 'direct')
+        ch.exchange_delete(exch_name)
 
-        ch.basic_publish(msg, 'funtest.fanout')
-        ch.basic_publish(msg, 'funtest.fanout', mandatory=True)
-        ch.basic_publish(msg, 'funtest.fanout', mandatory=True)
-        ch.basic_publish(msg, 'funtest.fanout', mandatory=True)
-        ch.close()
+    def test_exchange_declare_passive_raises(self, ch):
+        with pytest.raises(NotFound):
+            exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+            ch.exchange_declare(exch_name, 'direct', passive=True)
 
-        # 3 of the 4 messages we sent should have been returned
-        assert ch.returned_messages.qsize() == 3
+    def test_exchange_delete_nonexistent_raises(self, ch):
+        """Test to ensure that deleting a nonexistent exchange raises `NotFound`
+
+        For now, the expected behaviour of RabbitMQ doesn't seem to be 100% complaint with the spec, and this method
+        does not raise any exceptions.
+        """
+        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+        ch.exchange_delete(exch_name)
+
+    def test_exchange_delete_default(self, ch):
+        with pytest.raises(AccessRefused):
+            ch.exchange_delete('')
+
+    def test_exchange_delete_in_use(self, ch):
+        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+        queue_name = 'test_queue_{}'.format(uuid.uuid4())
+        routing_key = 'test_routing_key'
+        ch.exchange_declare(exch_name, 'direct')
+        ch.queue_declare(queue_name)
+        ch.queue_bind(queue_name, exch_name, routing_key)
+
+        with pytest.raises(PreconditionFailed):
+            ch.exchange_delete(exch_name, if_unused=True)
 
     def test_exchange_bind(self, ch):
         """Test exchange binding
@@ -207,39 +251,3 @@ class TestChannel:
         ch.exchange_bind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
 
         ch.exchange_unbind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
-
-
-class TestExchange:
-    def test_exchange_declare_and_delete(self, ch):
-        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
-        ch.exchange_declare(exch_name, 'direct')
-        ch.exchange_delete(exch_name)
-
-    def test_exchange_declare_passive_raises(self, ch):
-        with pytest.raises(NotFound):
-            exch_name = 'test_exchange_{}'.format(uuid.uuid4())
-            ch.exchange_declare(exch_name, 'direct', passive=True)
-
-    @pytest.mark.skipif(True, reason='The server seems to not raise a channel exception for some reason.')
-    def test_exchange_delete_nonexistent_raises(self, ch):
-        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
-
-        with pytest.raises(NotFound):
-            ch.exchange_delete(exch_name)
-
-    def test_exchange_delete_default(self, ch):
-        with pytest.raises(AccessRefused):
-            ch.exchange_delete('')
-
-    def test_exchange_delete_in_use(self, ch):
-        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
-        queue_name = 'test_queue_{}'.format(uuid.uuid4())
-        routing_key = 'test_routing_key'
-        ch.exchange_declare(exch_name, 'direct')
-        ch.queue_declare(queue_name)
-        ch.queue_bind(queue_name, exch_name, routing_key)
-
-        with pytest.raises(PreconditionFailed):
-            ch.exchange_delete(exch_name, if_unused=True)
-
-
