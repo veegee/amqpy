@@ -2,6 +2,7 @@ import socket
 from collections import defaultdict, deque
 from queue import Queue
 import struct
+import logging
 
 from .message import Message
 from .exceptions import AMQPError, UnexpectedFrame, Timeout, METHOD_NAME_MAP
@@ -9,6 +10,8 @@ from .serialization import AMQPReader
 from . import spec
 from .spec import FrameType, Frame, Method, method_t
 
+
+log = logging.getLogger('amqpy')
 
 __all__ = ['MethodReader']
 
@@ -183,7 +186,7 @@ class MethodReader:
             raise m
         if isinstance(m, tuple) and isinstance(m[1], AMQPError):
             raise m[1]
-        print(' read:', m.method_type, METHOD_NAME_MAP[m.method_type])
+        log.debug(' read: {}'.format(m.method_type, METHOD_NAME_MAP[m.method_type]))
         return m
 
     def read_method(self, timeout=None):
@@ -236,7 +239,7 @@ class MethodWriter:
         :type channel: int
         :type method: amqpy.spec.Method
         """
-        print('write:', method.method_type, METHOD_NAME_MAP[method.method_type])
+        log.debug('write: {}'.format(method.method_type, METHOD_NAME_MAP[method.method_type]))
         frames = Queue()
 
         # prepare method frame

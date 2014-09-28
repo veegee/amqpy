@@ -3,16 +3,17 @@ import socket
 import ssl
 from abc import ABCMeta, abstractmethod
 from socket import SOL_TCP
-
-from .exceptions import UnexpectedFrame
-from .utils import get_errno
-from .spec import FrameType, Frame
 from threading import Lock
 from functools import wraps
 import time
 import logging
 
-log = logging.getLogger('amqpy_transport')
+from .exceptions import UnexpectedFrame
+from .utils import get_errno
+from .spec import FrameType, Frame
+
+
+log = logging.getLogger('amqpy')
 
 _UNAVAIL = errno.EAGAIN, errno.EINTR, errno.ENOENT
 
