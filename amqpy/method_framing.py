@@ -1,8 +1,11 @@
 import socket
+from threading import Lock
 from collections import defaultdict, deque
 from queue import Queue
 import struct
 import logging
+
+from .concurrency import synchronized
 
 from .message import Message
 from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP
@@ -74,8 +77,9 @@ class PartialMessage:
 
 
 class MethodReader:
-    """Helper class to receive frames from the broker, combine them if necessary with content-headers and content-bodies
-    into complete methods
+    """Read frames from the server and construct complete methods
+
+    There should be one `MethodReader` instance per connection.
 
     In the case of a framing error, an :exc:`ConnectionError` is placed in the queue.
     In the case of unexpected frames, an :exc:`ChannelError` is placed in the queue.
@@ -88,32 +92,40 @@ class MethodReader:
         """
         self.source = source
         self.sock = source.sock
-        self.queue = deque()  # deque[Method or Exception]
-        self.running = False
+
+        # deque[Method or Exception]
+        self.method_queue = deque()
+        # dict[channel_id int: PartialMessage]
         self.partial_messages = {}
-        self.heartbeats = 0
-        self.expected_types = defaultdict(lambda: FrameType.METHOD)  # for each channel, which type is expected next
-        self.bytes_recv = 0  # not an actual byte count, just incremented whenever we receive
+        # dict[channel_id int: frame_type int]
+        self.expected_types = defaultdict(lambda: FrameType.METHOD)  # next expected frame type for each channel
+
+        self.heartbeats = 0  # total number of heartbeats received
+        self.frames_recv = 0  # total number of frames received
+
+        self._method_read_lock = Lock()
 
     def _next_method(self):
         """Read the next method from the source and process it
 
-        Once one complete method has been assembled, it is placed in the internal queue.
+        Once one complete method has been assembled, it is placed in the internal queue. This method will block until a
+        complete `Method` has been constructed, which may consist of one or more frames.
         """
-        while not self.queue:
+        while not self.method_queue:
+            # keep reading frames until we have at least one complete method in the queue
             try:
                 frame = self.source.read_frame()
             except Exception as exc:
                 # connection was closed? framing error?
-                self.queue.append(exc)
+                self.method_queue.append(exc)
                 break
 
-            self.bytes_recv += 1
+            self.frames_recv += 1
 
             if frame.frame_type not in (self.expected_types[frame.channel], 8):
                 msg = 'Received frame type {} while expecting type: {}' \
                     .format(frame.frame_type, self.expected_types[frame.channel])
-                self.queue.append(UnexpectedFrame(msg, channel_id=frame.channel))
+                self.method_queue.append(UnexpectedFrame(msg, channel_id=frame.channel))
             elif frame.frame_type == FrameType.METHOD:
                 self._process_method_frame(frame)
             elif frame.frame_type == FrameType.HEADER:
@@ -141,7 +153,7 @@ class MethodReader:
         else:
             # this is a complete method
             method = Method(method_type, args, None, channel)
-            self.queue.append(method)
+            self.method_queue.append(method)
 
     def _process_content_header(self, frame):
         """Process Content Header frames
@@ -152,9 +164,9 @@ class MethodReader:
         if partial.complete:
             # a bodyless message, we're done
             method = Method(partial.method_type, partial.args, partial.msg, frame.channel)
-            self.queue.append(method)
+            self.method_queue.append(method)
             self.partial_messages.pop(frame.channel, None)
-            self.expected_types[frame.channel] = FrameType.METHOD  # set expected frame type back to default
+            del self.expected_types[frame.channel]  # reset expected frame type for this channel
         else:
             # next expected frame type is FrameType.BODY
             self.expected_types[frame.channel] = spec.FrameType.BODY
@@ -168,10 +180,11 @@ class MethodReader:
         if partial.complete:
             # message is complete, append it to the queue
             method = Method(partial.method_type, partial.args, partial.msg, frame.channel)
-            self.queue.append(method)
+            self.method_queue.append(method)
             self.partial_messages.pop(frame.channel, None)
-            self.expected_types[frame.channel] = FrameType.METHOD  # set expected frame type back to default
+            del self.expected_types[frame.channel]  # reset expected frame type for this channel
 
+    @synchronized('_method_read_lock')
     def _read_method(self):
         """Read a method from the peer
 
@@ -180,7 +193,7 @@ class MethodReader:
         """
         # fully read and process next method
         self._next_method()
-        method = self.queue.popleft()
+        method = self.method_queue.popleft()
 
         # `method` may sometimes be an `Exception`, raise it here
         if isinstance(method, Exception):
@@ -215,7 +228,11 @@ class MethodReader:
 
 
 class MethodWriter:
-    """Convert AMQP methods into AMQP frames and send them out to the peer
+    """Write methods to the server by breaking them up and constructing multiple frames
+
+    There should be one `MethodWriter` instance per connection, and all channels share that instance. This class is
+    thread-safe. Any thread may call :meth:`write_method()` as long as no more than one thread is writing to any
+    given `channel_id` at a time.
     """
 
     def __init__(self, dest, frame_max):
@@ -227,34 +244,38 @@ class MethodWriter:
         """
         self.dest = dest
         self.frame_max = frame_max
-        self.methods_sent = 0  # keep track of number of methods sent
+        self.methods_sent = 0  # total number of methods sent
 
-    def write_method(self, channel, method):
-        """Write method
+    def write_method(self, channel_id, method):
+        """Write method to connection, destined for the specified `channel_id`
 
         This implementation uses a queue internally to prepare all frames before writing in order to detect issues.
 
-        :param channel: channel
+        This method is thread safe only if the `channel_id` parameter is unique across concurrent invocations. The AMQP
+        protocol allows interleaving frames destined for different channels, but not within the same channel. This means
+        no more than one thread may safely operate on any given channel.
+
+        :param channel_id: channel
         :param method: method to write
-        :type channel: int
-        :type method: amqpy.spec.Method
+        :type channel_id: int
+        :type method: Method
         """
         log.debug('{:7} {} {}'.format('Write:', method.method_type, METHOD_NAME_MAP[method.method_type]))
         frames = Queue()
 
-        # prepare method frame
-        frame = Frame(FrameType.METHOD, channel, method.pack_method())
+        # construct a method frame
+        frame = Frame(FrameType.METHOD, channel_id, method.pack_method())
         frames.put(frame)
 
         if method.content:
-            # prepare header frame
-            frame = Frame(FrameType.HEADER, channel, method.pack_header())
+            # construct a header frame
+            frame = Frame(FrameType.HEADER, channel_id, method.pack_header())
             frames.put(frame)
 
-            # prepare body frame(s)
+            # construct one or more body frames, which contain the body of the `Message`
             chunk_size = self.frame_max - 8
             for payload in method.pack_body(chunk_size):
-                frame = Frame(FrameType.BODY, channel, payload)
+                frame = Frame(FrameType.BODY, channel_id, payload)
                 frames.put(frame)
 
         while not frames.empty():

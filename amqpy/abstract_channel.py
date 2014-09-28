@@ -16,14 +16,15 @@ class AbstractChannel(metaclass=ABCMeta):
     The subclasses must have a _METHOD_MAP class variable, mapping between AMQP method signatures and Python methods.
     """
 
-    # : Placeholder, implementations must override this
+    #: placeholder, implementations must override this
     METHOD_MAP = {}
 
     def __init__(self, connection, channel_id):
         self.connection = connection
         self.channel_id = channel_id
         connection.channels[channel_id] = self
-        self.method_queue = []  # list[Method] higher level queue for methods
+        # list[Method]
+        self.method_queue = []  # queue of incoming methods for this channel
         self.auto_decode = False
 
     @abstractmethod
@@ -63,6 +64,8 @@ class AbstractChannel(metaclass=ABCMeta):
 
     def _wait_method(self, allowed_methods):
         """Wait for a method from the server destined for the current channel
+
+        This method is designed to be called from a channel instance.
 
         :return: method
         :rtype: Method
@@ -112,6 +115,7 @@ class AbstractChannel(metaclass=ABCMeta):
         """Wait for an event on multiple channels
 
         It only makes sense for the `Connection` instance to call this method (as opposed to `Channel` instances).
+        This method gets called by :meth:`Connection.drain_events()`.
 
         :param channels: dict of channels to watch
         :param allowed_methods: list of allowed methods
@@ -133,7 +137,7 @@ class AbstractChannel(metaclass=ABCMeta):
                     channel.method_queue.remove(qm)
                     return ch_id, qm
 
-        # nothing queued, need to wait for a method from the server
+        # nothing queued for any channel, need to wait for a method from the server
         while True:
             method = self.connection.method_reader.read_method(timeout)
             m_type = method.method_type

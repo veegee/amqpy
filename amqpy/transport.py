@@ -34,6 +34,9 @@ class AbstractTransport(metaclass=ABCMeta):
         """
         self.connected = True
         self._read_buffer = bytes()
+
+        # the purpose of the frame lock is to allow no more than one thread to read/write a frame to the connection
+        # at any time
         self._frame_lock = Lock()
 
         self.sock = None
@@ -114,6 +117,9 @@ class AbstractTransport(metaclass=ABCMeta):
     def read_frame(self):
         """Read frame from connection
 
+        Note that the frame may be destined for any channel. It is permitted to interleave frames from different
+        channels.
+
         :return: frame
         :rtype: amqpy.spec.Frame
         """
@@ -144,7 +150,11 @@ class AbstractTransport(metaclass=ABCMeta):
 
     @synchronized('_frame_lock')
     def write_frame(self, frame):
-        """
+        """Write frame to connection
+
+        Note that the frame may be destined for any channel. It is permitted to interleave frames from different
+        channels.
+
         :param frame: frame
         :type frame: amqpy.spec.Frame
         """
