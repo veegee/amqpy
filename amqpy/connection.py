@@ -3,6 +3,7 @@
 import logging
 import socket
 from array import array
+import pprint
 
 from .method_framing import MethodReader, MethodWriter
 from .serialization import AMQPWriter
@@ -386,10 +387,12 @@ class Connection(AbstractChannel):
         self.mechanisms = args.read_longstr().split(' ')
         self.locales = args.read_longstr().split(' ')
 
-        debug_msg = 'Start from server, version: {}.{}, properties: {}, mechanisms: {}, locales: {}'.strip()
-        log.debug(
-            debug_msg.format(self.version_major, self.version_minor, self.server_properties, self.mechanisms,
-                             self.locales))
+        properties = pprint.pformat(self.server_properties)
+        log.debug('Start from server')
+        log.debug('Version: {}.{}'.format(self.version_major, self.version_minor))
+        log.debug('Server properties:\n{}'.format(properties))
+        log.debug('Security mechanisms: {}'.format(self.mechanisms))
+        log.debug('Locales: {}'.format(self.locales))
 
     def _x_start_ok(self, client_properties, mechanism, response, locale):
         """Select security mechanism and locale
