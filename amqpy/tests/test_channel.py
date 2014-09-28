@@ -231,13 +231,14 @@ class TestExchange:
             ch.exchange_delete('')
 
     def test_exchange_delete_in_use(self, ch):
+        exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+        queue_name = 'test_queue_{}'.format(uuid.uuid4())
+        routing_key = 'test_routing_key'
+        ch.exchange_declare(exch_name, 'direct')
+        ch.queue_declare(queue_name)
+        ch.queue_bind(queue_name, exch_name, routing_key)
+
         with pytest.raises(PreconditionFailed):
-            exch_name = 'test_exchange_{}'.format(uuid.uuid4())
-            queue_name = 'test_queue_{}'.format(uuid.uuid4())
-            routing_key = 'test_routing_key'
-            ch.exchange_declare(exch_name, 'direct')
-            ch.queue_declare(queue_name)
-            ch.queue_bind(queue_name, exch_name, routing_key)
             ch.exchange_delete(exch_name, if_unused=True)
 
 
