@@ -140,6 +140,8 @@ class Connection(AbstractChannel):
 
         :param channel_id: channel ID number
         :type channel_id: int
+        :return: Channel
+        :rtype: amqpy.channel.Channel
         """
         return self.channels.get(channel_id, Channel(self, channel_id))
 

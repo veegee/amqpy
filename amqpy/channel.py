@@ -225,7 +225,7 @@ class Channel(AbstractChannel):
         log.debug('Channel open')
 
     @synchronized('lock')
-    def exchange_declare(self, exch_name, exch_type, passive=False, durable=False, auto_delete=False, nowait=False,
+    def exchange_declare(self, exch_name, exch_type, passive=False, durable=False, auto_delete=True, nowait=False,
                          arguments=None):
         """Declare exchange, create if needed
 
@@ -459,124 +459,39 @@ class Channel(AbstractChannel):
         pass
 
     @synchronized('lock')
-    def queue_declare(self, queue='', passive=False, durable=False, exclusive=False, auto_delete=False, nowait=False,
+    def queue_declare(self, queue='', passive=False, durable=False, exclusive=False, auto_delete=True, nowait=False,
                       arguments=None):
         """Declare queue, create if needed
 
-        This method creates or checks a queue.  When creating a new queue the client can specify various properties that
-        control the durability of the queue and its contents, and the level of sharing for the queue.
+        This method creates or checks a queue. When creating a new queue the client can specify various properties that
+        control the durability of the queue and its contents, and the level of sharing for the queue. A tuple
+        containing the queue name, message count, and consumer count is returned, which is essential for declaring
+        automatically named queues.
 
-        RULE:
+        * If `passive` is specified, the server state is not modified (a queue will not be declared), and the server
+          only checks if the specified queue exists and returns its properties. If the queue does not exist,
+          the server must raise a 404 NOT FOUND channel exception.
+        * The server must create a default binding for a newly-created queue to the default exchange, which is an
+          exchange of type 'direct'.
+        * Queue names starting with 'amq.' are reserved for use by the server. If an attempt is made to declare a
+          queue with such a name, and the `passive` flag is disabled, the server must raise a 403 ACCESS REFUSED
+          connection exception.
+        * The server must raise a 405 RESOURCE LOCKED channel exception if an attempt is made to access a queue declared
+          as exclusive by another open connection.
+        * The server must ignore the `auto_delete` flag if the queue already exists.
 
-            The server MUST create a default binding for a newly- created queue to the default exchange, which is an
-            exchange of type 'direct'.
-
-        RULE:
-
-            The server SHOULD support a minimum of 256 queues per virtual host and ideally, impose no limit except as
-            defined by available resources.
-
-        PARAMETERS:
-
-            queue: shortstr
-
-                RULE:
-
-                    The queue name MAY be empty, in which case the server MUST create a new queue with a unique
-                    generated name and return this to the client in the Declare-Ok method.
-
-                RULE:
-
-                    Queue names starting with "amq." are reserved for predeclared and standardised server queues.  If
-                    the queue name starts with "amq." and the passive option is False, the server MUST raise a
-                    connection exception with reply code 403 (access refused).
-
-            passive: boolean
-
-                do not create queue
-
-                If set, the server will not create the queue.  The client can use this to check whether a queue exists
-                without modifying the server state.
-
-                RULE:
-
-                    If set, and the queue does not already exist, the server MUST respond with a reply code 404 (not
-                    found) and raise a channel exception.
-
-            durable: boolean
-
-                request a durable queue
-
-                If set when creating a new queue, the queue will be marked as durable.  Durable queues remain active
-                when a server restarts. Non-durable queues (transient queues) are purged if/when a server restarts.
-                Note that durable queues do not necessarily hold persistent messages, although it does not make sense to
-                send persistent messages to a transient queue.
-
-                RULE:
-
-                    The server MUST recreate the durable queue after a restart.
-
-                RULE:
-
-                    The server MUST support both durable and transient queues.
-
-                RULE:
-
-                    The server MUST ignore the durable field if the queue already exists.
-
-            exclusive: boolean
-
-                request an exclusive queue
-
-                Exclusive queues may only be consumed from by the current connection. Setting the 'exclusive' flag
-                always implies 'auto-delete'.
-
-                RULE:
-
-                    The server MUST support both exclusive (private) and non-exclusive (shared) queues.
-
-                RULE:
-
-                    The server MUST raise a channel exception if 'exclusive' is specified and the queue already exists
-                    and is owned by a different connection.
-
-            auto_delete: boolean
-
-                auto-delete queue when unused
-
-                If set, the queue is deleted when all consumers have finished using it. Last consumer can be cancelled
-                either explicitly or because its channel is closed. If there was no consumer ever on the queue, it won't
-                be deleted.
-
-                RULE:
-
-                    The server SHOULD allow for a reasonable delay between the point when it determines that a queue is
-                    not being used (or no longer used), and the point when it deletes the queue.  At the least it must
-                    allow a client to create a queue and then create a consumer to read from it, with a small but
-                    non-zero delay between these two actions.  The server should equally allow for clients that may be
-                    disconnected prematurely, and wish to re- consume from the same queue without losing messages.  We
-                    would recommend a configurable timeout, with a suitable default value being one minute.
-
-                RULE:
-
-                    The server MUST ignore the auto-delete field if the queue already exists.
-
-            nowait: boolean
-
-                do not send a reply method
-
-                If set, the server will not respond to the method. The client should not wait for a reply method.  If
-                the server could not complete the method it will raise a channel or connection exception.
-
-            arguments: table
-
-                arguments for declaration
-
-                A set of arguments for the declaration. The syntax and semantics of these arguments depends on the
-                server implementation.  This field is ignored if passive is True.
-
-        Returns a tuple containing 3 items: the name of the queue (essential for automatically-named queues) message
-        count consumer count
+        :param str queue: queue name; leave blank to let the server generate a name automatically
+        :param bool passive: do not create queue; client can use this to check whether a queue exists
+        :param bool durable: mark as durable (remain active after server restarts)
+        :param bool exclusive: mark as exclusive (can only be consumed from by this connection); implies `auto_delete`
+        :param bool auto_delete: auto-delete queue when all consumers have finished using it
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param dict arguments: exchange declare arguments
+        :raise NotFound: if `passive` is enabled and the queue does not exist
+        :raise AccessRefused: if an attempt is made to declare a queue with a reserved name
+        :raise ResourceLocked: if an attempt is made to access an exclusive queue declared by another open connection
+        :return: tuple(queue_name, message_count, consumer_count)
+        :rtype: tuple(str, int, int)
         """
         arguments = {} if arguments is None else arguments
         args = AMQPWriter()
@@ -1018,33 +933,14 @@ class Channel(AbstractChannel):
 
     @synchronized('lock')
     def basic_get(self, queue='', no_ack=False):
-        """Direct access to a queue
+        """Directly get a message from the `queue`
 
-        This method provides a direct access to the messages in a queue using a synchronous dialogue that is designed
-        for specific types of application where synchronous functionality is more important than performance.
+        This method is non-blocking. If no messages are available on the queue, `None` is returned.
 
-        PARAMETERS:
-
-            queue: shortstr
-
-                Specifies the name of the queue to consume from.  If the queue name is null, refers to the current queue
-                for the channel, which is the last declared queue.
-
-                RULE:
-
-                    If the client did not previously declare a queue, and the queue name in this method is empty, the
-                    server MUST raise a connection exception with reply code 530 (not allowed).
-
-            no_ack: boolean
-
-                no acknowledgement needed
-
-                If this field is set the server does not expect acknowledgments for messages.  That is, when a message
-                is delivered to the client the server automatically and silently acknowledges it on behalf of the
-                client.  This functionality increases performance but at the cost of reliability.  Messages can get lost
-                if a client dies before it can deliver them to the application.
-
-            Non-blocking, returns a message object, or None.
+        :param str queue: queue name; leave blank to refer to last declared queue for the channel
+        :param bool no_ack: if enabled, the server automatically acknowledges the message
+        :return: message, or None if no messages are available on the queue
+        :rtype: amqpy.message.Message or None
         """
         args = AMQPWriter()
         args.write_short(0)
@@ -1148,14 +1044,11 @@ class Channel(AbstractChannel):
         exchange configuration and distributed to any active consumers when the transaction, if any, is committed.
 
         :param msg: message
-        :param exchange: exchange name, empty string means default exchange
-        :param routing_key: routing key
-        :param mandatory: True: deliver to at least one queue or return the message; False: drop the unroutable message
-        :param immediate: request immediate delivery
+        :param str exchange: exchange name, empty string means default exchange
+        :param str routing_key: routing key
+        :param bool mandatory: True: deliver to at least one queue, or return it; False: drop the unroutable message
+        :param bool immediate: request immediate delivery
         :type msg: amqpy.Message
-        :type exchange: str
-        :type mandatory: bool
-        :type immediate: bool
         """
         if self.publisher_ack_enabled:
             raise Exception('Publisher confirms are enabled, please use `basic_publish_confirm()` instead')
