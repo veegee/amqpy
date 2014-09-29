@@ -27,7 +27,7 @@ class GenericContent:
         return self.properties == other.properties
 
     def load_properties(self, raw_bytes):
-        """Load raw bytes into `self.properites`
+        """Load raw bytes into `self.properties`
 
         The `raw_bytes` are the payload of a `FrameType.HEADER` frame, starting at a byte-offset of 12.
         """

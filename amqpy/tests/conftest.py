@@ -20,6 +20,8 @@ def get_server_props(cxn):
     product = cxn.server_properties['product']
     version = cxn.server_properties['version'].split('.')
     version = tuple([int(i) for i in version])
+    x = cxn.server_capabilities
+    assert x
 
     return product, version
 

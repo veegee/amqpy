@@ -60,9 +60,6 @@ class TestConnection:
         ch = conn.channel()
         assert 1 in conn.channels
 
-        # remove all the references
-        conn = None
-
         del ch
 
         gc.collect()
