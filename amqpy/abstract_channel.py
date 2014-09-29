@@ -13,7 +13,7 @@ __all__ = ['AbstractChannel']
 class AbstractChannel(metaclass=ABCMeta):
     """Superclass for both the Connection, which is treated as channel 0, and other user-created Channel objects
 
-    The subclasses must have a _METHOD_MAP class variable, mapping between AMQP method signatures and Python methods.
+    The subclasses must have a METHOD_MAP class variable, mapping between AMQP method signatures and Python methods.
     """
 
     #: placeholder, implementations must override this

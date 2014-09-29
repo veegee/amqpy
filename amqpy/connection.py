@@ -58,7 +58,7 @@ class Connection(AbstractChannel):
     def __init__(self, host='localhost', port=5672, userid='guest', password='guest', login_method='AMQPLAIN',
                  virtual_host='/', locale='en_US', client_properties=None, ssl=None, connect_timeout=None,
                  channel_max=65535, frame_max=131072, heartbeat=0, on_blocked=None, on_unblocked=None,
-                 confirm_publish=False, **kwargs):
+                 confirm_publish=False):
         """Create a connection to the specified host
 
         If you are using SSL, make sure the correct port number is specified (usually 5671), as the default of 5672 is
@@ -68,7 +68,6 @@ class Connection(AbstractChannel):
         :param int port: port
         :param str userid: username
         :param str password: password
-        :param login_response: if not specified, one is built up for you from `userid` and `password` if present
         :param str virtual_host: virtual host
         :param str locale: locale
         :param dict client_properties: dict of client properties
@@ -77,7 +76,6 @@ class Connection(AbstractChannel):
         :param int channel_max: maximum number of channels
         :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
-        :param callable on_open: callback on connection open
         :param callable on_blocked: callback on connection blocked
         :param callable on_unblocked: callback on connection unblocked
         :param bool confirm_publish: confirm publish
@@ -207,7 +205,7 @@ class Connection(AbstractChannel):
             except Exception:
                 pass
 
-        callback = channel._METHOD_MAP.get(method.method_type)
+        callback = channel.METHOD_MAP.get(method.method_type)
 
         if callback is None:
             raise AMQPNotImplementedError('Unknown AMQP method {} (ch: {})'.format(method.method_type, chan_id))
@@ -267,6 +265,7 @@ class Connection(AbstractChannel):
             return self.on_blocked(reason)
 
     def _unblocked(self, method):
+        assert method
         if self.on_unblocked:
             return self.on_unblocked()
 
@@ -286,6 +285,7 @@ class Connection(AbstractChannel):
         This method is called when the server send a close-ok in response to our close request. It is now safe to
         close the underlying connection.
         """
+        assert method
         self._do_close()
 
     def _x_open(self, virtual_host, capabilities=''):
@@ -312,6 +312,7 @@ class Connection(AbstractChannel):
 
         This method signals to the client that the connection is ready for use.
         """
+        assert method
         log.debug('Open OK')
 
     def _secure(self, method):
