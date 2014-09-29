@@ -1,5 +1,5 @@
 [mod] amqpy.message
-======================
+===================
 
 .. automodule:: amqpy.message
     :members:
