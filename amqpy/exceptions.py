@@ -14,7 +14,7 @@ method_t = namedtuple('method_t', ('class_id', 'method_id'))
 __all__ = [
     'Timeout',
     'AMQPError',
-    'ConnectionError', 'ChannelError',
+    'AMQPConnectionError', 'ChannelError',
     'RecoverableConnectionError', 'IrrecoverableConnectionError',
     'RecoverableChannelError', 'IrrecoverableChannelError',
     'ConsumerCancelled', 'ContentTooLarge', 'NoConsumers',
@@ -69,7 +69,7 @@ class AMQPError(Exception):
         return self.method_name or self.method_type
 
 
-class ConnectionError(AMQPError):
+class AMQPConnectionError(AMQPError):
     pass
 
 
@@ -85,11 +85,11 @@ class IrrecoverableChannelError(ChannelError):
     pass
 
 
-class RecoverableConnectionError(ConnectionError):
+class RecoverableConnectionError(AMQPConnectionError):
     pass
 
 
-class IrrecoverableConnectionError(ConnectionError):
+class IrrecoverableConnectionError(AMQPConnectionError):
     pass
 
 
@@ -190,15 +190,15 @@ ERROR_MAP = {
 }
 
 
-def error_for_code(code, text, method_type, default, channel_id=None):
+def error_for_code(code, text, meth_type, default, channel_id=None):
     """Get exception class associated with specified error code
 
     :param int code: AMQP reply code
     :param str text: localized reply text
-    :param method_type: method type
+    :param meth_type: method type
     :param default: default exception class if error code cannot be matched with an exception class
     :param channel_id: optional associated channel ID
-    :type method_type: amqpy.spec.method_t
+    :type meth_type: amqpy.spec.method_t
     :type default: Callable
     :type channel_id: int or None
     :return: Exception object
@@ -206,9 +206,9 @@ def error_for_code(code, text, method_type, default, channel_id=None):
     """
     try:
         exc = ERROR_MAP[code]
-        return exc(text, method_type, reply_code=code, channel_id=channel_id)
+        return exc(text, meth_type, reply_code=code, channel_id=channel_id)
     except KeyError:
-        return default(text, method_type, reply_code=code, channel_id=channel_id)
+        return default(text, meth_type, reply_code=code, channel_id=channel_id)
 
 
 METHOD_NAME_MAP = {
@@ -278,6 +278,6 @@ METHOD_NAME_MAP = {
 
 
 # insert keys which are 4-byte unsigned int representations of a method type for easy lookups
-for method_type, name in list(METHOD_NAME_MAP.items()):
-    data = struct.pack('>HH', *method_type)
+for mt, name in list(METHOD_NAME_MAP.items()):
+    data = struct.pack('>HH', *mt)
     METHOD_NAME_MAP[struct.unpack('>I', data)[0]] = name

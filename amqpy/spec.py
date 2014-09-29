@@ -240,6 +240,8 @@ class Method:
         self.content = content
         self.channel_id = channel_id
 
+        self._body_bytes = bytes()  # used internally to store encoded body
+
     def pack_method(self):
         """Pack this method into a bytes object suitable for using as a payload for `FrameType.METHOD` frames
 

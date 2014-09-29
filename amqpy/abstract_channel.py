@@ -169,6 +169,7 @@ class AbstractChannel(metaclass=ABCMeta):
 
         if content and self.auto_decode and 'content_encoding' in content.properties:
             # try to decode message body
+            # noinspection PyBroadException
             try:
                 content.body = content.body.decode(content.properties['content_encoding'])
             except Exception:

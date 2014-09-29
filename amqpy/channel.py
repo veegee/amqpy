@@ -35,8 +35,10 @@ class Channel(AbstractChannel):
         'content_encoding' property, or the decode raises an Exception, the message body is left as plain bytes.
         """
         if channel_id:
+            # noinspection PyProtectedMember
             connection._claim_channel_id(channel_id)
         else:
+            # noinspection PyProtectedMember
             channel_id = connection._get_free_channel_id()
 
         super().__init__(connection, channel_id)
@@ -75,6 +77,7 @@ class Channel(AbstractChannel):
         connection, self.connection = self.connection, None
         if connection:
             connection.channels.pop(channel_id, None)
+            # noinspection PyProtectedMember
             connection._avail_channel_ids.append(channel_id)
         self.callbacks.clear()
         self.cancel_callbacks.clear()

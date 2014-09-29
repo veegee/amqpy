@@ -79,7 +79,7 @@ class MethodReader:
 
     There should be one `MethodReader` instance per connection.
 
-    In the case of a framing error, an :exc:`ConnectionError` is placed in the queue.
+    In the case of a framing error, an :exc:`AMQPConnectionError` is placed in the queue.
     In the case of unexpected frames, an :exc:`ChannelError` is placed in the queue.
     """
 

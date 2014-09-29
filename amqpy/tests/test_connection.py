@@ -62,6 +62,7 @@ class TestConnection:
 
         # remove all the references
         conn = None
+
         del ch
 
         gc.collect()

@@ -10,7 +10,7 @@ from .serialization import AMQPWriter
 from . import __version__
 from .abstract_channel import AbstractChannel
 from .channel import Channel
-from .exceptions import ResourceError, ConnectionError, error_for_code, AMQPNotImplementedError
+from .exceptions import ResourceError, AMQPConnectionError, error_for_code, AMQPNotImplementedError
 from .transport import create_transport
 from . import spec
 from .spec import Method, Frame, FrameType, method_t
@@ -152,6 +152,7 @@ class Connection(AbstractChannel):
 
             channels = [x for x in self.channels.values() if x is not self]
             for ch in channels:
+                # noinspection PyProtectedMember
                 ch._do_close()
         except socket.error:
             pass  # connection already closed on the other end
@@ -169,8 +170,7 @@ class Connection(AbstractChannel):
         try:
             return self._avail_channel_ids.remove(channel_id)
         except ValueError:
-            raise ConnectionError(
-                'Channel %r already open' % (channel_id, ))
+            raise AMQPConnectionError('Channel {} already open'.format(channel_id))
 
     def is_alive(self):
         if hasattr(socket, 'MSG_PEEK'):
@@ -200,6 +200,7 @@ class Connection(AbstractChannel):
         channel = self.channels[chan_id]
 
         if content and channel.auto_decode and hasattr(content, 'content_encoding'):
+            # noinspection PyBroadException
             try:
                 content.body = content.body.decode(content.content_encoding)
             except Exception:
@@ -255,7 +256,7 @@ class Connection(AbstractChannel):
         self._x_close_ok()  # send a close-ok to the server, to confirm that we've acknowledged the close request
 
         method_type = method_t(class_id, method_id)
-        raise error_for_code(reply_code, reply_text, method_type, ConnectionError, self.channel_id)
+        raise error_for_code(reply_code, reply_text, method_type, AMQPConnectionError, self.channel_id)
 
     def _blocked(self, method):
         """RabbitMQ Extension

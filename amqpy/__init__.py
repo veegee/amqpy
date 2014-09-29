@@ -1,4 +1,4 @@
-VERSION = (0, 4, 1)
+VERSION = (0, 4, 2)
 __version__ = '.'.join(map(str, VERSION[0:3])) + ''.join(VERSION[3:])
 __author__ = 'veegee'
 __maintainer__ = 'veegee'
@@ -11,7 +11,7 @@ from .channel import Channel
 from .connection import Connection
 from .exceptions import (
     AMQPError,
-    ConnectionError,
+    AMQPConnectionError,
     RecoverableConnectionError,
     IrrecoverableConnectionError,
     ChannelError,

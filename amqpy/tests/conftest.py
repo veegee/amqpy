@@ -5,20 +5,20 @@ import pytest
 from .. import Connection
 
 
-def get_server_props(conn):
-    """Parse server properties from `conn`
+def get_server_props(cxn):
+    """Parse server properties from `cxn`
 
     An example result::
 
         ('RabbitMQ', (3, 3, 5))
 
-    :param conn: connection object
-    :type conn: amqpy.Connection
+    :param cxn: connection object
+    :type cxn: amqpy.Connection
     :return: tuple(server product name, version)
     :rtype: tuple(str, tuple(int...))
     """
-    product = conn.server_properties['product']
-    version = conn.server_properties['version'].split('.')
+    product = cxn.server_properties['product']
+    version = cxn.server_properties['version'].split('.')
     version = tuple([int(i) for i in version])
 
     return product, version

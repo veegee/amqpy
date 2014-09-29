@@ -201,12 +201,12 @@ class TestSerialization:
 
     def test_shortstr_unicode(self):
         w = AMQPWriter()
-        w.write_shortstr(u'hello')
+        w.write_shortstr('hello')
         s = w.getvalue()
         assert_equal_binary(s, '\x05hello')
 
         r = AMQPReader(s)
-        assert r.read_shortstr() == u'hello'
+        assert r.read_shortstr() == 'hello'
 
     def test_long_shortstr(self):
         w = AMQPWriter()
@@ -216,7 +216,7 @@ class TestSerialization:
     def test_long_shortstr_unicode(self):
         w = AMQPWriter()
         with pytest.raises(FrameSyntaxError):
-            w.write_shortstr(u'\u0100' * 128)
+            w.write_shortstr('\u0100' * 128)
 
     #
     # Longstr
@@ -244,7 +244,7 @@ class TestSerialization:
         assert r.read_longstr() == str(val)
 
     def test_longstr_unicode(self):
-        val = u'a' * 512
+        val = 'a' * 512
         w = AMQPWriter()
         w.write_longstr(val)
         s = w.getvalue()
@@ -294,7 +294,7 @@ class TestSerialization:
             'foo': 7,
             'bar': Decimal('123345.1234'),
             'baz': 'this is some random string I typed',
-            'ubaz': u'And something in unicode',
+            'ubaz': 'And something in unicode',
             'dday_aniv': datetime(1994, 6, 6),
             'nothing': None,
             'more': {

@@ -75,6 +75,7 @@ class AbstractTransport(metaclass=ABCMeta):
         try:
             # socket module may have been collected by gc if this is called by a thread at shutdown
             if socket is not None:
+                # noinspection PyBroadException
                 try:
                     self.close()
                 except:
@@ -167,9 +168,6 @@ class AbstractTransport(metaclass=ABCMeta):
             # read frame terminator byte
             frame_terminator = self.read(1)
             frame.data.extend(frame_terminator)
-        except socket.timeout:
-            self._read_buffer = frame.data + self._read_buffer
-            raise
         except (OSError, IOError, socket.error) as exc:
             if get_errno(exc) not in _UNAVAIL:
                 self.connected = False
