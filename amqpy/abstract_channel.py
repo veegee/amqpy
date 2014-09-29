@@ -7,7 +7,6 @@ from .exceptions import AMQPNotImplementedError, RecoverableConnectionError
 from .spec import Method
 from . import spec
 
-
 __all__ = ['AbstractChannel']
 
 

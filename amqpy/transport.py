@@ -10,7 +10,6 @@ from .exceptions import UnexpectedFrame
 from .utils import get_errno
 from .spec import FrameType, Frame
 
-
 log = logging.getLogger('amqpy')
 
 _UNAVAIL = errno.EAGAIN, errno.EINTR, errno.ENOENT
@@ -114,7 +113,6 @@ class AbstractTransport(metaclass=ABCMeta):
                 raise IOError('socket closed')
 
         return memoryview(self._rbuf)[:n]
-
 
     @abstractmethod
     def read(self, n, initial=False):

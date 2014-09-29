@@ -99,7 +99,7 @@ class TestChannel:
         assert msg2.body == 'hello w\xf6rld'.encode('latin_1')
 
     def test_survives_channel_error(self, ch):
-        with pytest.raises(ChannelError) as execinfo:
+        with pytest.raises(ChannelError):
             ch.queue_declare('krjqheewq_bogus', passive=True)
         ch.queue_declare('funtest_survive')
         ch.queue_declare('funtest_survive', passive=True)
@@ -114,7 +114,7 @@ class TestChannel:
 
         msg = Message(application_headers={'test': object()})
 
-        with pytest.raises(FrameSyntaxError) as execinfo:
+        with pytest.raises(FrameSyntaxError):
             ch.basic_publish(msg, routing_key=qname)
 
     def test_large(self, ch):

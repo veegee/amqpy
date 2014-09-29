@@ -16,7 +16,6 @@ from . import spec
 from .spec import Method, Frame, FrameType, method_t
 from .concurrency import synchronized
 
-
 __all__ = ['Connection']
 
 # client property info that gets sent to the server on connection startup
@@ -327,6 +326,7 @@ class Connection(AbstractChannel):
                 Challenge information, a block of opaque binary data passed to the security mechanism.
         """
         challenge = method.args.read_longstr()
+        assert challenge
 
     def _x_secure_ok(self, response):
         """Security mechanism response

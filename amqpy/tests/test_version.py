@@ -9,4 +9,3 @@ class TestVersion:
             readme_version = tuple(version_list)
 
         assert VERSION == readme_version
-

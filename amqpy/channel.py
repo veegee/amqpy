@@ -12,7 +12,6 @@ from .serialization import AMQPWriter
 from . import spec
 from .spec import Method, method_t
 
-
 __all__ = ['Channel']
 
 log = logging.getLogger('amqpy')

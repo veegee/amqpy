@@ -6,13 +6,11 @@ import struct
 import logging
 
 from .concurrency import synchronized
-
 from .message import Message
 from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP
 from .serialization import AMQPReader
 from . import spec
 from .spec import FrameType, Frame, Method, method_t
-
 
 log = logging.getLogger('amqpy')
 
