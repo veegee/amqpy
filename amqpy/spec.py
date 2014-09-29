@@ -143,6 +143,7 @@ class Frame:
         :type channel: int
         :type payload: bytes or bytearray
         """
+        #: raw frame data; can be manually manipulated at any time
         self.data = bytearray()
 
         self._frame_type = None
