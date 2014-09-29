@@ -23,8 +23,8 @@ class AbstractChannel(metaclass=ABCMeta):
         self.connection = connection
         self.channel_id = channel_id
         connection.channels[channel_id] = self
-        # list[Method]
-        self.method_queue = []  # queue of incoming methods for this channel
+        # queue of incoming methods for this channel
+        self.method_queue = []  # list[Method]
         self.auto_decode = False
         self.lock = Lock()
 

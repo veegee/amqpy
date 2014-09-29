@@ -81,16 +81,8 @@ class Connection(AbstractChannel):
         :param bool confirm_publish: confirm publish
         :type ssl: dict or None
         """
-        # create login "response" to send to server
-        login_response = AMQPWriter()
-        login_response.write_table({'LOGIN': userid, 'PASSWORD': password})
-        login_response = login_response.getvalue()[4:]  # skip the length
-        # at the beginning
-
-        d = dict(LIBRARY_PROPERTIES, **client_properties or {})
-
-        # map of {channel int: channel Channel}
-        self.channels = {}
+        # `channels` map stores references to all active channels
+        self.channels = {}  # dict of {channel_id int: Channel}
 
         # the connection object itself is treated as channel 0
         super().__init__(self, 0)
@@ -115,17 +107,24 @@ class Connection(AbstractChannel):
         self.mechanisms = []
         self.locales = []
 
-        # let the transport.py module setup the actual socket connection to the broker
+        # start the connection; this also sends the connection protocol header
         self.transport = create_transport(host, port, connect_timeout, frame_max, ssl)
 
+        # create global instances of `MethodReader` and `MethodWriter` which can be used by all channels
         self.method_reader = MethodReader(self.transport)
         self.method_writer = MethodWriter(self.transport, self.frame_max)
 
-        # wait for server to send the START method
+        # wait for server to send the 'start' method
         self.wait(allowed_methods=[spec.Connection.Start])
 
-        # reply with START-OK and connection parameters
-        self._x_start_ok(d, login_method, login_response, locale)
+        # create 'login response' to send to server
+        login_response = AMQPWriter()
+        login_response.write_table({'LOGIN': userid, 'PASSWORD': password})
+        login_response = login_response.getvalue()[4:]  # skip the length
+
+        # reply with 'start-ok' and connection parameters
+        client_props = dict(LIBRARY_PROPERTIES, **client_properties or {})
+        self._x_start_ok(client_props, login_method, login_response, locale)
 
         self._wait_tune_ok = True
         while self._wait_tune_ok:
