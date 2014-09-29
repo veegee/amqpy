@@ -148,17 +148,18 @@ class AbstractChannel(metaclass=ABCMeta):
         while True:
             method = self.connection.method_reader.read_method(timeout)
             m_type = method.method_type
+            ch_id = method.channel_id
 
             # check if the received method is the one we're waiting for
-            if channel in channels and (allowed_methods is None or m_type in allowed_methods):
-                return channel, method
+            if ch_id in channels and (allowed_methods is None or m_type in allowed_methods):
+                return ch_id, method
 
             # not the channel and/or method we were looking for; queue this method for later
-            channels[channel].method_queue.append(method)
+            channels[ch_id].method_queue.append(method)
 
             # if the method is destined for channel 0 (the connection itself), it's probably an exception, so handle it
             # immediately
-            if channel == 0:
+            if ch_id == 0:
                 self.connection.wait()
 
     def handle_method(self, method, callback=None):
