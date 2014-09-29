@@ -57,7 +57,7 @@ class Connection(AbstractChannel):
 
     def __init__(self, host='localhost', port=5672, userid='guest', password='guest', login_method='AMQPLAIN',
                  virtual_host='/', locale='en_US', client_properties=None, ssl=None, connect_timeout=None,
-                 channel_max=None, frame_max=None, heartbeat=0, on_blocked=None, on_unblocked=None,
+                 channel_max=65535, frame_max=131072, heartbeat=0, on_blocked=None, on_unblocked=None,
                  confirm_publish=False, **kwargs):
         """Create a connection to the specified host
 
@@ -83,9 +83,6 @@ class Connection(AbstractChannel):
         :param bool confirm_publish: confirm publish
         :type ssl: dict or None
         """
-        channel_max = channel_max or 65535  # maximum number of channels
-        frame_max = frame_max or 131072  # maximum frame payload size in bytes
-
         # create login "response" to send to server
         login_response = AMQPWriter()
         login_response.write_table({'LOGIN': userid, 'PASSWORD': password})
@@ -121,7 +118,7 @@ class Connection(AbstractChannel):
         self.locales = []
 
         # let the transport.py module setup the actual socket connection to the broker
-        self.transport = create_transport(host, port, connect_timeout, ssl)
+        self.transport = create_transport(host, port, connect_timeout, frame_max, ssl)
 
         self.method_reader = MethodReader(self.transport)
         self.method_writer = MethodWriter(self.transport, self.frame_max)
@@ -438,8 +435,9 @@ class Connection(AbstractChannel):
 
     def _tune(self, method):
         """Propose connection tuning parameters
-        This method proposes a set of connection configuration values to the client.  The client can accept and/or
-        adjust these.
+
+        This method is the handler for receiving a "tune" method. `channel_max` and `frame_max` are set to the lower
+        of the values proposed by each party.
 
         PARAMETERS:
             channel_max: short
@@ -454,7 +452,7 @@ class Connection(AbstractChannel):
                 if it cannot allocate resources for them.
                 RULE:
                     Until the frame-max has been negotiated, both peers MUST accept frames of up to 4096 octets large.
-                    The minimum non-zero value for the frame- max field is 4096.
+                    The minimum non-zero value for the frame-max field is 4096.
             heartbeat: short
                 desired heartbeat delay
                 The delay, in seconds, of the connection heartbeat that the server wants.  Zero means the server does
@@ -462,8 +460,10 @@ class Connection(AbstractChannel):
         """
         args = method.args
         client_heartbeat = self.client_heartbeat or 0
-        self.channel_max = args.read_short() or self.channel_max
-        self.frame_max = args.read_long() or self.frame_max
+        # maximum number of channels that the server supports
+        self.channel_max = min(args.read_short(), self.channel_max)
+        # largest frame size the server proposes for the connection
+        self.frame_max = min(args.read_long(), self.frame_max)
         self.method_writer.frame_max = self.frame_max
         self.server_heartbeat = args.read_short() or 0
 

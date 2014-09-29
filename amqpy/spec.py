@@ -10,6 +10,8 @@ basic_return_t = namedtuple('basic_return_t', ('reply_code', 'reply_text', 'exch
 
 method_t = namedtuple('method_t', ('class_id', 'method_id'))
 
+FRAME_MIN_SIZE = 4096
+
 
 class FrameType:
     """Frame constants

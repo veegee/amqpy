@@ -2,7 +2,6 @@ import errno
 import socket
 import ssl
 from abc import ABCMeta, abstractmethod
-from socket import SOL_TCP
 import logging
 from threading import Lock
 
@@ -23,7 +22,7 @@ class AbstractTransport(metaclass=ABCMeta):
     """Common superclass for TCP and SSL transports"""
     connected = False
 
-    def __init__(self, host, port, connect_timeout):
+    def __init__(self, host, port, connect_timeout, buf_size):
         """
         :param host: hostname or IP address
         :param port: port
@@ -32,27 +31,27 @@ class AbstractTransport(metaclass=ABCMeta):
         :type port: int
         :type connect_timeout: float or None
         """
-        self.connected = True
-        self._read_buffer = bytes()
+        self._rbuf = bytearray(buf_size)
 
         # the purpose of the frame lock is to allow no more than one thread to read/write a frame to the connection
         # at any time
         self._frame_lock = Lock()
 
         self.sock = None
+
+        # try to connect
         last_err = None
-        for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM, SOL_TCP):
+        for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM, socket.IPPROTO_TCP):
             af, socktype, proto, canonname, sa = res
             try:
                 self.sock = socket.socket(af, socktype, proto)
                 self.sock.settimeout(connect_timeout)
                 self.sock.connect(sa)
+                break
             except socket.error as exc:
                 self.sock.close()
                 self.sock = None
                 last_err = exc
-                continue
-            break
 
         if not self.sock:
             # didn't connect, return the most recent error message
@@ -60,7 +59,7 @@ class AbstractTransport(metaclass=ABCMeta):
 
         try:
             self.sock.settimeout(None)
-            self.sock.setsockopt(SOL_TCP, socket.TCP_NODELAY, 1)
+            self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
             self._setup_transport()
@@ -71,13 +70,15 @@ class AbstractTransport(metaclass=ABCMeta):
                 self.connected = False
             raise
 
+        self.connected = True
+
     def __del__(self):
         try:
-            # socket module may have been collected by gc if this is called by a thread at shutdown.
+            # socket module may have been collected by gc if this is called by a thread at shutdown
             if socket is not None:
                 try:
                     self.close()
-                except socket.error:
+                except:
                     pass
         finally:
             self.sock = None
@@ -88,31 +89,32 @@ class AbstractTransport(metaclass=ABCMeta):
         This is the default implementation. Subclasses may implement `read()` to simply call this method, or provide
         their  own `read()` implementation.
 
-        According to SSL_read(3), it can at most return 16kb of data. Thus, we use an internal read buffer like
-        TCPTransport.read to get the exact number of bytes wanted.
+        Note: According to SSL_read(3), it can at most return 16kB of data. Thus, we use an internal read buffer like
+        to get the exact number of bytes wanted.
+
+        Note: ssl.sock.read may cause ENOENT if the operation couldn't be performed (?).
 
         :param int n: exact number of bytes to read
         :return: data read
-        :rtype: bytes
+        :rtype: memoryview
         """
-        rbuf = self._read_buffer
-        try:
-            while len(rbuf) < n:
-                try:
-                    s = self.sock.recv(n - len(rbuf))  # see note above
-                except socket.error as exc:
-                    # ssl.sock.read may cause ENOENT if the operation couldn't be performed (Issue celery#1414).
-                    if not initial and exc.errno in _errnos:
-                        continue
-                    raise
-                if not s:
-                    raise IOError('Socket closed')
-                rbuf += s
-        except:
-            self._read_buffer = rbuf
-            raise
-        result, self._read_buffer = rbuf[:n], rbuf[n:]
-        return result
+        mview = memoryview(self._rbuf)
+        to_read = n
+        while to_read:
+            try:
+                bytes_read = self.sock.recv_into(mview, to_read)
+                mview = mview[bytes_read:]
+                to_read -= bytes_read
+            except socket.error as exc:
+                if not initial and exc.errno in _errnos:
+                    continue
+                raise
+
+            if not bytes_read:
+                raise IOError('socket closed')
+
+        return memoryview(self._rbuf)[:n]
+
 
     @abstractmethod
     def read(self, n, initial=False):
@@ -203,9 +205,9 @@ class SSLTransport(AbstractTransport):
     """Transport that works over SSL
     """
 
-    def __init__(self, host, port, connect_timeout, ssl_opts):
+    def __init__(self, host, port, connect_timeout, frame_max, ssl_opts):
         self.ssl_opts = ssl_opts
-        super().__init__(host, port, connect_timeout)
+        super().__init__(host, port, connect_timeout, frame_max)
 
     def _setup_transport(self):
         """Wrap the socket in an SSL object
@@ -257,7 +259,7 @@ class TCPTransport(AbstractTransport):
         self.sock.sendall(s)
 
 
-def create_transport(host, port, connect_timeout, ssl_opts=None):
+def create_transport(host, port, connect_timeout, frame_max, ssl_opts=None):
     """Given a few parameters from the Connection constructor, select and create a subclass of AbstractTransport
 
     If `ssl_opts` is a dict, SSL will be used and `ssl_opts` will be passed to :func:`ssl.wrap_socket()`. In all other
@@ -271,6 +273,6 @@ def create_transport(host, port, connect_timeout, ssl_opts=None):
     :type ssl_opts: dict or None
     """
     if isinstance(ssl_opts, dict):
-        return SSLTransport(host, port, connect_timeout, ssl_opts)
+        return SSLTransport(host, port, connect_timeout, frame_max, ssl_opts)
     else:
-        return TCPTransport(host, port, connect_timeout)
+        return TCPTransport(host, port, connect_timeout, frame_max)
