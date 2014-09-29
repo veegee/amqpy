@@ -173,7 +173,7 @@ class Channel(AbstractChannel):
         """Enable/disable flow from peer
 
         This method asks the peer to pause or restart the flow of content data. This is a simple flow-control mechanism
-        that a peer can use to avoid oveflowing its queues or otherwise finding itself receiving more messages than it
+        that a peer can use to avoid overflowing its queues or otherwise finding itself receiving more messages than it
         can process. Note that this method is not intended for window control.  The peer that receives a request to stop
         sending content should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.
@@ -986,7 +986,7 @@ class Channel(AbstractChannel):
         This method publishes a message to a specific exchange. The message will be routed to queues as defined by the
         exchange configuration and distributed to any active consumers when the transaction, if any, is committed.
 
-        **This method requires the RabbitMQ publisher confirms extension.**
+        **This method requires the RabbitMQ publisher acknowledgements extension.**
 
         :param msg: message
         :param exchange: exchange name, empty string means default exchange
@@ -1012,23 +1012,21 @@ class Channel(AbstractChannel):
         class semantics. Though the qos method could in principle apply to both peers, it is currently meaningful only
         for the server.
 
-        The client can request that messages be sent in advance so that when the client finishes processing a message,
-        the following message is already held locally, rather than needing to be sent down the channel. Prefetching
-        gives a performance improvement. This field specifies the prefetch window size in octets. The server will send a
-        message in advance if it is equal to or smaller in size than the available prefetch size (and also falls into
-        other prefetch limits). May be set to zero, meaning "no specific limit", although other prefetch limits may
-        still apply. The prefetch-size is ignored if the no-ack option is set.
-
-        The server must ignore `prefetch_size` setting when the client is not processing any messages - i.e. the
-        prefetch size does not limit the transfer of single messages to a client, only the sending in advance of more
-        messages while the client still has one or more unacknowledged messages.
-
-        The `prefetch_count` specifies a prefetch window in terms of whole messages. This field may be used in
-        combination  with the prefetch-size field; a message will only be sent in advance if both prefetch windows (and
-        those at the channel and connection level) allow it. The prefetch-count is ignored if the no-ack option is set.
-
-        The server may send less data in advance than allowed by the client's specified prefetch windows but it must not
-        send more.
+        * The client can request that messages be sent in advance so that when the client finishes processing a
+          message, the following message is already held locally, rather than needing to be sent down the channel.
+          Prefetching gives a performance improvement. This field specifies the prefetch window size in octets. The
+          server will send a message in advance if it is equal to or smaller in size than the available prefetch size
+          (and also falls into other prefetch limits). May be set to zero, meaning "no specific limit", although other
+          prefetch limits may still apply. The prefetch-size is ignored if the no-ack option is set.
+        * The server must ignore `prefetch_size` setting when the client is not processing any messages - i.e. the
+          prefetch size does not limit the transfer of single messages to a client, only the sending in advance of more
+          messages while the client still has one or more unacknowledged messages.
+        * The `prefetch_count` specifies a prefetch window in terms of whole messages. This field may be used in
+          combination  with the prefetch-size field; a message will only be sent in advance if both prefetch windows
+          (and those at the channel and connection level) allow it. The prefetch-count is ignored if the no-ack option
+          is set.
+        * The server may send less data in advance than allowed by the client's specified prefetch windows but it
+          must not send more.
 
         :param int prefetch_size: prefetch window in octets
         :param int prefetch_count: prefetch window in messages
@@ -1248,4 +1246,3 @@ class Channel(AbstractChannel):
         spec.Tx.CommitOk: _tx_commit_ok,
         spec.Tx.RollbackOk: _tx_rollback_ok,
     }
-
