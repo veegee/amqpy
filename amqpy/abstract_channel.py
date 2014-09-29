@@ -1,6 +1,7 @@
 """Code common to Connection and Channel objects
 """
 from abc import ABCMeta, abstractmethod
+from threading import Lock
 
 from .exceptions import AMQPNotImplementedError, RecoverableConnectionError
 from .spec import Method
@@ -26,6 +27,7 @@ class AbstractChannel(metaclass=ABCMeta):
         # list[Method]
         self.method_queue = []  # queue of incoming methods for this channel
         self.auto_decode = False
+        self.lock = Lock()
 
     @abstractmethod
     def close(self):

@@ -14,6 +14,7 @@ from .exceptions import ResourceError, ConnectionError, error_for_code, AMQPNotI
 from .transport import create_transport
 from . import spec
 from .spec import Method, Frame, FrameType, method_t
+from .concurrency import synchronized
 
 
 __all__ = ['Connection']
@@ -34,25 +35,25 @@ class Connection(AbstractChannel):
     """
     Channel = Channel
 
-    # : Final heartbeat interval value (in float seconds) after negotiation
+    #: Final heartbeat interval value (in float seconds) after negotiation
     heartbeat = None
 
-    # : Original heartbeat interval value proposed by client.
+    #: Original heartbeat interval value proposed by client.
     client_heartbeat = None
 
-    # : Original heartbeat interval proposed by server.
+    #: Original heartbeat interval proposed by server.
     server_heartbeat = None
 
-    # : Time of last heartbeat sent (in monotonic time, if available).
+    #: Time of last heartbeat sent (in monotonic time, if available).
     last_heartbeat_sent = 0
 
-    # : Time of last heartbeat received (in monotonic time, if available).
+    #: Time of last heartbeat received (in monotonic time, if available).
     last_heartbeat_received = 0
 
-    # : Number of bytes sent to socket at the last heartbeat check.
+    #: Number of bytes sent to socket at the last heartbeat check.
     prev_sent = None
 
-    # : Number of bytes received from socket at the last heartbeat check.
+    #: Number of bytes received from socket at the last heartbeat check.
     prev_recv = None
 
     def __init__(self, host='localhost', port=5672, userid='guest', password='guest', login_method='AMQPLAIN',
@@ -139,6 +140,15 @@ class Connection(AbstractChannel):
     def connected(self):
         return self.transport and self.transport.connected
 
+    @synchronized('lock')
+    def channel(self, channel_id=None):
+        """Fetch a Channel object specified by `channel_id`, or create that object if it doesn't already exist
+
+        :param channel_id: channel ID number
+        :type channel_id: int
+        """
+        return self.channels.get(channel_id, self.Channel(self, channel_id))
+
     def _do_close(self):
         try:
             self.transport.close()
@@ -164,14 +174,6 @@ class Connection(AbstractChannel):
         except ValueError:
             raise ConnectionError(
                 'Channel %r already open' % (channel_id, ))
-
-    def channel(self, channel_id=None):
-        """Fetch a Channel object specified by `channel_id`, or create that object if it doesn't already exist
-
-        :param channel_id: channel ID number
-        :type channel_id: int
-        """
-        return self.channels.get(channel_id, self.Channel(self, channel_id))
 
     def is_alive(self):
         if hasattr(socket, 'MSG_PEEK'):
