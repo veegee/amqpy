@@ -33,6 +33,13 @@ class Channel(AbstractChannel):
         The 'auto_decode' parameter (defaults to True), indicates whether the library should attempt to decode the body
         of Messages to a Unicode string if there's a 'content_encoding' property for the message.  If there's no
         'content_encoding' property, or the decode raises an Exception, the message body is left as plain bytes.
+
+        :param connection: the channel's associated Connection
+        :param channel_id: the channel's assigned channel ID
+        :param auto_decode: enable auto decoding of message bodies
+        :type connection: amqpy.connection.Connection
+        :type channel_id: int or None
+        :type auto_decode: bool
         """
         if channel_id:
             # noinspection PyProtectedMember
@@ -62,7 +69,7 @@ class Channel(AbstractChannel):
         self.no_ack_consumers = set()
 
         # set first time basic_publish_confirm is called and publisher confirms are enabled for this channel.
-        self._confirm_selected = self.connection.confirm_publish
+        self.publisher_ack_enabled = self.connection.publisher_ack_enabled
 
         self._x_open()
 
@@ -1150,7 +1157,7 @@ class Channel(AbstractChannel):
         :type mandatory: bool
         :type immediate: bool
         """
-        if self._confirm_selected:
+        if self.publisher_ack_enabled:
             raise Exception('Publisher confirms are enabled, please use `basic_publish_confirm()` instead')
         self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
 
@@ -1173,7 +1180,7 @@ class Channel(AbstractChannel):
         :type mandatory: bool
         :type immediate: bool
         """
-        if not self._confirm_selected:
+        if not self.publisher_ack_enabled:
             raise Exception('Publisher confirms are NOT enabled')
         self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
         self.wait([spec.Basic.Ack])
@@ -1429,7 +1436,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Confirm.Select, args))
         if not nowait:
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
-        self._confirm_selected = True
+        self.publisher_ack_enabled = True
 
     def _confirm_select_ok(self, method):
         """With this method, the broker confirms to the client that the channel is now using publisher confirms
@@ -1478,6 +1485,3 @@ class Channel(AbstractChannel):
         spec.Tx.RollbackOk: _tx_rollback_ok,
     }
 
-    IMMEDIATE_METHODS = [
-        spec.Basic.Return,
-    ]

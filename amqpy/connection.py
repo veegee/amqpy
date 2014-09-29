@@ -32,8 +32,6 @@ class Connection(AbstractChannel):
     """The connection class provides methods for a client to establish a network connection to a server, and for both
     peers to operate the connection thereafter
     """
-    Channel = Channel
-
     #: Final heartbeat interval value (in float seconds) after negotiation
     heartbeat = None
 
@@ -58,7 +56,7 @@ class Connection(AbstractChannel):
     def __init__(self, host='localhost', port=5672, userid='guest', password='guest', login_method='AMQPLAIN',
                  virtual_host='/', locale='en_US', client_properties=None, ssl=None, connect_timeout=None,
                  channel_max=65535, frame_max=131072, heartbeat=0, on_blocked=None, on_unblocked=None,
-                 confirm_publish=False):
+                 enable_publisher_ack=False):
         """Create a connection to the specified host
 
         If you are using SSL, make sure the correct port number is specified (usually 5671), as the default of 5672 is
@@ -78,7 +76,7 @@ class Connection(AbstractChannel):
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
         :param callable on_blocked: callback on connection blocked
         :param callable on_unblocked: callback on connection unblocked
-        :param bool confirm_publish: confirm publish
+        :param bool enable_publisher_ack: enable publisher acknowledgements by default for new channels
         :type ssl: dict or None
         """
         # `channels` map stores references to all active channels
@@ -92,7 +90,7 @@ class Connection(AbstractChannel):
         self.frame_max = frame_max
         self.client_heartbeat = heartbeat
 
-        self.confirm_publish = confirm_publish
+        self.publisher_ack_enabled = enable_publisher_ack
 
         # callbacks
         self.on_blocked = on_blocked
@@ -143,7 +141,7 @@ class Connection(AbstractChannel):
         :param channel_id: channel ID number
         :type channel_id: int
         """
-        return self.channels.get(channel_id, self.Channel(self, channel_id))
+        return self.channels.get(channel_id, Channel(self, channel_id))
 
     def _do_close(self):
         try:
@@ -159,6 +157,11 @@ class Connection(AbstractChannel):
             self.transport = self.connection = self.channels = None
 
     def _get_free_channel_id(self):
+        """Get next free channel ID
+
+        :return: next free channel_id
+        :rtype: int
+        """
         try:
             return self._avail_channel_ids.pop()
         except IndexError:
@@ -166,6 +169,11 @@ class Connection(AbstractChannel):
                 len(self.channels), self.channel_max), spec.Channel.Open)
 
     def _claim_channel_id(self, channel_id):
+        """Claim channel ID
+
+        :param channel_id: channel ID
+        :type channel_id: int
+        """
         try:
             return self._avail_channel_ids.remove(channel_id)
         except ValueError:
