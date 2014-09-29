@@ -1,7 +1,7 @@
 Python 3 AMQP >= 0.9.1 client library
 =====================================
 
-* Version: 0.3.3
+* Version: 0.4.0
 * Web: http://amqpy.readthedocs.org/
 * Download: http://pypi.python.org/pypi/amqpy/
 * Source: http://github.com/veegee/amqpy
@@ -20,7 +20,7 @@ focus on:
 * 100% compliance with the AMQP protocol specification
 
 This library is actively maintained. Please submit issues and pull requests.
-Bugs will be fixed as quickly as possible.
+Bugs will be fixed immediately.
 
 The current API is not final, but will progressively get more stable as version
 1.0.0 is approached.
@@ -57,8 +57,6 @@ Features
 To do (goals for version 1.0.0)
 ===============================
 
-* Completely thread-safe for all public methods
-* AMQP 1.0
 * Add support for automatic heartbeats in a separate thread
 * [Kombu](https://github.com/celery/kombu) compatibility
 * Publish on PyPi

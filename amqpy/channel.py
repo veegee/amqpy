@@ -24,7 +24,7 @@ class Channel(AbstractChannel):
     The channel class provides methods for a client to establish a virtual connection - a channel - to a server and for
     both peers to operate the virtual connection thereafter.
     """
-   
+
     # TODO: finish cleaning up the documentation in this module
     # TODO: add :raise: and :return: directives in each docstring
 
