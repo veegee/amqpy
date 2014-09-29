@@ -582,48 +582,17 @@ class Channel(AbstractChannel):
     def queue_purge(self, queue='', nowait=False):
         """Purge a queue
 
-        This method removes all messages from a queue.  It does not cancel consumers.  Purged messages are deleted
+        This method removes all messages from a queue. It does not cancel consumers. Purged messages are deleted
         without any formal "undo" mechanism.
 
-        RULE:
+        * On transacted channels the server MUST not purge messages that have already been sent to a client but not yet
+          acknowledged.
+        * If nowait is False, this method returns a message count.
 
-            A call to purge MUST result in an empty queue.
-
-        RULE:
-
-            On transacted channels the server MUST not purge messages that have already been sent to a client but not
-            yet acknowledged.
-
-        RULE:
-
-            The server MAY implement a purge queue or log that allows system administrators to recover
-            accidentally-purged messages.  The server SHOULD NOT keep purged messages in the same storage spaces as the
-            live messages since the volumes of purged messages may get very large.
-
-        PARAMETERS:
-
-            queue: shortstr
-
-                Specifies the name of the queue to purge.  If the queue name is empty, refers to the current queue for
-                the channel, which is the last declared queue.
-
-                RULE:
-
-                    If the client did not previously declare a queue, and the queue name in this method is empty, the
-                    server MUST raise a connection exception with reply code 530 (not allowed).
-
-                RULE:
-
-                    The queue must exist. Attempting to purge a non- existing queue causes a channel exception.
-
-            nowait: boolean
-
-                do not send a reply method
-
-                If set, the server will not respond to the method. The client should not wait for a reply method.  If
-                the server could not complete the method it will raise a channel or connection exception.
-
-        if nowait is False, returns a message_count
+        :param str queue: queue name to purge; leave blank to refer to last declared queue for this channel
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :return: message count (if nowait is False)
+        :rtype: int or None
         """
         args = AMQPWriter()
         args.write_short(0)
@@ -653,40 +622,15 @@ class Channel(AbstractChannel):
     def basic_ack(self, delivery_tag, multiple=False):
         """Acknowledge one or more messages
 
-        This method acknowledges one or more messages delivered via the Deliver or Get-Ok methods.  The client can ask
+        This method acknowledges one or more messages delivered via the Deliver or Get-Ok methods. The client can ask
         to confirm a single message or a set of messages up to and including a specific message.
 
-        PARAMETERS:
+        * The delivery tag is valid only within the same channel that the message was received.
+        * Set `delivery_tag` to `0` and `multiple` to `True` to acknowledge all outstanding messages.
+        * If the `delivery_tag` is invalid, the server must raise a channel exception.
 
-            delivery_tag: longlong
-
-                server-assigned delivery tag
-
-                The server-assigned and channel-specific delivery tag
-
-                RULE:
-
-                    The delivery tag is valid only within the channel from which the message was received.  I.e. a
-                    client MUST NOT receive a message on one channel and then acknowledge it on another.
-
-                RULE:
-
-                    The server MUST NOT use a zero value for delivery tags.  Zero is reserved for client use, meaning
-                    "all messages so far received".
-
-            multiple: boolean
-
-                acknowledge multiple messages
-
-                If set to True, the delivery tag is treated as "up to and including", so that the client can acknowledge
-                multiple messages with a single method.  If set to False, the delivery tag refers to a single message.
-                If the multiple field is True, and the delivery tag is zero, tells the server to acknowledge all
-                outstanding mesages.
-
-                RULE:
-
-                    The server MUST validate that a non-zero delivery- tag refers to an delivered message, and raise a
-                    channel exception if this is not the case.
+        :param int delivery_tag: server-assigned delivery tag; 0 means "all messages received so far"
+        :param bool multiple: if set, the `delivery_tag` is treated as "all messages up to and including"
         """
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
@@ -698,33 +642,14 @@ class Channel(AbstractChannel):
         """End a queue consumer
 
         This method cancels a consumer. This does not affect already delivered messages, but it does mean the server
-        will not send any more messages for that consumer.  The client may receive an abitrary number of messages in
+        will not send any more messages for that consumer. The client may receive an arbitrary number of messages in
         between sending the cancel method and receiving the cancel-ok reply.
 
-        RULE:
+        * If the queue no longer exists when the client sends a cancel command, or the consumer has been cancelled for
+          other reasons, this command has no effect.
 
-            If the queue no longer exists when the client sends a cancel command, or the consumer has been cancelled for
-            other reasons, this command has no effect.
-
-        PARAMETERS:
-
-            consumer_tag: shortstr
-
-                consumer tag
-
-                Identifier for the consumer, valid within the current connection.
-
-                RULE:
-
-                    The consumer tag is valid only within the channel from which the consumer was created. I.e. a client
-                    MUST NOT create a consumer in one channel and then use it in another.
-
-            nowait: boolean
-
-                do not send a reply method
-
-                If set, the server will not respond to the method. The client should not wait for a reply method.  If
-                the server could not complete the method it will raise a channel or connection exception.
+        :param str consumer_tag: consumer tag, valid only within the current connection and channel
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
         """
         if self.connection is not None:
             self.no_ack_consumers.discard(consumer_tag)
@@ -1082,50 +1007,32 @@ class Channel(AbstractChannel):
     def basic_qos(self, prefetch_size, prefetch_count, a_global):
         """Specify quality of service
 
-        This method requests a specific quality of service.  The QoS can be specified for the current channel or for all
-        channels on the connection.  The particular properties and semantics of a qos method always depend on the
-        content class semantics. Though the qos method could in principle apply to both peers, it is currently
-        meaningful only for the server.
+        This method requests a specific quality of service. The QoS can be specified for the current channel or for all
+        channels on the connection. The particular properties and semantics of a qos method always depend on the content
+        class semantics. Though the qos method could in principle apply to both peers, it is currently meaningful only
+        for the server.
 
-        PARAMETERS:
+        The client can request that messages be sent in advance so that when the client finishes processing a message,
+        the following message is already held locally, rather than needing to be sent down the channel. Prefetching
+        gives a performance improvement. This field specifies the prefetch window size in octets. The server will send a
+        message in advance if it is equal to or smaller in size than the available prefetch size (and also falls into
+        other prefetch limits). May be set to zero, meaning "no specific limit", although other prefetch limits may
+        still apply. The prefetch-size is ignored if the no-ack option is set.
 
-            prefetch_size: long
+        The server must ignore `prefetch_size` setting when the client is not processing any messages - i.e. the
+        prefetch size does not limit the transfer of single messages to a client, only the sending in advance of more
+        messages while the client still has one or more unacknowledged messages.
 
-                prefetch window in octets
+        The `prefetch_count` specifies a prefetch window in terms of whole messages. This field may be used in
+        combination  with the prefetch-size field; a message will only be sent in advance if both prefetch windows (and
+        those at the channel and connection level) allow it. The prefetch-count is ignored if the no-ack option is set.
 
-                The client can request that messages be sent in advance so that when the client finishes processing a
-                message, the following message is already held locally, rather than needing to be sent down the channel.
-                Prefetching gives a performance improvement. This field specifies the prefetch window size in octets.
-                The server will send a message in advance if it is equal to or smaller in size than the available
-                prefetch size (and also falls into other prefetch limits). May be set to zero, meaning "no specific
-                limit", although other prefetch limits may still apply. The prefetch-size is ignored if the no-ack
-                option is set.
+        The server may send less data in advance than allowed by the client's specified prefetch windows but it must not
+        send more.
 
-                RULE:
-
-                    The server MUST ignore this setting when the client is not processing any messages - i.e. the
-                    prefetch size does not limit the transfer of single messages to a client, only the sending in
-                    advance of more messages while the client still has one or more unacknowledged messages.
-
-            prefetch_count: short
-
-                prefetch window in messages
-
-                Specifies a prefetch window in terms of whole messages.  This field may be used in combination with the
-                prefetch-size field; a message will only be sent in advance if both prefetch windows (and those at the
-                channel and connection level) allow it. The prefetch- count is ignored if the no-ack option is set.
-
-                RULE:
-
-                    The server MAY send less data in advance than allowed by the client's specified prefetch windows but
-                    it MUST NOT send more.
-
-            a_global: boolean
-
-                apply to entire connection
-
-                By default the QoS settings apply to the current channel only.  If this field is set, they are applied
-                to the entire connection.
+        :param int prefetch_size: prefetch window in octets
+        :param int prefetch_count: prefetch window in messages
+        :param bool a_global: apply to entire connection (default is for current channel only)
         """
         args = AMQPWriter()
         args.write_long(prefetch_size)
@@ -1147,25 +1054,13 @@ class Channel(AbstractChannel):
         """Redeliver unacknowledged messages
 
         This method asks the broker to redeliver all unacknowledged messages on a specified channel. Zero or more
-        messages may be redelivered.  This method is only allowed on non-transacted channels.
+        messages may be redelivered. This method is only allowed on non-transacted channels.
 
-        RULE:
+        * The server MUST set the redelivered flag on all messages that are resent.
+        * The server MUST raise a channel exception if this is called on a transacted channel.
 
-            The server MUST set the redelivered flag on all messages that are resent.
-
-        RULE:
-
-            The server MUST raise a channel exception if this is called on a transacted channel.
-
-        PARAMETERS:
-
-            requeue: boolean
-
-                requeue the message
-
-                If this field is False, the message will be redelivered to the original recipient.  If this field is
-                True, the server will attempt to requeue the message, potentially then delivering it to an alternative
-                subscriber.
+        :param bool requeue: if set, the server will attempt to requeue the message, potentially then delivering it
+            to a different subscriber
         """
         args = AMQPWriter()
         args.write_bit(requeue)
@@ -1173,6 +1068,17 @@ class Channel(AbstractChannel):
 
     @synchronized('lock')
     def basic_recover_async(self, requeue=False):
+        """Redeliver unacknowledged messages (async)
+
+        This method asks the broker to redeliver all unacknowledged messages on a specified channel. Zero or more
+        messages may be redelivered. This method is only allowed on non-transacted channels.
+
+        * The server MUST set the redelivered flag on all messages that are resent.
+        * The server MUST raise a channel exception if this is called on a transacted channel.
+
+        :param bool requeue: if set, the server will attempt to requeue the message, potentially then delivering it
+            to a different subscriber
+        """
         args = AMQPWriter()
         args.write_bit(requeue)
         self._send_method(Method(spec.Basic.RecoverAsync, args))
@@ -1186,58 +1092,24 @@ class Channel(AbstractChannel):
     def basic_reject(self, delivery_tag, requeue):
         """Reject an incoming message
 
-        This method allows a client to reject a message.  It can be used to interrupt and cancel large incoming
-        messages, or return untreatable messages to their original queue.
+        This method allows a client to reject a message. It can be used to interrupt and cancel large incoming messages,
+        or return untreatable messages to their original queue.
 
-        RULE:
+        * The server SHOULD be capable of accepting and process the Reject method while sending message content with a
+          Deliver or Get-Ok method.  I.e. the server should read and process incoming methods while sending output
+          frames. To cancel a partially-send content, the server sends a content body frame of size 1 (i.e. with no data
+          except the frame-end octet).
+        * The server SHOULD interpret this method as meaning that the client is unable to process the message at this
+          time.
+        * A client MUST NOT use this method as a means of selecting messages to process.  A rejected message MAY be
+          discarded or dead-lettered, not necessarily passed to another client.
+        * The server MUST NOT deliver the message to the same client within the context of the current channel. The
+          recommended strategy is to attempt to deliver the message to an alternative consumer, and if that is not
+          possible, to move the message to a dead-letter queue. The server MAY use more sophisticated tracking to hold
+          the message on the queue and redeliver it to the same client at a later stage.
 
-            The server SHOULD be capable of accepting and process the Reject method while sending message content with a
-            Deliver or Get-Ok method.  I.e. the server should read and process incoming methods while sending output
-            frames.  To cancel a partially-send content, the server sends a content body frame of size 1 (i.e. with no
-            data except the frame-end octet).
-
-        RULE:
-
-            The server SHOULD interpret this method as meaning that the client is unable to process the message at this
-            time.
-
-        RULE:
-
-            A client MUST NOT use this method as a means of selecting messages to process.  A rejected message MAY be
-            discarded or dead-lettered, not necessarily passed to another client.
-
-        PARAMETERS:
-
-            delivery_tag: longlong
-
-                server-assigned delivery tag
-
-                The server-assigned and channel-specific delivery tag
-
-                RULE:
-
-                    The delivery tag is valid only within the channel from which the message was received.  I.e. a
-                    client MUST NOT receive a message on one channel and then acknowledge it on another.
-
-                RULE:
-
-                    The server MUST NOT use a zero value for delivery tags.  Zero is reserved for client use, meaning
-                    "all messages so far received".
-
-            requeue: boolean
-
-                requeue the message
-
-                If this field is False, the message will be discarded. If this field is True, the server will attempt to
-                requeue the message.
-
-                RULE:
-
-                    The server MUST NOT deliver the message to the same client within the context of the current
-                    channel.  The recommended strategy is to attempt to deliver the message to an alternative consumer,
-                    and if that is not possible, to move the message to a dead-letter queue.  The server MAY use more
-                    sophisticated tracking to hold the message on the queue and redeliver it to the same client at a
-                    later stage.
+        :param int delivery_tag: server-assigned channel-specific delivery tag
+        :param bool requeue: True: requeue the message; False: discard the message
         """
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
@@ -1285,7 +1157,6 @@ class Channel(AbstractChannel):
 
         This method abandons all messages published and acknowledged in the current transaction.  A new transaction
         starts immediately after a rollback.
-
         """
         self._send_method(Method(spec.Tx.Rollback))
         return self.wait(allowed_methods=[spec.Tx.RollbackOk])

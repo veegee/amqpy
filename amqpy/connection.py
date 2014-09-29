@@ -35,23 +35,17 @@ class Connection(AbstractChannel):
     #: Final heartbeat interval value (in float seconds) after negotiation
     heartbeat = None
 
-    #: Original heartbeat interval value proposed by client.
+    #: Original heartbeat interval value proposed by client
     client_heartbeat = None
 
-    #: Original heartbeat interval proposed by server.
+    #: Original heartbeat interval proposed by server
     server_heartbeat = None
 
-    #: Time of last heartbeat sent (in monotonic time, if available).
+    #: Time of last heartbeat sent (in monotonic time, if available)
     last_heartbeat_sent = 0
 
-    #: Time of last heartbeat received (in monotonic time, if available).
+    #: Time of last heartbeat received (in monotonic time, if available)
     last_heartbeat_received = 0
-
-    #: Number of bytes sent to socket at the last heartbeat check.
-    prev_sent = None
-
-    #: Number of bytes received from socket at the last heartbeat check.
-    prev_recv = None
 
     def __init__(self, host='localhost', port=5672, userid='guest', password='guest', login_method='AMQPLAIN',
                  virtual_host='/', locale='en_US', client_properties=None, ssl=None, connect_timeout=None,
@@ -74,8 +68,8 @@ class Connection(AbstractChannel):
         :param int channel_max: maximum number of channels
         :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
-        :param callable on_blocked: callback on connection blocked
-        :param callable on_unblocked: callback on connection unblocked
+        :param Callable on_blocked: callback on connection blocked
+        :param Callable on_unblocked: callback on connection unblocked
         :param bool enable_publisher_ack: enable publisher acknowledgements by default for new channels
         :type ssl: dict or None
         """
