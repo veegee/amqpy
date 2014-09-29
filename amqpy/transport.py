@@ -82,6 +82,38 @@ class AbstractTransport(metaclass=ABCMeta):
         finally:
             self.sock = None
 
+    def _read(self, n, initial, _errnos):
+        """Read from socket
+
+        This is the default implementation. Subclasses may implement `read()` to simply call this method, or provide
+        their  own `read()` implementation.
+
+        According to SSL_read(3), it can at most return 16kb of data. Thus, we use an internal read buffer like
+        TCPTransport.read to get the exact number of bytes wanted.
+
+        :param int n: exact number of bytes to read
+        :return: data read
+        :rtype: bytes
+        """
+        rbuf = self._read_buffer
+        try:
+            while len(rbuf) < n:
+                try:
+                    s = self.sock.recv(n - len(rbuf))  # see note above
+                except socket.error as exc:
+                    # ssl.sock.read may cause ENOENT if the operation couldn't be performed (Issue celery#1414).
+                    if not initial and exc.errno in _errnos:
+                        continue
+                    raise
+                if not s:
+                    raise IOError('Socket closed')
+                rbuf += s
+        except:
+            self._read_buffer = rbuf
+            raise
+        result, self._read_buffer = rbuf[:n], rbuf[n:]
+        return result
+
     @abstractmethod
     def read(self, n, initial=False):
         """Read exactly `n` bytes from the peer
@@ -98,7 +130,6 @@ class AbstractTransport(metaclass=ABCMeta):
         """Completely write a string to the peer
         """
 
-    @abstractmethod
     def _setup_transport(self):
         """Do any additional initialization of the class (used by the subclasses)
         """
@@ -180,38 +211,18 @@ class SSLTransport(AbstractTransport):
         """Wrap the socket in an SSL object
         """
         self.sock = ssl.wrap_socket(self.sock, **self.ssl_opts)
-        self._quick_recv = self.sock.read
 
-    def read(self, n, initial=False, _errnos=(errno.ENOENT, errno.EAGAIN, errno.EINTR)):
+    def read(self, n, initial=False):
         """Read from socket
 
         According to SSL_read(3), it can at most return 16kb of data. Thus, we use an internal read buffer like
         TCPTransport.read to get the exact number of bytes wanted.
 
-        :param n: number of bytes to read
-        :type n: int
+        :param int n: exact number of bytes to read
         :return: data read
         :rtype: bytes
         """
-        recv = self._quick_recv
-        rbuf = self._read_buffer
-        try:
-            while len(rbuf) < n:
-                try:
-                    s = recv(n - len(rbuf))  # see note above
-                except socket.error as exc:
-                    # ssl.sock.read may cause ENOENT if the operation couldn't be performed (Issue celery#1414).
-                    if not initial and exc.errno in _errnos:
-                        continue
-                    raise
-                if not s:
-                    raise IOError('Socket closed')
-                rbuf += s
-        except:
-            self._read_buffer = rbuf
-            raise
-        result, self._read_buffer = rbuf[:n], rbuf[n:]
-        return result
+        return self._read(n, initial, _errnos=(errno.ENOENT, errno.EAGAIN, errno.EINTR))
 
     def write(self, s):
         """Write a string out to the SSL socket fully
@@ -233,33 +244,14 @@ class TCPTransport(AbstractTransport):
     """Transport that deals directly with TCP socket
     """
 
-    def _setup_transport(self):
-        """Setup to write() directly to the socket, and do our own buffered reads
-        """
-        self._quick_recv = self.sock.recv
-
-    def read(self, n, initial=False, _errnos=(errno.EAGAIN, errno.EINTR)):
+    def read(self, n, initial=False):
         """Read exactly n bytes from the socket
-        """
-        recv = self._quick_recv
-        rbuf = self._read_buffer
-        try:
-            while len(rbuf) < n:
-                try:
-                    s = recv(n - len(rbuf))
-                except socket.error as exc:
-                    if not initial and exc.errno in _errnos:
-                        continue
-                    raise
-                if not s:
-                    raise IOError('Socket closed')
-                rbuf += s
-        except:
-            self._read_buffer = rbuf
-            raise
 
-        result, self._read_buffer = rbuf[:n], rbuf[n:]
-        return result
+        :param int n: exact number of bytes to read
+        :return: data read
+        :rtype: bytes
+        """
+        return self._read(n, initial, _errnos=(errno.EAGAIN, errno.EINTR))
 
     def write(self, s):
         self.sock.sendall(s)
