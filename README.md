@@ -1,4 +1,4 @@
-Python 3 AMQP >= 0.9.1 client library
+Python 3 AMQP 0.9.1 client library
 =====================================
 
 * Version: 0.4.3
@@ -11,7 +11,7 @@ Python 3 AMQP >= 0.9.1 client library
 About
 =====
 
-amqpy is an AMQP >= 0.9.1 library for Python >= 3.2.0 (including PyPy3) with a
+amqpy is an AMQP 0.9.1 library for Python >= 3.2.0 (including PyPy3) with a
 focus on:
 
 * stability
