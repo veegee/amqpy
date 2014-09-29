@@ -62,9 +62,7 @@ class Channel(AbstractChannel):
         self.no_ack_consumers = set()
 
         # set first time basic_publish_confirm is called and publisher confirms are enabled for this channel.
-        self._confirm_selected = False
-        if self.connection.confirm_publish:
-            self.basic_publish = self.basic_publish_confirm
+        self._confirm_selected = self.connection.confirm_publish
 
         self._x_open()
 
@@ -864,79 +862,27 @@ class Channel(AbstractChannel):
         This method asks the server to start a "consumer", which is a transient request for messages from a specific
         queue. Consumers last as long as the channel they were created on, or until the client cancels them.
 
-        :param queue: name of queue; if None, refers to last declared queue for this channel
-        :param consumer_tag: consumer tag, local to the connection
-        :param no_local: if True: do not deliver own messages
-        :param no_ack: server will not expect an ack for each message
-        :param exclusive: request exclusive access
-        :param nowait: tell server not to send a
-        :param callback: a callback callable(message) for each delivered message
-        :param arguments: AMQP method arguments
-        :param on_cancel: a callback callable
+        * The `consumer_tag` is local to a connection, so two clients can use the same consumer tags. But on the same
+          connection, the `consumer_tag` must be unique, or the server must raise a 530 NOT ALLOWED connection
+          exception.
+        * If `no_ack` is set, the server automatically acknowledges each message on behalf of the client.
+        * If `exclusive` is set, the client asks for this consumer to have exclusive access to the queue. If the
+          server cannot grant exclusive access to the queue because there are other consumers active, it must raise a
+          403 ACCESS REFUSED channel exception.
+        * `callback` must be a `Callable(message)` which is called for each messaged delivered by the broker. If no
+          callback is specified, messages are quietly discarded; `no_ack` should probably be set to True in that case.
 
-        PARAMETERS:
-
-            queue: shortstr
-
-                Specifies the name of the queue to consume from.  If the queue name is null, refers to the current queue
-                for the channel, which is the last declared queue.
-
-                RULE:
-
-                    If the client did not previously declare a queue, and the queue name in this method is empty, the
-                    server MUST raise a connection exception with reply code 530 (not allowed).
-
-            consumer_tag: shortstr
-
-                Specifies the identifier for the consumer. The consumer tag is local to a connection, so two clients can
-                use the same consumer tags. If this field is empty the server will generate a unique tag.
-
-                RULE:
-
-                    The tag MUST NOT refer to an existing consumer. If the client attempts to create two consumers with
-                    the same non-empty tag the server MUST raise a connection exception with reply code 530 (not
-                    allowed).
-
-            no_local: boolean
-
-                do not deliver own messages
-
-                If the no-local field is set the server will not send messages to the client that published them.
-
-            no_ack: boolean
-
-                no acknowledgement needed
-
-                If this field is set the server does not expect acknowledgments for messages.  That is, when a message
-                is delivered to the client the server automatically and silently acknowledges it on behalf of the
-                client.  This functionality increases performance but at the cost of reliability.  Messages can get lost
-                if a client dies before it can deliver them to the application.
-
-            exclusive: boolean
-
-                request exclusive access
-
-                Request exclusive consumer access, meaning only this consumer can access the queue.
-
-                RULE:
-
-                    If the server cannot grant exclusive access to the queue when asked, - because there are other
-                    consumers active - it MUST raise a channel exception with return code 403 (access refused).
-
-            nowait: boolean
-
-                do not send a reply method
-
-                If set, the server will not respond to the method. The client should not wait for a reply method.  If
-                the server could not complete the method it will raise a channel or connection exception.
-
-            callback: Python callable
-
-                function/method called with each delivered message
-
-                For each message delivered by the broker, the callable will be called with a Message object as the
-                single argument.  If no callable is specified, messages are quietly discarded, no_ack should probably be
-                set to True in that case.
+        :param str queue: name of queue; if None, refers to last declared queue for this channel
+        :param str consumer_tag: consumer tag, local to the connection
+        :param bool no_local: if True: do not deliver own messages
+        :param bool no_ack: server will not expect an ack for each message
+        :param bool exclusive: request exclusive access
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param Callable callback: a callback callable(message) for each delivered message
+        :param dict arguments: AMQP method arguments
+        :param Callable on_cancel: a callback callable
+        :return: consumer tag
+        :rtype: str
         """
         args = AMQPWriter()
         args.write_short(0)
@@ -1177,6 +1123,16 @@ class Channel(AbstractChannel):
         }
         return msg
 
+    def _basic_publish(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
+        args = AMQPWriter()
+        args.write_short(0)
+        args.write_shortstr(exchange)
+        args.write_shortstr(routing_key)
+        args.write_bit(mandatory)
+        args.write_bit(immediate)
+
+        self._send_method(Method(spec.Basic.Publish, args, msg))
+
     @synchronized('lock')
     def basic_publish(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
         """Publish a message
@@ -1194,23 +1150,33 @@ class Channel(AbstractChannel):
         :type mandatory: bool
         :type immediate: bool
         """
-        args = AMQPWriter()
-        args.write_short(0)
-        args.write_shortstr(exchange)
-        args.write_shortstr(routing_key)
-        args.write_bit(mandatory)
-        args.write_bit(immediate)
-
-        self._send_method(Method(spec.Basic.Publish, args, msg))
+        if self._confirm_selected:
+            raise Exception('Publisher confirms are enabled, please use `basic_publish_confirm()` instead')
+        self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
 
     @synchronized('lock')
-    def basic_publish_confirm(self, *args, **kwargs):
+    def basic_publish_confirm(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
+        """Publish a message and wait for a confirmation from the server
+
+        This method publishes a message to a specific exchange. The message will be routed to queues as defined by the
+        exchange configuration and distributed to any active consumers when the transaction, if any, is committed.
+
+        **This method requires the RabbitMQ publisher confirms extension.**
+
+        :param msg: message
+        :param exchange: exchange name, empty string means default exchange
+        :param routing_key: routing key
+        :param mandatory: True: deliver to at least one queue or return the message; False: drop the unroutable message
+        :param immediate: request immediate delivery
+        :type msg: amqpy.Message
+        :type exchange: str
+        :type mandatory: bool
+        :type immediate: bool
+        """
         if not self._confirm_selected:
-            self._confirm_selected = True
-            self.confirm_select()
-        ret = self.basic_publish(*args, **kwargs)
+            raise Exception('Publisher confirms are NOT enabled')
+        self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
         self.wait([spec.Basic.Ack])
-        return ret
 
     @synchronized('lock')
     def basic_qos(self, prefetch_size, prefetch_count, a_global):
@@ -1451,12 +1417,11 @@ class Channel(AbstractChannel):
 
     @synchronized('lock')
     def confirm_select(self, nowait=False):
-        """Enable publisher confirms for this channel (an RabbitMQ extension)
+        """Enable publisher confirms for this channel (a RabbitMQ extension)
 
         Can now be used if the channel is in transactional mode.
 
-        :param nowait: If set, the server will not respond to the method. The client should not wait for a reply method.
-            If the server could not complete the method it will raise a channel or connection exception.
+        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
         """
         args = AMQPWriter()
         args.write_bit(nowait)
@@ -1464,6 +1429,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Confirm.Select, args))
         if not nowait:
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
+        self._confirm_selected = True
 
     def _confirm_select_ok(self, method):
         """With this method, the broker confirms to the client that the channel is now using publisher confirms

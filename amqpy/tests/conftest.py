@@ -65,7 +65,7 @@ def rand_queue():
     :return: random queue name
     :rtype: str
     """
-    queue_name = 'test_queue_{}'.format(uuid.uuid4())
+    queue_name = 'amqpy.test.queue.{}'.format(uuid.uuid4())
     return queue_name
 
 
@@ -76,7 +76,7 @@ def rand_exch():
     :return: random exchange name
     :rtype: str
     """
-    exch_name = 'test_exchange_{}'.format(uuid.uuid4())
+    exch_name = 'amqpy.test.exchange.{}'.format(uuid.uuid4())
     return exch_name
 
 
@@ -87,5 +87,5 @@ def rand_rk():
     :return: random routing key
     :rtype: str
     """
-    routing_key = 'test_routing_key_{}'.format(uuid.uuid4())
+    routing_key = 'amqpy.test.rk.{}'.format(uuid.uuid4())
     return routing_key

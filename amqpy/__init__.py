@@ -10,6 +10,7 @@ from .message import Message
 from .channel import Channel
 from .connection import Connection
 from .exceptions import (
+    Timeout,
     AMQPError,
     AMQPConnectionError,
     RecoverableConnectionError,
