@@ -18,8 +18,7 @@ classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 3.2',
     'Programming Language :: Python :: 3.3',
-    'Programming Language :: Python :: 3.4'
-    'Programming Language :: Python :: Implementation :: PyPy3',
+    'Programming Language :: Python :: 3.4',
     'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
     'Intended Audience :: Developers',
 ]
