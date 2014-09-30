@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-from setuptools import setup, find_packages
-import amqpy
-
 import sys
 import codecs
+
+from setuptools import setup, find_packages
+
+import amqpy
 
 NAME = 'amqpy'
 DESCRIPTION = 'AMQP 0.9.1 client library for Python >= 3.2.0'
@@ -22,6 +23,8 @@ classifiers = [
     'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
     'Intended Audience :: Developers',
 ]
+
+keywords = ['amqp', 'rabbitmq', 'qpid']
 
 is_pypy = hasattr(sys, 'pypy_version_info')
 
@@ -41,4 +44,5 @@ setup(
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     tests_require=['pytest>=2.6'],
     classifiers=classifiers,
+    keywords=keywords
 )
