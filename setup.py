@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import codecs
+import os
 
 from setuptools import setup, find_packages
 
@@ -23,13 +23,23 @@ classifiers = [
     'Intended Audience :: Developers',
 ]
 
+package_data = {
+    '': ['*.md', '*.ini', 'AUTHORS', 'LICENSE'],
+}
+
 keywords = ['amqp', 'rabbitmq', 'qpid']
 
 is_pypy = hasattr(sys, 'pypy_version_info')
 
+long_description = 'amqpy - an AMQP 0.9.1 library for Python >= 3.2.0'
+if os.path.exists('README.md'):
+    with open('README.md') as f:
+        long_description = f.read()
+
 setup(
     name=NAME,
     description=DESCRIPTION,
+    long_description=long_description,
     version=amqpy.__version__,
     author=amqpy.__author__,
     author_email=amqpy.__contact__,
@@ -38,6 +48,7 @@ setup(
     platforms=['any'],
     license='LGPL',
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
+    package_data=package_data,
     tests_require=['pytest>=2.6'],
     classifiers=classifiers,
     keywords=keywords
