@@ -1,3 +1,2 @@
 py==1.4.25
 pytest==2.6.3
-sphinx-bootstrap-theme==0.4.2
