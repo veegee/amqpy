@@ -7,8 +7,8 @@ from setuptools import setup, find_packages
 
 import amqpy
 
-NAME = 'amqpy'
-DESCRIPTION = 'AMQP 0.9.1 client library for Python >= 3.2.0'
+name = 'amqpy'
+description = 'an AMQP 0.9.1 client library for Python >= 3.2.0'
 
 if sys.version_info < (3, 2):
     raise Exception('amqpy requires Python 3.2 or higher')
@@ -31,14 +31,14 @@ keywords = ['amqp', 'rabbitmq', 'qpid']
 
 is_pypy = hasattr(sys, 'pypy_version_info')
 
-long_description = 'amqpy - an AMQP 0.9.1 library for Python >= 3.2.0'
+long_description = description
 if os.path.exists('README.md'):
     with open('README.md') as f:
         long_description = f.read()
 
 setup(
-    name=NAME,
-    description=DESCRIPTION,
+    name=name,
+    description=description,
     long_description=long_description,
     version=amqpy.__version__,
     author=amqpy.__author__,
