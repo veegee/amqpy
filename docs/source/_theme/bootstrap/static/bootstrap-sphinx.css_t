@@ -174,3 +174,28 @@ table.field-list {
     width: 263px;
   }
 }
+
+/* Format headings nicely */
+dt {
+    font-weight: normal;
+}
+
+dl.class > dt {
+    font-size: 1.2em;
+}
+
+dl.class > dd {
+    padding-left: 40px;
+}
+
+dl.method > dd {
+    padding-left: 40px;
+}
+
+table.field-list tbody td, table.field-list tbody th {
+    padding: 3px;
+}
+
+table.field-list tbody th {
+    padding-right: 10px;
+}
