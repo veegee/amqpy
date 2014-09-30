@@ -26,8 +26,7 @@ The current API is not final, but will progressively get more stable as version
 
 This library is NOT Python 2 compatible, and will never support Python 2. If you
 are using Python 2, you should upgrade to Python 3 >= 3.2.0. However, this
-library aims to maintain backwards compatibility for all Python 3 >= 3.2.0, and
-all AMQP >= 0.9.1.
+library aims to maintain backwards compatibility for all Python 3 >= 3.2.0.
 
 
 Features
