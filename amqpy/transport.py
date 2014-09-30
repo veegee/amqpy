@@ -168,14 +168,18 @@ class AbstractTransport(metaclass=ABCMeta):
             # read frame terminator byte
             frame_terminator = self.read(1)
             frame.data.extend(frame_terminator)
+
+            # this fixes the change in memoryview in Python 3.3 (accessing an element returns the correct type)
+            i_last_byte = bytes(frame_terminator)[0]
+
         except (OSError, IOError, socket.error) as exc:
             if get_errno(exc) not in _UNAVAIL:
                 self.connected = False
             raise
-        if frame_terminator[0] == FrameType.END:
+        if i_last_byte == FrameType.END:
             return frame
         else:
-            raise UnexpectedFrame('Received 0x{0:02x} while expecting 0xCE (FrameType.END)'.format(frame_terminator))
+            raise UnexpectedFrame('Received {} while expecting 0xCE (FrameType.END)'.format(hex(i_last_byte)))
 
     @synchronized('_frame_lock')
     def write_frame(self, frame):
