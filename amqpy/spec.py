@@ -9,11 +9,15 @@ basic_return_t = namedtuple('basic_return_t', ('reply_code', 'reply_text', 'exch
 
 method_t = namedtuple('method_t', ('class_id', 'method_id'))
 
+#: The default, minimum frame size that both the client and server must be able to handle
 FRAME_MIN_SIZE = 4096
 
 
 class FrameType:
-    """Frame constants
+    """This class contains frame-related constants
+
+    METHOD, HEADER, BODY, and HEARTBEAT are all frame type constants which make up the first byte of every frame. The
+    END constant is the termination value which is the last byte of every frame.
     """
     METHOD = 1  # method frame
     HEADER = 2  # content header frame

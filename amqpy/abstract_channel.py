@@ -16,10 +16,10 @@ class AbstractChannel(metaclass=ABCMeta):
     The subclasses must have a METHOD_MAP class variable, mapping between AMQP method signatures and Python methods.
     """
 
-    #: placeholder, implementations must override this
+    #: Placeholder, implementations must override this
     METHOD_MAP = {}
 
-    #: list of methods which must be handled immediately
+    #: List of methods which must be handled immediately
     IMMEDIATE_METHODS = [spec.Basic.Return]
 
     def __init__(self, connection, channel_id):
