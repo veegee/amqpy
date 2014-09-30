@@ -56,7 +56,12 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-if not on_rtd:
+try:
+    z = __import__('sphinx_bootstrap_theme')
+except ImportError:
+    z = None
+
+if not on_rtd or z:
     import sphinx_bootstrap_theme
 
     html_theme = 'bootstrap'
