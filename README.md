@@ -11,8 +11,7 @@ Python 3 AMQP 0.9.1 client library
 About
 =====
 
-amqpy is an AMQP 0.9.1 library for Python >= 3.2.0 (including PyPy3) with a
-focus on:
+amqpy is an AMQP 0.9.1 library for Python >= 3.2.0 with a focus on:
 
 * stability
 * well-tested and thoroughly documented code
@@ -57,16 +56,15 @@ Features
 To do (goals for version 1.0.0)
 ===============================
 
+* Add support for PyPy3
 * Add support for automatic heartbeats in a separate thread
 * [Kombu](https://github.com/celery/kombu) compatibility
-* Publish on PyPi
 
 # Tests
 
 * Test for strict protocol compliance and behaviour
 * Test for thread safety, use PyTest monkey patching facilities to patch
   `socket` to slow down reads and writes
-*
 
 # Documentation
 
