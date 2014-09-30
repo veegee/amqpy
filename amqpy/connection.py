@@ -22,6 +22,7 @@ __all__ = ['Connection']
 LIBRARY_PROPERTIES = {
     'product': 'amqpy',
     'product_version': __version__,
+    'version': __version__,
     'capabilities': {},
 }
 

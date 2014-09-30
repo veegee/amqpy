@@ -229,6 +229,8 @@ class Channel(AbstractChannel):
                          arguments=None):
         """Declare exchange, create if needed
 
+        * Exchanges cannot be redeclared with different types. The client MUST not attempt to redeclare an existing
+          exchange with a different type than used in the original Exchange.Declare method.
         * This method creates an exchange if it does not already exist, and if the exchange exists, verifies that it
           is of the correct and expected class.
         * The server must ignore the `durable` field if the exchange already exists.
@@ -244,6 +246,7 @@ class Channel(AbstractChannel):
         :param bool auto_delete: auto-delete exchange when all queues have finished using it
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
         :param dict arguments: exchange declare arguments
+        :raise AccessRefused: if attempting to declare an exchange with a reserved name (amq.*)
         :raise NotFound: if `passive` is enabled and the exchange does not exist
         :return: None
         """

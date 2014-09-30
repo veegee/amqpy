@@ -2,7 +2,8 @@ import uuid
 
 import pytest
 
-from .. import ChannelError, Channel, Message, FrameSyntaxError, NotFound, AccessRefused, PreconditionFailed
+from .. import Channel, Message, FrameSyntaxError
+from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused
 from .conftest import get_server_props
 
 
@@ -16,6 +17,20 @@ class TestExchange:
         with pytest.raises(NotFound):
             exch_name = 'test_exchange_{}'.format(uuid.uuid4())
             ch.exchange_declare(exch_name, 'direct', passive=True)
+
+    def test_exchange_redeclare_different_type_raises(self, ch: Channel, rand_exch):
+        """Redeclaring an exchange with a different type should raise
+        """
+        ch.exchange_declare(rand_exch, 'direct')
+        with pytest.raises(AMQPError):
+            ch.exchange_declare(rand_exch, 'fanout')
+
+    def test_exchange_redeclare_auto_delete_raises(self, ch: Channel, rand_exch):
+        """Redeclaring an exchange with a different `auto_delete` should raise
+        """
+        ch.exchange_declare(rand_exch, 'direct', auto_delete=False)
+        with pytest.raises(AMQPError):
+            ch.exchange_declare(rand_exch, 'direct', auto_delete=True)
 
     def test_exchange_delete_nonexistent_raises(self, ch, rand_exch):
         """Test to ensure that deleting a nonexistent exchange raises `NotFound`
