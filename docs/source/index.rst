@@ -10,6 +10,7 @@ API documentation:
     amqpy.channel
     amqpy.message
     amqpy.spec
+    amqpy.exceptions
 
 
 Introduction

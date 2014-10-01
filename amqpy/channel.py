@@ -129,6 +129,8 @@ class Channel(AbstractChannel):
         conditions (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a
         close is due to an exception, the sender provides the class and method id of the method which caused the
         exception.
+
+        This method sends a "close-ok" to the server, then re-opens the channel.
         """
         args = method.args
         reply_code = args.read_short()
@@ -137,8 +139,12 @@ class Channel(AbstractChannel):
         method_id = args.read_short()
 
         self._send_method(Method(spec.Channel.CloseOk))
+        self.is_open = False
+
+        # re-open the channel
         self._do_revive()
 
+        # get information about the method which caused the server to close the channel
         method_type = method_t(class_id, method_id)
         raise error_for_code(reply_code, reply_text, method_type, ChannelError, self.channel_id)
 

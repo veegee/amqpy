@@ -1,5 +1,5 @@
-[mod] amqpy.spec
-================
+amqpy.spec module
+=================
 
 .. automodule:: amqpy.spec
     :members:

@@ -1,5 +1,5 @@
-[mod] amqpy.channel
-===================
+amqpy.channel module
+====================
 
 .. automodule:: amqpy.channel
     :members:
