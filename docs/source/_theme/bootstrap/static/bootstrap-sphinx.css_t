@@ -199,3 +199,7 @@ table.field-list tbody td, table.field-list tbody th {
 table.field-list tbody th {
     padding-right: 10px;
 }
+
+pre {
+    color: #333;
+}

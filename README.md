@@ -56,6 +56,10 @@ Features
 To do (goals for version 1.0.0)
 ===============================
 
+* Add support for channel-level event draining, so that multiple threads can
+  block while waiting for events on their own channels.
+* Add support for multiple authentication mechanisms such as CRAM-MD5 for
+  Apache Qpid
 * Add support for automatic heartbeats in a separate thread
 * [Kombu](https://github.com/celery/kombu) compatibility
 
