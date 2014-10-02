@@ -136,10 +136,10 @@ class Connection(AbstractChannel):
 
     @synchronized('lock')
     def channel(self, channel_id=None):
-        """Fetch a Channel object specified by `channel_id`, or create that object if it doesn't already exist
+        """Create a new channel, or fetch the channel associated with `channel_id` if specified
 
         :param channel_id: channel ID number
-        :type channel_id: int
+        :type channel_id: int or None
         :return: Channel
         :rtype: amqpy.channel.Channel
         """
