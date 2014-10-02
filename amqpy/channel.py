@@ -1,7 +1,6 @@
 """AMQP Channels
 """
 import logging
-from collections import defaultdict
 from queue import Queue
 
 from .concurrency import synchronized

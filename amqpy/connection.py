@@ -63,16 +63,20 @@ class Connection(AbstractChannel):
         :param str password: password
         :param str virtual_host: virtual host
         :param str locale: locale
-        :param dict client_properties: dict of client properties
+        :param client_properties: dict of client properties
         :param ssl: dict of SSL options passed to :func:`ssl.wrap_socket()`, None to disable SSL
         :param float connect_timeout: connect timeout
         :param int channel_max: maximum number of channels
         :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
-        :param Callable on_blocked: callback on connection blocked
-        :param Callable on_unblocked: callback on connection unblocked
+        :param on_blocked: callback on connection blocked
+        :param on_unblocked: callback on connection unblocked
         :param bool enable_publisher_ack: enable publisher acknowledgements by default for new channels
+        :type connect_timeout: float or None
+        :type client_properties: dict or None
         :type ssl: dict or None
+        :type on_blocked: Callable or None
+        :type on_unblocked: Callable or None
         """
         # `channels` map stores references to all active channels
         self.channels = {}  # dict of {channel_id int: Channel}
@@ -116,14 +120,15 @@ class Connection(AbstractChannel):
         login_response = login_response.getvalue()[4:]  # skip the length
 
         # reply with 'start-ok' and connection parameters
+        # noinspection PyArgumentList
         client_props = dict(LIBRARY_PROPERTIES, **client_properties or {})
-        self._x_start_ok(client_props, login_method, login_response, locale)
+        self._send_start_ok(client_props, login_method, login_response, locale)
 
         self._wait_tune_ok = True
         while self._wait_tune_ok:
             self.wait(allowed_methods=[spec.Connection.Secure, spec.Connection.Tune])
 
-        self._x_open(virtual_host)
+        self._send_open(virtual_host)
 
     @property
     def connected(self):
@@ -257,7 +262,7 @@ class Connection(AbstractChannel):
         class_id = args.read_short()  # class_id of method
         method_id = args.read_short()  # method_id of method
 
-        self._x_close_ok()  # send a close-ok to the server, to confirm that we've acknowledged the close request
+        self._send_close_ok()  # send a close-ok to the server, to confirm that we've acknowledged the close request
 
         method_type = method_t(class_id, method_id)
         raise error_for_code(reply_code, reply_text, method_type, AMQPConnectionError, self.channel_id)
@@ -266,15 +271,17 @@ class Connection(AbstractChannel):
         """RabbitMQ Extension
         """
         reason = method.args.read_shortstr()
-        if self.on_blocked:
+        if callable(self.on_blocked):
+            # noinspection PyCallingNonCallable
             return self.on_blocked(reason)
 
     def _cb_unblocked(self, method):
         assert method
-        if self.on_unblocked:
+        if callable(self.on_unblocked):
+            # noinspection PyCallingNonCallable
             return self.on_unblocked()
 
-    def _x_close_ok(self):
+    def _send_close_ok(self):
         """Confirm a connection close that has been requested by the server
 
         This method confirms a Connection.Close method and tells the recipient that it is safe to release resources for
@@ -293,7 +300,7 @@ class Connection(AbstractChannel):
         assert method
         self._do_close()
 
-    def _x_open(self, virtual_host, capabilities=''):
+    def _send_open(self, virtual_host, capabilities=''):
         """Open connection to virtual host
 
         This method opens a connection to a virtual host, which is a collection of resources, and acts to separate
@@ -334,7 +341,7 @@ class Connection(AbstractChannel):
         challenge = method.args.read_longstr()
         assert challenge
 
-    def _x_secure_ok(self, response):
+    def _send_secure_ok(self, response):
         """Security mechanism response
 
         This method attempts to authenticate, passing a block of SASL data for the security mechanism at the server
@@ -399,7 +406,7 @@ class Connection(AbstractChannel):
         log.debug('Security mechanisms: {}'.format(self.mechanisms))
         log.debug('Locales: {}'.format(self.locales))
 
-    def _x_start_ok(self, client_properties, mechanism, response, locale):
+    def _send_start_ok(self, client_properties, mechanism, response, locale):
         """Select security mechanism and locale
 
         This method selects a SASL security mechanism. ASL uses SASL (RFC2222) to negotiate authentication and
@@ -485,12 +492,12 @@ class Connection(AbstractChannel):
         if not self.client_heartbeat:
             self.heartbeat = 0
 
-        self._x_tune_ok(self.channel_max, self.frame_max, self.heartbeat)
+        self._send_tune_ok(self.channel_max, self.frame_max, self.heartbeat)
 
     def send_heartbeat(self):
         self.transport.write_frame(Frame(FrameType.HEARTBEAT))
 
-    def _x_tune_ok(self, channel_max, frame_max, heartbeat):
+    def _send_tune_ok(self, channel_max, frame_max, heartbeat):
         """Negotiate connection tuning parameters
 
         This method sends the client's connection tuning parameters to the server. Certain fields are negotiated, others

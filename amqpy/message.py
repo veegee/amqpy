@@ -115,7 +115,7 @@ class Message(GenericContent):
         :param body: message body
         :param channel: associated channel
         :type body: bytes or str
-        :type channel: amqpy.Channel
+        :type channel: amqpy.channel.Channel
 
         `properties` can include:
 
@@ -140,11 +140,7 @@ class Message(GenericContent):
         """
         super().__init__(properties)
         # TODO: collapse **properties into a dict parameter
-        if isinstance(body, bytearray):
-            # TODO: temporary measure to make tests that expect an instance of bytes pass, but reassess this
-            self.body = bytes(body)
-        else:
-            self.body = body
+        self.body = body
         self.channel = channel  # associated channel
         self.delivery_info = {}  # delivery info, set after receiving a message
 
