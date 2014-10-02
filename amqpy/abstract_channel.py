@@ -67,7 +67,7 @@ class AbstractChannel(metaclass=ABCMeta):
         :type callback: Callable(AbstractChannel, Method)
         """
         method = self._wait_method(allowed_methods)
-        return self.handle_method(method, callback)
+        return self.handle_method(method, callback=callback)
 
     def _wait_method(self, allowed_methods):
         """Wait for a method from the server destined for the current channel
@@ -146,6 +146,7 @@ class AbstractChannel(metaclass=ABCMeta):
 
         # nothing queued for any channel, need to wait for a method from the server
         while True:
+            # do a blocking read for any incoming method
             method = self.connection.method_reader.read_method(timeout)
             m_type = method.method_type
             ch_id = method.channel_id
@@ -153,6 +154,13 @@ class AbstractChannel(metaclass=ABCMeta):
             # check if the received method is the one we're waiting for
             if ch_id in channels and (allowed_methods is None or m_type in allowed_methods):
                 return ch_id, method
+
+            # check if the received method needs to be handled immediately
+            if ch_id != 0 and m_type in self.IMMEDIATE_METHODS:
+                # certain methods like basic_return should be dispatched immediately rather than being queued, even if
+                # they're not one of the `allowed_methods` we're looking for
+                self.connection.channels[ch_id].handle_method(method)
+                continue
 
             # not the channel and/or method we were looking for; queue this method for later
             channels[ch_id].method_queue.append(method)
@@ -162,21 +170,24 @@ class AbstractChannel(metaclass=ABCMeta):
             if ch_id == 0:
                 self.connection.wait()
 
-    def handle_method(self, method, callback=None):
+    def handle_method(self, method, channel=None, callback=None):
         """Handle the specified received method
 
         The appropriate handler as defined in `self.METHOD_MAP` will be called to handle this method.
 
         :param method: freshly received method from the server
+        :param channel: channel object
         :param callback: callable with the following signature: callable(AbstractChannel, Method)
         :type method: amqpy.spec.Method
+        :type channel: amqpy.channel.Channel
         :type callback: Callable(AbstractChannel, Method) or None
         :return: the return value of the specific callback or method handler
         """
         #: :type: GenericContent
         content = method.content
+        channel = channel or self
 
-        if content and self.auto_decode and 'content_encoding' in content.properties:
+        if content and channel.auto_decode and 'content_encoding' in content.properties:
             # try to decode message body
             # noinspection PyBroadException
             try:
@@ -185,8 +196,8 @@ class AbstractChannel(metaclass=ABCMeta):
                 pass
 
         try:
-            callback = callback or self.METHOD_MAP[method.method_type]
+            callback = callback or channel.METHOD_MAP[method.method_type]
         except KeyError:
             raise AMQPNotImplementedError('Unknown AMQP method {0}'.format(method.method_type))
 
-        return callback(self, method)
+        return callback(channel, method)

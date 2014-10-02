@@ -10,7 +10,7 @@ from .serialization import AMQPWriter
 from . import __version__
 from .abstract_channel import AbstractChannel
 from .channel import Channel
-from .exceptions import ResourceError, AMQPConnectionError, error_for_code, AMQPNotImplementedError
+from .exceptions import ResourceError, AMQPConnectionError, error_for_code
 from .transport import create_transport
 from . import spec
 from .spec import Method, Frame, FrameType, method_t
@@ -204,23 +204,8 @@ class Connection(AbstractChannel):
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
         chan_id, method = self._wait_multiple(self.channels, None, timeout=timeout)
-        content = method.content
-
         channel = self.channels[chan_id]
-
-        if content and channel.auto_decode and hasattr(content, 'content_encoding'):
-            # noinspection PyBroadException
-            try:
-                content.body = content.body.decode(content.content_encoding)
-            except Exception:
-                pass
-
-        callback = channel.METHOD_MAP.get(method.method_type)
-
-        if callback is None:
-            raise AMQPNotImplementedError('Unknown AMQP method {} (ch: {})'.format(method.method_type, chan_id))
-
-        return callback(channel, method)
+        return self.handle_method(method, channel=channel)
 
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Request a connection close
