@@ -26,12 +26,10 @@ __all__ = [
 ]
 
 
-class Timeout(Exception):
+class Timeout(TimeoutError):
     """General AMQP operation timeout
     """
-
-    def __init__(self):
-        pass
+    pass
 
 
 class AMQPError(Exception):
