@@ -243,7 +243,7 @@ class Connection(AbstractChannel):
         self._send_method(Method(spec.Connection.Close, args))
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 
-    def _close(self, method):
+    def _cb_close(self, method):
         """Respond to a connection close
 
         This method indicates that the sender (server) wants to close the connection. This may be due to internal
@@ -262,14 +262,14 @@ class Connection(AbstractChannel):
         method_type = method_t(class_id, method_id)
         raise error_for_code(reply_code, reply_text, method_type, AMQPConnectionError, self.channel_id)
 
-    def _blocked(self, method):
+    def _cb_blocked(self, method):
         """RabbitMQ Extension
         """
         reason = method.args.read_shortstr()
         if self.on_blocked:
             return self.on_blocked(reason)
 
-    def _unblocked(self, method):
+    def _cb_unblocked(self, method):
         assert method
         if self.on_unblocked:
             return self.on_unblocked()
@@ -284,7 +284,7 @@ class Connection(AbstractChannel):
         self._send_method(Method(spec.Connection.CloseOk))
         self._do_close()
 
-    def _close_ok(self, method):
+    def _cb_close_ok(self, method):
         """Confirm a connection close
 
         This method is called when the server send a close-ok in response to our close request. It is now safe to
@@ -312,7 +312,7 @@ class Connection(AbstractChannel):
         self._send_method(Method(spec.Connection.Open, args))
         return self.wait(allowed_methods=[spec.Connection.OpenOk])
 
-    def _open_ok(self, method):
+    def _cb_open_ok(self, method):
         """Signal that the connection is ready
 
         This method signals to the client that the connection is ready for use.
@@ -320,7 +320,7 @@ class Connection(AbstractChannel):
         assert method
         log.debug('Open OK')
 
-    def _secure(self, method):
+    def _cb_secure(self, method):
         """Security mechanism challenge
 
         The SASL protocol works by exchanging challenges and responses until both peers have received sufficient
@@ -350,7 +350,7 @@ class Connection(AbstractChannel):
         args.write_longstr(response)
         self._send_method(Method(spec.Connection.SecureOk, args))
 
-    def _start(self, method):
+    def _cb_start(self, method):
         """Start connection negotiation callback
 
         This method starts the connection negotiation process by telling the client the protocol version that the server
@@ -441,7 +441,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(locale)
         self._send_method(Method(spec.Connection.StartOk, args))
 
-    def _tune(self, method):
+    def _cb_tune(self, method):
         """Propose connection tuning parameters
 
         This method is the handler for receiving a "tune" method. `channel_max` and `frame_max` are set to the lower
@@ -533,12 +533,12 @@ class Connection(AbstractChannel):
         return self.server_properties.get('capabilities') or {}
 
     METHOD_MAP = {
-        spec.Connection.Start: _start,
-        spec.Connection.Secure: _secure,
-        spec.Connection.Tune: _tune,
-        spec.Connection.OpenOk: _open_ok,
-        spec.Connection.Close: _close,
-        spec.Connection.CloseOk: _close_ok,
-        spec.Connection.Blocked: _blocked,
-        spec.Connection.Unblocked: _unblocked,
+        spec.Connection.Start: _cb_start,
+        spec.Connection.Secure: _cb_secure,
+        spec.Connection.Tune: _cb_tune,
+        spec.Connection.OpenOk: _cb_open_ok,
+        spec.Connection.Close: _cb_close,
+        spec.Connection.CloseOk: _cb_close_ok,
+        spec.Connection.Blocked: _cb_blocked,
+        spec.Connection.Unblocked: _cb_unblocked,
     }

@@ -65,7 +65,6 @@ To do (goals for version 1.0.0)
 
 * Add `.json()` method to `Message` for convenience
 * Add icons to Sphinx doc
-* Rename callbacks
 
 # Tests
 

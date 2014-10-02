@@ -18,14 +18,10 @@ log = logging.getLogger('amqpy')
 
 
 class Channel(AbstractChannel):
-    """Work with channels
-
-    The channel class provides methods for a client to establish a virtual connection - a channel - to a server and for
+    """
+    The channel class provides methods for a client to establish a virtual connection (a channel) to a server and for
     both peers to operate the virtual connection thereafter.
     """
-
-    # TODO: finish cleaning up the documentation in this module
-    # TODO: add :raise: and :return: directives in each docstring
 
     def __init__(self, connection, channel_id=None, auto_decode=True):
         """Create a channel bound to a connection and using the specified numeric channel_id, and open on the server
@@ -63,7 +59,6 @@ class Channel(AbstractChannel):
         self.cancel_callbacks = {}
 
         self.auto_decode = auto_decode  # auto decode received messages
-        self.events = defaultdict(set)  # TODO: find out what this is used for
 
         # set of consumers that have opted for `no_ack` delivery (server will not expect an ack for delivered messages)
         self.no_ack_consumers = set()
@@ -86,7 +81,6 @@ class Channel(AbstractChannel):
             connection._avail_channel_ids.append(channel_id)
         self.callbacks.clear()
         self.cancel_callbacks.clear()
-        self.events.clear()
         self.no_ack_consumers.clear()
 
     def _do_revive(self):
@@ -122,7 +116,7 @@ class Channel(AbstractChannel):
         finally:
             self.connection = None
 
-    def _close(self, method):
+    def _cb_close(self, method):
         """Respond to a channel close
 
         This method indicates that the sender (server) wants to close the channel. This may be due to internal
@@ -148,7 +142,7 @@ class Channel(AbstractChannel):
         method_type = method_t(class_id, method_id)
         raise error_for_code(reply_code, reply_text, method_type, ChannelError, self.channel_id)
 
-    def _close_ok(self, method):
+    def _cb_close_ok(self, method):
         """Confirm a channel close
 
         This method confirms a Channel.Close method and tells the recipient that it is safe to release resources for the
@@ -175,7 +169,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Channel.Flow, args))
         return self.wait(allowed_methods=[spec.Channel.FlowOk])
 
-    def _flow(self, method):
+    def _cb_flow(self, method):
         """Enable/disable flow from peer
 
         This method asks the peer to pause or restart the flow of content data. This is a simple flow-control mechanism
@@ -200,7 +194,7 @@ class Channel(AbstractChannel):
         args.write_bit(active)
         self._send_method(Method(spec.Channel.FlowOk, args))
 
-    def _flow_ok(self, method):
+    def _cb_flow_ok(self, method):
         """Confirm a flow method
 
         Confirms to the peer that a flow command was received and processed.
@@ -221,7 +215,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Channel.Open, args))
         return self.wait(allowed_methods=[spec.Channel.OpenOk])
 
-    def _open_ok(self, method):
+    def _cb_open_ok(self, method):
         """Signal that the channel is ready
 
         The server sends this method to signal to the client that this channel is ready for use.
@@ -272,7 +266,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.DeclareOk])
 
-    def _exchange_declare_ok(self, method):
+    def _cb_exchange_declare_ok(self, method):
         """Confirms an exchange declaration
 
         The server sends this method to confirm a Declare method and confirms the name of the exchange, essential for
@@ -307,7 +301,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.DeleteOk])
 
-    def _exchange_delete_ok(self, method):
+    def _cb_exchange_delete_ok(self, method):
         """Confirm deletion of an exchange
 
         The server sends this method to confirm that the deletion of an exchange was successful.
@@ -372,14 +366,14 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Exchange.UnbindOk])
 
-    def _exchange_bind_ok(self, method):
+    def _cb_exchange_bind_ok(self, method):
         """Confirm bind successful
 
         The server sends this method to confirm that the bind was successful.
         """
         pass
 
-    def _exchange_unbind_ok(self, method):
+    def _cb_exchange_unbind_ok(self, method):
         """Confirm unbind successful
 
         The server sends this method to confirm that the unbind was successful.
@@ -425,7 +419,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.BindOk])
 
-    def _queue_bind_ok(self, method):
+    def _cb_queue_bind_ok(self, method):
         """Confirm bind successful
 
         The server sends this method to confirm that the bind was successful.
@@ -460,7 +454,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.UnbindOk])
 
-    def _queue_unbind_ok(self, method):
+    def _cb_queue_unbind_ok(self, method):
         """Confirm unbind successful
 
         This method confirms that the unbind was successful.
@@ -517,7 +511,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.DeclareOk])
 
-    def _queue_declare_ok(self, method):
+    def _cb_queue_declare_ok(self, method):
         """Confirms a queue definition
 
         This method confirms a Declare method and confirms the name of the queue, essential for automatically-named
@@ -572,7 +566,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.DeleteOk])
 
-    def _queue_delete_ok(self, method):
+    def _cb_queue_delete_ok(self, method):
         """Confirm deletion of a queue
 
         This method confirms the deletion of a queue.
@@ -612,7 +606,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(allowed_methods=[spec.Queue.PurgeOk])
 
-    def _queue_purge_ok(self, method):
+    def _cb_queue_purge_ok(self, method):
         """Confirms a queue purge
 
         This method confirms the purge of a queue.
@@ -668,7 +662,7 @@ class Channel(AbstractChannel):
             self._send_method(Method(spec.Basic.Cancel, args))
             return self.wait(allowed_methods=[spec.Basic.CancelOk])
 
-    def _basic_cancel_notify(self, method):
+    def _cb_basic_cancel_notify(self, method):
         """Consumer cancelled by server.
 
         Most likely the queue was deleted.
@@ -681,7 +675,7 @@ class Channel(AbstractChannel):
         else:
             raise ConsumerCancelled(consumer_tag, spec.Basic.Cancel)
 
-    def _basic_cancel_ok(self, method):
+    def _cb_basic_cancel_ok(self, method):
         """Confirm a cancelled consumer
 
         This method confirms that the cancellation was completed.
@@ -764,7 +758,7 @@ class Channel(AbstractChannel):
 
         return consumer_tag
 
-    def _basic_consume_ok(self, method):
+    def _cb_basic_consume_ok(self, method):
         """Confirm a new consumer
 
         The server provides the client with a consumer tag, which is used by the client for methods called on the
@@ -779,7 +773,7 @@ class Channel(AbstractChannel):
         args = method.args
         return args.read_shortstr()
 
-    def _basic_deliver(self, method):
+    def _cb_basic_deliver(self, method):
         """Notify the client of a consumer message
 
         This method delivers a message to the client, via a consumer. In the asynchronous message delivery model, the
@@ -883,7 +877,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Basic.Get, args))
         return self.wait(allowed_methods=[spec.Basic.GetOk, spec.Basic.GetEmpty])
 
-    def _basic_get_empty(self, method):
+    def _cb_basic_get_empty(self, method):
         """Indicate no messages available
 
         This method tells the client that the queue has no messages
@@ -892,7 +886,7 @@ class Channel(AbstractChannel):
         args = method.args
         args.read_shortstr()
 
-    def _basic_get_ok(self, method):
+    def _cb_basic_get_ok(self, method):
         """Provide client with a message
 
         This method delivers a message to the client following a get method.  A message delivered by 'get-ok' must be
@@ -1048,7 +1042,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Basic.Qos, args))
         return self.wait(allowed_methods=[spec.Basic.QosOk])
 
-    def _basic_qos_ok(self, method):
+    def _cb_basic_qos_ok(self, method):
         """Confirm the requested qos
 
         This method tells the client that the requested QoS levels could be handled by the server.  The requested QoS
@@ -1090,7 +1084,7 @@ class Channel(AbstractChannel):
         args.write_bit(requeue)
         self._send_method(Method(spec.Basic.RecoverAsync, args))
 
-    def _basic_recover_ok(self, method):
+    def _cb_basic_recover_ok(self, method):
         """In 0-9-1 the deprecated recover solicits a response
         """
         pass
@@ -1123,7 +1117,7 @@ class Channel(AbstractChannel):
         args.write_bit(requeue)
         self._send_method(Method(spec.Basic.Reject, args))
 
-    def _basic_return(self, method):
+    def _cb_basic_return(self, method):
         """Return a failed message
 
         This method returns an undeliverable message that was published with the `immediate` flag set, or an unroutable
@@ -1150,7 +1144,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Tx.Commit))
         return self.wait(allowed_methods=[spec.Tx.CommitOk])
 
-    def _tx_commit_ok(self, method):
+    def _cb_tx_commit_ok(self, method):
         """Confirm a successful commit
 
         This method confirms to the client that the commit succeeded. Note that if a commit fails, the server raises a
@@ -1168,7 +1162,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Tx.Rollback))
         return self.wait(allowed_methods=[spec.Tx.RollbackOk])
 
-    def _tx_rollback_ok(self, method):
+    def _cb_tx_rollback_ok(self, method):
         """Confirm a successful rollback
 
         This method confirms to the client that the rollback succeeded. Note that if an rollback fails, the server
@@ -1186,7 +1180,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Tx.Select))
         return self.wait(allowed_methods=[spec.Tx.SelectOk])
 
-    def _tx_select_ok(self, method):
+    def _cb_tx_select_ok(self, method):
         """Confirm transaction mode
 
         This method confirms to the client that the channel was successfully set to use standard transactions.
@@ -1209,49 +1203,47 @@ class Channel(AbstractChannel):
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
         self.publisher_ack_enabled = True
 
-    def _confirm_select_ok(self, method):
+    def _cb_confirm_select_ok(self, method):
         """With this method, the broker confirms to the client that the channel is now using publisher confirms
         """
         pass
 
-    def _basic_ack_recv(self, method):
+    def _cb_basic_ack_recv(self, method):
         """Callback for receiving a `spec.Basic.Ack`
 
         This will be called when the server acknowledges a published message (RabbitMQ extension).
         """
-        args = method.args
-        delivery_tag = args.read_longlong()
-        multiple = args.read_bit()
-        for callback in self.events['basic_ack']:
-            callback(delivery_tag, multiple)
+        # args = method.args
+        # delivery_tag = args.read_longlong()
+        # multiple = args.read_bit()
 
     METHOD_MAP = {
-        spec.Channel.OpenOk: _open_ok,
-        spec.Channel.Flow: _flow,
-        spec.Channel.FlowOk: _flow_ok,
-        spec.Channel.Close: _close,
-        spec.Channel.CloseOk: _close_ok,
-        spec.Exchange.DeclareOk: _exchange_declare_ok,
-        spec.Exchange.DeleteOk: _exchange_delete_ok,
-        spec.Exchange.BindOk: _exchange_bind_ok,
-        spec.Exchange.UnbindOk: _exchange_unbind_ok,
-        spec.Queue.DeclareOk: _queue_declare_ok,
-        spec.Queue.BindOk: _queue_bind_ok,
-        spec.Queue.PurgeOk: _queue_purge_ok,
-        spec.Queue.DeleteOk: _queue_delete_ok,
-        spec.Queue.UnbindOk: _queue_unbind_ok,
-        spec.Basic.QosOk: _basic_qos_ok,
-        spec.Basic.ConsumeOk: _basic_consume_ok,
-        spec.Basic.Cancel: _basic_cancel_notify,
-        spec.Basic.CancelOk: _basic_cancel_ok,
-        spec.Basic.Return: _basic_return,
-        spec.Basic.Deliver: _basic_deliver,
-        spec.Basic.GetOk: _basic_get_ok,
-        spec.Basic.GetEmpty: _basic_get_empty,
-        spec.Basic.Ack: _basic_ack_recv,
-        spec.Basic.RecoverOk: _basic_recover_ok,
-        spec.Confirm.SelectOk: _confirm_select_ok,
-        spec.Tx.SelectOk: _tx_select_ok,
-        spec.Tx.CommitOk: _tx_commit_ok,
-        spec.Tx.RollbackOk: _tx_rollback_ok,
+        spec.Channel.OpenOk: _cb_open_ok,
+        spec.Channel.Flow: _cb_flow,
+        spec.Channel.FlowOk: _cb_flow_ok,
+        spec.Channel.Close: _cb_close,
+        spec.Channel.CloseOk: _cb_close_ok,
+        spec.Exchange.DeclareOk: _cb_exchange_declare_ok,
+        spec.Exchange.DeleteOk: _cb_exchange_delete_ok,
+        spec.Exchange.BindOk: _cb_exchange_bind_ok,
+        spec.Exchange.UnbindOk: _cb_exchange_unbind_ok,
+        spec.Queue.DeclareOk: _cb_queue_declare_ok,
+        spec.Queue.BindOk: _cb_queue_bind_ok,
+        spec.Queue.PurgeOk: _cb_queue_purge_ok,
+        spec.Queue.DeleteOk: _cb_queue_delete_ok,
+        spec.Queue.UnbindOk: _cb_queue_unbind_ok,
+        spec.Basic.QosOk: _cb_basic_qos_ok,
+        spec.Basic.ConsumeOk: _cb_basic_consume_ok,
+        spec.Basic.Cancel: _cb_basic_cancel_notify,
+        spec.Basic.CancelOk: _cb_basic_cancel_ok,
+        spec.Basic.Return: _cb_basic_return,
+        spec.Basic.Deliver: _cb_basic_deliver,
+        spec.Basic.GetOk: _cb_basic_get_ok,
+        spec.Basic.GetEmpty: _cb_basic_get_empty,
+        spec.Basic.Ack: _cb_basic_ack_recv,
+        spec.Basic.RecoverOk: _cb_basic_recover_ok,
+        spec.Confirm.SelectOk: _cb_confirm_select_ok,
+        spec.Tx.SelectOk: _cb_tx_select_ok,
+        spec.Tx.CommitOk: _cb_tx_commit_ok,
+        spec.Tx.RollbackOk: _cb_tx_rollback_ok,
     }
