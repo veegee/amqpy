@@ -231,7 +231,7 @@ class Channel(AbstractChannel):
         log.debug('Channel open')
 
     @synchronized('lock')
-    def exchange_declare(self, exch_name, exch_type, passive=False, durable=False, auto_delete=True, nowait=False,
+    def exchange_declare(self, exchange, exch_type, passive=False, durable=False, auto_delete=True, nowait=False,
                          arguments=None):
         """Declare exchange, create if needed
 
@@ -245,7 +245,7 @@ class Channel(AbstractChannel):
           exception.
         * `arguments` is ignored if passive is True.
 
-        :param str exch_name: exchange name
+        :param str exchange: exchange name
         :param str exch_type: exchange type (direct, fanout, etc.)
         :param bool passive: do not create exchange; client can use this to check whether an exchange exists
         :param bool durable: mark exchange as durable (remain active after server restarts)
@@ -259,7 +259,7 @@ class Channel(AbstractChannel):
         arguments = arguments or {}
         args = AMQPWriter()
         args.write_short(0)  # reserved-1
-        args.write_shortstr(exch_name)  # exchange name
+        args.write_shortstr(exchange)  # exchange name
         args.write_shortstr(exch_type)  # exchange type
         args.write_bit(passive)  # passive
         args.write_bit(durable)  # durable
@@ -281,7 +281,7 @@ class Channel(AbstractChannel):
         pass
 
     @synchronized('lock')
-    def exchange_delete(self, exch_name, if_unused=False, nowait=False):
+    def exchange_delete(self, exchange, if_unused=False, nowait=False):
         """Delete an exchange
 
         This method deletes an exchange.
@@ -290,16 +290,16 @@ class Channel(AbstractChannel):
           all queue bindings on the exchange are cancelled.
         * If `if_unused` is set, and the exchange has queue bindings, the server must raise a channel exception.
 
-        :param str exch_name: exchange name
+        :param str exchange: exchange name
         :param bool if_unused: delete only if unused (has no queue bindings)
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
-        :raise NotFound: if exchange with `exch_name` does not exist
+        :raise NotFound: if exchange with `exchange` does not exist
         :raise PreconditionFailed: if attempting to delete a queue with bindings and `if_unused` is set
         :return: None
         """
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(exch_name)
+        args.write_shortstr(exchange)
         args.write_bit(if_unused)
         args.write_bit(nowait)
         self._send_method(Method(spec.Exchange.Delete, args))
@@ -387,7 +387,7 @@ class Channel(AbstractChannel):
         pass
 
     @synchronized('lock')
-    def queue_bind(self, queue_name, exch_name='', routing_key='', nowait=False, arguments=None):
+    def queue_bind(self, queue, exchange='', routing_key='', nowait=False, arguments=None):
         """Bind queue to an exchange
 
         This method binds a queue to an exchange. Until a queue is bound it will not receive any messages. In a classic
@@ -401,13 +401,13 @@ class Channel(AbstractChannel):
         * The server should support at least 4 bindings per queue, and ideally, impose no limit except as defined by
           available resources.
 
-        * If the client did not previously declare a queue, and the `queue_name` is empty, the server must raise a
+        * If the client did not previously declare a queue, and the `queue` is empty, the server must raise a
           connection exception with reply code 530 (not allowed).
-        * If `queue_name` does not exist, the server must raise a channel exception with reply code 404 (not found).
-        * If `exch_name` does not exist, the server must raise a channel exception with reply code 404 (not found).
+        * If `queue` does not exist, the server must raise a channel exception with reply code 404 (not found).
+        * If `exchange` does not exist, the server must raise a channel exception with reply code 404 (not found).
 
-        :param str queue_name: name of queue to bind; blank refers to the last declared queue for this channel
-        :param str exch_name: name of exchange to bind to
+        :param str queue: name of queue to bind; blank refers to the last declared queue for this channel
+        :param str exchange: name of exchange to bind to
         :param str routing_key: routing key for the binding
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
         :param dict arguments: binding arguments, specific to the exchange class
@@ -415,8 +415,8 @@ class Channel(AbstractChannel):
         arguments = {} if arguments is None else arguments
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(queue_name)
-        args.write_shortstr(exch_name)
+        args.write_shortstr(queue)
+        args.write_shortstr(exchange)
         args.write_shortstr(routing_key)
         args.write_bit(nowait)
         args.write_table(arguments)
@@ -433,7 +433,7 @@ class Channel(AbstractChannel):
         pass
 
     @synchronized('lock')
-    def queue_unbind(self, queue_name, exch_name, routing_key='', nowait=False, arguments=None):
+    def queue_unbind(self, queue, exchange, routing_key='', nowait=False, arguments=None):
         """Unbind a queue from an exchange
 
         This method unbinds a queue from an exchange.
@@ -442,16 +442,16 @@ class Channel(AbstractChannel):
         * The client must not attempt to unbind a queue that does not exist.
         * The client must not attempt to unbind a queue from an exchange that does not exist.
 
-        :param str queue_name: name of queue to unbind, leave blank to refer to the last declared queue on this channel
-        :param str exch_name: name of exchange to unbind, leave blank to refer to default exchange
+        :param str queue: name of queue to unbind, leave blank to refer to the last declared queue on this channel
+        :param str exchange: name of exchange to unbind, leave blank to refer to default exchange
         :param str routing_key: routing key of binding
         :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(queue_name)
-        args.write_shortstr(exch_name)
+        args.write_shortstr(queue)
+        args.write_shortstr(exchange)
         args.write_shortstr(routing_key)
         # args.write_bit(nowait)
         args.write_table(arguments)
@@ -499,7 +499,7 @@ class Channel(AbstractChannel):
         :raise NotFound: if `passive` is enabled and the queue does not exist
         :raise AccessRefused: if an attempt is made to declare a queue with a reserved name
         :raise ResourceLocked: if an attempt is made to access an exclusive queue declared by another open connection
-        :return: tuple(queue_name, message_count, consumer_count)
+        :return: tuple(queue, message_count, consumer_count)
         :rtype: tuple(str, int, int)
         """
         arguments = {} if arguments is None else arguments
@@ -546,24 +546,24 @@ class Channel(AbstractChannel):
         return queue_declare_ok_t(args.read_shortstr(), args.read_long(), args.read_long())
 
     @synchronized('lock')
-    def queue_delete(self, queue_name='', if_unused=False, if_empty=False, nowait=False):
+    def queue_delete(self, queue='', if_unused=False, if_empty=False, nowait=False):
         """Delete a queue
 
         This method deletes a queue. When a queue is deleted any pending messages are sent to a dead-letter queue if
         this is defined in the server configuration, and all consumers on the queue are cancelled.
 
-        :param str queue_name: name of queue to delete, empty string refers to last declared queue on this channel
+        :param str queue: name of queue to delete, empty string refers to last declared queue on this channel
         :param bool if_unused: delete only if unused (has no consumers); raise a channel exception otherwise
         :param bool if_empty: delete only if empty; raise a channel exception otherwise
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
-        :raise NotFound: if `queue_name` does not exist
+        :raise NotFound: if `queue` does not exist
         :raise PreconditionFailed: if `if_unused` or `if_empty` conditions are not met
         :return: number of messages deleted
         :rtype: int
         """
         args = AMQPWriter()
         args.write_short(0)
-        args.write_shortstr(queue_name)
+        args.write_shortstr(queue)
         args.write_bit(if_unused)
         args.write_bit(if_empty)
         args.write_bit(nowait)

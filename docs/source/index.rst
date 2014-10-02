@@ -46,7 +46,7 @@ amqpy is easy to use::
     # declare an exchange and queue, and bind the queue to the exchange
     ch.exchange_declare('test.exchange', 'direct')
     ch.queue_declare('test.q')
-    ch.queue_bind('test.q', exch_name='test.exchange', routing_key='test.q')
+    ch.queue_bind('test.q', exchange='test.exchange', routing_key='test.q')
 
     # publish a few messages, which will get routed to the queue bound to the routing key "test.q"
     ch.basic_publish(Message('hello world 1'), exchange='test.exchange', routing_key='test.q')
