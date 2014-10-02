@@ -63,16 +63,15 @@ To do (goals for version 1.0.0)
 * Add support for automatic heartbeats in a separate thread
 * [Kombu](https://github.com/celery/kombu) compatibility
 
+* Add `.json()` method to `Message` for convenience
+* Add icons to Sphinx doc
+* Rename callbacks
+
 # Tests
 
 * Test for strict protocol compliance and behaviour
 * Test for thread safety, use PyTest monkey patching facilities to patch
   `socket` to slow down reads and writes
-
-# Documentation
-
-* Ensure all public methods and fields have consistent and complete docstrings
-* Create Sphinx documents and tutorial
 
 # Low priority
 

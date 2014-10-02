@@ -162,7 +162,7 @@ class Channel(AbstractChannel):
         """Enable/disable flow from peer
 
         This method asks the peer to pause or restart the flow of content data. This is a simple flow-control mechanism
-        that a peer can use to avoid oveflowing its queues or otherwise finding itself receiving more messages than it
+        that a peer can use to avoid overflowing its queues or otherwise finding itself receiving more messages than it
         can process. Note that this method is not intended for window control.  The peer that receives a request to stop
         sending content should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.

@@ -1,9 +1,9 @@
 /*
-* bootstrap-sphinx.css
-* ~~~~~~~~~~~~~~~~~~~~
-*
-* Sphinx stylesheet -- Bootstrap theme.
-*/
+ * bootstrap-sphinx.css
+ * ~~~~~~~~~~~~~~~~~~~~
+ *
+ * Sphinx stylesheet -- Bootstrap theme
+ */
 
 .navbar-inverse .brand {
   color: #FFF;
@@ -175,31 +175,52 @@ table.field-list {
   }
 }
 
-/* Format headings nicely */
+
+
+/* format headings nicely */
 dt {
-    font-weight: normal;
+  font-weight: normal;
 }
 
+/* entire "class" definition */
 dl.class > dt {
-    font-size: 1.2em;
+  font-size: 1.2em;
 }
 
 dl.class > dd {
-    padding-left: 40px;
+  padding-left: 40px;
 }
 
 dl.method > dd {
-    padding-left: 40px;
+  padding-left: 40px;
+}
+
+dl.exception > dd {
+  padding-left: 40px;
+}
+
+dl.attribute > dd {
+  padding-left: 40px;
 }
 
 table.field-list tbody td, table.field-list tbody th {
-    padding: 3px;
+  padding: 3px;
 }
 
 table.field-list tbody th {
-    padding-right: 10px;
+  padding-right: 10px;
 }
 
+/* single backtick-wrapped text */
+cite {
+    font-family: "Courier New", monospace;
+    padding: 0px 4px;
+    color: #c7254e;
+    background-color: #f9f2f4;
+    border-radius: 4px;
+}
+
+/* for code examples */
 pre {
-    color: #333;
+  color: #333;
 }
