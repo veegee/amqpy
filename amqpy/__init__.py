@@ -9,6 +9,7 @@ __docformat__ = 'restructuredtext'
 from .message import Message
 from .channel import Channel
 from .connection import Connection
+from .consumer import AbstractConsumer
 from .exceptions import (
     Timeout,
     AMQPError,

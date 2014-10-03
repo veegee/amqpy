@@ -9,6 +9,7 @@ API documentation:
     amqpy.connection
     amqpy.channel
     amqpy.message
+    amqpy.consumer
     amqpy.spec
     amqpy.exceptions
 
@@ -37,7 +38,7 @@ amqpy is easy to install, and there are no dependencies::
 
 amqpy is easy to use::
 
-    from amqpy import Connection, Message
+    from amqpy import Connection, Message, AbstractConsumer
 
     conn = Connection()  # connect to guest:guest@localhost:5672 by default
 
@@ -61,12 +62,13 @@ amqpy is easy to use::
 
 Let's create a consumer::
 
-    def consumer(msg: Message):
-        print('Received a message: {}'.format(msg.body))
-        msg.ack()
+    class Consumer(AbstractConsumer):
+        def run(msg: Message):
+            print('Received a message: {}'.format(msg.body))
+            msg.ack()
 
-    # declare a consumer
-    ch.basic_consume(queue='test.q', consumer_tag='test.consumer', callback=consumer)
+    consumer = Consumer(ch, 'test.q')
+    consumer.declare()
 
     # wait for events, which will receive delivered messages and call any consumer callbacks
     conn.drain_events(timeout=None)
