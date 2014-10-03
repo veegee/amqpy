@@ -1006,7 +1006,7 @@ class Channel(AbstractChannel):
         self.wait([spec.Basic.Ack])
 
     @synchronized('lock')
-    def basic_qos(self, prefetch_size, prefetch_count, a_global):
+    def basic_qos(self, prefetch_size=0, prefetch_count=0, a_global=False):
         """Specify quality of service
 
         This method requests a specific quality of service. The QoS can be specified for the current channel or for all
