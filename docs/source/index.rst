@@ -90,27 +90,20 @@ Features
 * Support for timeouts
 * Support for heartbeats (client must manually send heartbeats)
 * Fully thread-safe
-* Supports RabbitMQ extensions:
-    * Consumer Cancel Notifications
-        * by default a cancel results in `ChannelError` being raised
-        * but not if a `on_cancel` callback is passed to `basic_consume`
-    * Publisher confirms
-        * `Channel.confirm_select()` enables publisher confirms
-        * `Channel.events['basic_ack'].append(my_callback)` adds a callback to
-          be called when a message is confirmed. This callback is then called
-          with the signature `(delivery_tag, multiple)`
-    * Exchange to exchange bindings: `exchange_bind()` and `exchange_unbind()`
-        * `Channel.confirm_select()` enables publisher confirms
-        * `Channel.events['basic_ack'].append(my_callback)` adds a callback to
-          be called when a message is confirmed. This callback is then called
-          with the signature `(delivery_tag, multiple)`
+
+Supports RabbitMQ extensions:
+
+* Consumer Cancel Notifications: by default a cancel results in `ChannelError` being raised, but not if a `on_cancel`
+  callback is passed to `basic_consume`
+* Publisher confirms: enable with `Channel.confirm_select()`, then use Channel.basic_publish_confirm
+* Exchange to exchange bindings: `Channel.exchange_bind()` and `Channel.exchange_unbind()`
 
 
 Testing
 =======
 
-amqpy uses the excellent `pytest` framework. To run all tests, simply install a local RabbitMQ server. No additional
-configuration is necessary for RabbitMQ. Then install pytest and run in the project root::
+amqpy uses the excellent **tox** and **pytest** frameworks. To run all tests, simply install a local RabbitMQ server.
+No additional configuration is necessary for RabbitMQ. Then install pytest and run in the project root::
 
     pip install pytest
     py.test
