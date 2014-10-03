@@ -29,8 +29,6 @@ package_data = {
 
 keywords = ['amqp', 'rabbitmq', 'qpid']
 
-is_pypy = hasattr(sys, 'pypy_version_info')
-
 long_description = description
 if os.path.exists('README.md'):
     with open('README.md') as f:
