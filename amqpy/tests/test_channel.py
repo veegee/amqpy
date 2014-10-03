@@ -5,7 +5,7 @@ import sys
 import pytest
 
 from .. import Channel, Message, FrameSyntaxError
-from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused, Timeout
+from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused
 from .conftest import get_server_props
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, style='{', format='{asctime} {levelname:8} {message}',
@@ -321,52 +321,3 @@ class TestChannel:
 
         # 3 of the 4 messages we sent should have been returned
         assert ch.returned_messages.qsize() == 3
-
-
-class TestConsumer:
-    def test_basic_consume(self, conn, ch, rand_exch, rand_queue):
-        self.consume_count = 0
-
-        def consumer(msg: Message):
-            """Consume message
-            """
-            global consume_count
-            log.info('Received message: {}'.format(msg.body))
-            msg.ack()
-            self.consume_count += 1
-
-        q = rand_queue
-        rk = q
-        exch = rand_exch
-
-        log.info('Declare exchange')
-        ch.exchange_declare(exch, 'direct')
-
-        log.info('Declare queue')
-        ch.queue_declare(q)
-
-        log.info('Bind queue')
-        ch.queue_bind(q, exch, rk)
-
-        log.info('Enable publisher confirms')
-        ch.confirm_select()
-
-        log.info('Publish messages')
-        ch.basic_publish_confirm(Message('Hello, world!', content_type='text/plain'), exch, rk)
-        ch.basic_publish_confirm(Message('Hello, world!', content_type='text/plain'), exch, rk)
-
-        log.info('Declare consumer')
-        ch.basic_consume(q, callback=consumer)
-
-        log.info('Publish messages')
-        ch.basic_publish_confirm(Message('Hello, world!', content_type='text/plain'), exch, rk)
-        ch.basic_publish_confirm(Message('Hello, world!', content_type='text/plain'), exch, rk)
-
-        log.info('Begin draining events')
-        while True:
-            try:
-                conn.drain_events(0.1)
-            except Timeout:
-                break
-
-        assert self.consume_count == 4

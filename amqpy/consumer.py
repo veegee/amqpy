@@ -24,6 +24,7 @@ class AbstractConsumer(metaclass=ABCMeta):
     settings are enabled for the channel or connection. This way, multiple consumers may be declared on the same
     channel, and messages will be load-balanced among them.
     """
+
     def __init__(self, channel, queue, consumer_tag='', no_local=False, no_ack=False, exclusive=False,
                  use_thread=False):
         """
@@ -43,6 +44,9 @@ class AbstractConsumer(metaclass=ABCMeta):
         self.no_ack = no_ack
         self.exclusive = exclusive
         self.use_thread = use_thread
+
+        #: Number of messages consumed (incremented automatically)
+        self.consume_count = 0
 
     def declare(self):
         """Declare the consumer
@@ -80,9 +84,13 @@ class AbstractConsumer(metaclass=ABCMeta):
         """
         pass
 
+    def _run(self, msg):
+        self.run(msg)
+        self.consume_count += 1
+
     def start(self, msg):
         if self.use_thread:
-            t = Thread(target=self.run, args=(msg,), name='consumer-{}'.format(self.consumer_tag))
+            t = Thread(target=self._run, args=(msg,), name='consumer-{}'.format(self.consumer_tag))
             t.start()
         else:
-            self.run(msg)
+            self._run(msg)

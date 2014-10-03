@@ -1,8 +1,74 @@
 import uuid
+import logging
+import sys
 
 import pytest
 
 from .. import Connection
+
+
+class ColouredFormatter(logging.Formatter):
+    RESET = '\x1B[0m'
+    RED = '\x1B[31m'
+    YELLOW = '\x1B[33m'
+    BRGREEN = '\x1B[01;32m'  # grey in solarized for terminals
+
+    def format(self, record, colour=False):
+        message = super().format(record)
+
+        if not colour:
+            return message
+
+        level_no = record.levelno
+        if level_no >= logging.CRITICAL:
+            colour = self.RED
+        elif level_no >= logging.ERROR:
+            colour = self.RED
+        elif level_no >= logging.WARNING:
+            colour = self.YELLOW
+        elif level_no >= logging.INFO:
+            colour = self.RESET
+        elif level_no >= logging.DEBUG:
+            colour = self.BRGREEN
+        else:
+            colour = self.RESET
+
+        message = colour + message + self.RESET
+
+        return message
+
+
+class ColouredHandler(logging.StreamHandler):
+    def __init__(self, stream=sys.stdout):
+        super().__init__(stream)
+
+    def format(self, record, colour=False):
+        if not isinstance(self.formatter, ColouredFormatter):
+            self.formatter = ColouredFormatter()
+
+        return self.formatter.format(record, colour)
+
+    def emit(self, record):
+        stream = self.stream
+        try:
+            #msg = self.format(record, stream.isatty())
+            msg = self.format(record, True)  # force coloured output for pytest
+
+            stream.write(msg)
+            stream.write(self.terminator)
+            self.flush()
+        except Exception:
+            self.handleError(record)
+
+
+h = ColouredHandler()
+h.formatter = ColouredFormatter('{asctime} {levelname:8} {message}', '%Y-%m-%d %H:%M:%S', '{')
+if sys.version_info >= (3, 3):
+    logging.basicConfig(level=logging.DEBUG, handlers=[h])
+else:
+    # Python 3.2 doesn't support the `handlers` parameter for `logging.basicConfig()`
+    logging.basicConfig(level=logging.DEBUG, format='{asctime} {levelname:8} {message}', datefmt='%Y-%m-%d %H:%M:%S',
+                        style='{')
 
 
 def get_server_props(cxn):
