@@ -191,6 +191,8 @@ class Connection(AbstractChannel):
 
         This method is the primary way to check if the connection is alive.
 
+        Side effects: This method may send a heartbeat as a last resort to check if the connection is alive.
+
         :return: True if connection is alive, else False
         :rtype: bool
         """
@@ -202,20 +204,26 @@ class Connection(AbstractChannel):
             # the `transport` is not connected
             return False
 
+        # recv with MSG_PEEK to check if the connection is alive
+        # note: if there is data still in the buffer, this will not tell us anything
         if hasattr(socket, 'MSG_PEEK'):
-            log.debug('is_alive(): MSG_PEEK')
             prev = self.sock.gettimeout()
             self.sock.settimeout(0.0001)
             try:
                 self.sock.recv(1, socket.MSG_PEEK)
             except socket.timeout:
-                log.debug('is_alive(): socket.timeout')
                 pass
             except socket.error:
-                log.debug('is_alive(): socket.error')
+                # the exception is usually (always?) a ConnectionResetError in Python 3.3+
                 return False
             finally:
                 self.sock.settimeout(prev)
+
+        # send a heartbeat to check if the connection is alive
+        try:
+            self.send_heartbeat()
+        except socket.error:
+            return False
 
         return True
 
@@ -246,8 +254,9 @@ class Connection(AbstractChannel):
         :param method_type: if close is triggered by a failing method, this is the method that caused it
         :type method_type: amqpy.spec.method_t
         """
-        if self.transport is None:
+        if not self.is_alive():
             # already closed
+            log.debug('Already closed')
             return
 
         args = AMQPWriter()
