@@ -187,18 +187,27 @@ class Connection(AbstractChannel):
             raise AMQPConnectionError('Channel {} already open'.format(channel_id))
 
     def is_alive(self):
-        """Check if underlying socket connection is alive
+        """Check if connection is alive
+
+        This method is the primary way to check if the connection is alive.
 
         :return: True if connection is alive, else False
         :rtype: bool
         """
+        if not self.sock:
+            # we don't have a valid socket, this connection is definitely not alive
+            return False
+
+        if not self.connected:
+            # the `transport` is not connected
+            return False
+
         if hasattr(socket, 'MSG_PEEK'):
             log.debug('is_alive(): MSG_PEEK')
-            sock = self.sock
-            prev = sock.gettimeout()
-            sock.settimeout(0.0001)
+            prev = self.sock.gettimeout()
+            self.sock.settimeout(0.0001)
             try:
-                sock.recv(1, socket.MSG_PEEK)
+                self.sock.recv(1, socket.MSG_PEEK)
             except socket.timeout:
                 log.debug('is_alive(): socket.timeout')
                 pass
@@ -206,7 +215,8 @@ class Connection(AbstractChannel):
                 log.debug('is_alive(): socket.error')
                 return False
             finally:
-                sock.settimeout(prev)
+                self.sock.settimeout(prev)
+
         return True
 
     def drain_events(self, timeout=None):
@@ -533,7 +543,8 @@ class Connection(AbstractChannel):
 
     @property
     def sock(self):
-        return self.transport.sock
+        if self.transport and self.transport.sock:
+            return self.transport.sock
 
     @property
     def server_capabilities(self):
