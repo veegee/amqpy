@@ -14,7 +14,7 @@ if sys.version_info < (3, 2):
     raise Exception('amqpy requires Python 3.2 or higher')
 
 classifiers = [
-    'Development Status :: 3 - Alpha',
+    'Development Status :: 4 - Beta',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3.2',
     'Programming Language :: Python :: 3.3',
