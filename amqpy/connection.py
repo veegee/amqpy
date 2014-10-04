@@ -26,7 +26,7 @@ LIBRARY_PROPERTIES = {
     'capabilities': {},
 }
 
-log = logging.getLogger('amqpy')
+log = logging.getLogger('amqpy.connection')
 
 
 class Connection(AbstractChannel):
@@ -132,7 +132,12 @@ class Connection(AbstractChannel):
 
     @property
     def connected(self):
-        return self.transport and self.transport.connected
+        """Check if connection is connected
+
+        :return: True if connected, else False
+        :rtype: bool
+        """
+        return bool(self.transport and self.transport.connected)
 
     @synchronized('lock')
     def channel(self, channel_id=None):
@@ -145,14 +150,14 @@ class Connection(AbstractChannel):
         """
         return self.channels.get(channel_id, Channel(self, channel_id))
 
-    def _do_close(self):
+    def _close(self):
         try:
             self.transport.close()
 
             channels = [x for x in self.channels.values() if x is not self]
             for ch in channels:
                 # noinspection PyProtectedMember
-                ch._do_close()
+                ch._close()
         except socket.error:
             pass  # connection already closed on the other end
         finally:
@@ -182,22 +187,33 @@ class Connection(AbstractChannel):
             raise AMQPConnectionError('Channel {} already open'.format(channel_id))
 
     def is_alive(self):
+        """Check if underlying socket connection is alive
+
+        :return: True if connection is alive, else False
+        :rtype: bool
+        """
         if hasattr(socket, 'MSG_PEEK'):
+            log.debug('is_alive(): MSG_PEEK')
             sock = self.sock
             prev = sock.gettimeout()
             sock.settimeout(0.0001)
             try:
                 sock.recv(1, socket.MSG_PEEK)
             except socket.timeout:
+                log.debug('is_alive(): socket.timeout')
                 pass
             except socket.error:
+                log.debug('is_alive(): socket.error')
                 return False
             finally:
                 sock.settimeout(prev)
         return True
 
     def drain_events(self, timeout=None):
-        """Wait for an event on a channel
+        """Wait for an event on all channels
+
+        This method should be called after creating consumers in order to receive delivered messages and execute
+        consumer callbacks.
 
         :param timeout: maximum allowed time wait for an event
         :type timeout: float or None
@@ -208,17 +224,16 @@ class Connection(AbstractChannel):
         return self.handle_method(method, channel=channel)
 
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
-        """Request a connection close
+        """Close connection to the server
 
-        This method indicates that the sender wants to close the connection. This may be due to internal conditions
-        (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a close is due
-        to an exception, the sender provides the class and method id of the method which caused the exception.
+        This method performs a connection close handshake with the server, then closes the underlying connection.
 
-        :param reply_code: the reply code
-        :param reply_text: localized reply text
+        If this connection close is due to a client error, the client may provide a `reply_code`, `reply_text`,
+        and `method_type` to indicate to the server the reason for closing the connection.
+
+        :param int reply_code: the reply code
+        :param str reply_text: localized reply text
         :param method_type: if close is triggered by a failing method, this is the method that caused it
-        :type reply_code: int
-        :type reply_text: str
         :type method_type: amqpy.spec.method_t
         """
         if self.transport is None:
@@ -234,7 +249,7 @@ class Connection(AbstractChannel):
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
 
     def _cb_close(self, method):
-        """Respond to a connection close
+        """Handle received connection close
 
         This method indicates that the sender (server) wants to close the connection. This may be due to internal
         conditions (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a
@@ -274,7 +289,7 @@ class Connection(AbstractChannel):
         Close-Ok handshake method SHOULD log the error.
         """
         self._send_method(Method(spec.Connection.CloseOk))
-        self._do_close()
+        self._close()
 
     def _cb_close_ok(self, method):
         """Confirm a connection close
@@ -283,7 +298,7 @@ class Connection(AbstractChannel):
         close the underlying connection.
         """
         assert method
-        self._do_close()
+        self._close()
 
     def _send_open(self, virtual_host, capabilities=''):
         """Open connection to virtual host

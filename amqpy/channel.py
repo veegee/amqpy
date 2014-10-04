@@ -65,12 +65,12 @@ class Channel(AbstractChannel):
         # set first time basic_publish_confirm is called and publisher confirms are enabled for this channel.
         self.publisher_ack_enabled = self.connection.publisher_ack_enabled
 
-        self._x_open()
+        self._send_open()
 
-    def _do_close(self):
+    def _close(self):
         """Tear down this object, after we've agreed to close with the server
         """
-        log.debug('Closed channel #%d', self.channel_id)
+        log.debug('Channel close #{}'.format(self.channel_id))
         self.is_open = False
         channel_id, self.channel_id = self.channel_id, None
         connection, self.connection = self.connection, None
@@ -82,9 +82,9 @@ class Channel(AbstractChannel):
         self.cancel_callbacks.clear()
         self.no_ack_consumers.clear()
 
-    def _do_revive(self):
+    def _revive(self):
         self.is_open = False
-        self._x_open()
+        self._send_open()
 
     @synchronized('lock')
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
@@ -116,7 +116,7 @@ class Channel(AbstractChannel):
             self.connection = None
 
     def _cb_close(self, method):
-        """Respond to a channel close
+        """Respond to a channel close sent by the server
 
         This method indicates that the sender (server) wants to close the channel. This may be due to internal
         conditions (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a
@@ -135,7 +135,7 @@ class Channel(AbstractChannel):
         self.is_open = False
 
         # re-open the channel
-        self._do_revive()
+        self._revive()
 
         # get information about the method which caused the server to close the channel
         method_type = method_t(class_id, method_id)
@@ -148,7 +148,7 @@ class Channel(AbstractChannel):
         channel and close the socket.
         """
         assert method
-        self._do_close()
+        self._close()
 
     @synchronized('lock')
     def flow(self, active):
@@ -179,9 +179,9 @@ class Channel(AbstractChannel):
         """
         args = method.args
         self.active = args.read_bit()
-        self._x_flow_ok(self.active)
+        self._send_flow_ok(self.active)
 
-    def _x_flow_ok(self, active):
+    def _send_flow_ok(self, active):
         """Confirm a flow method
 
         Confirms to the peer that a flow command was received and processed.
@@ -201,21 +201,21 @@ class Channel(AbstractChannel):
         args = method.args
         return args.read_bit()
 
-    def _x_open(self):
-        """Open a channel for use
+    def _send_open(self):
+        """Open a channel
 
-        This method opens a virtual connection (a channel).
+        This method opens a channel.
         """
         if self.is_open:
             return
 
         args = AMQPWriter()
-        args.write_shortstr('')  # out_of_band: deprecated
+        args.write_shortstr('')  # reserved
         self._send_method(Method(spec.Channel.Open, args))
         return self.wait(allowed_methods=[spec.Channel.OpenOk])
 
     def _cb_open_ok(self, method):
-        """Signal that the channel is ready
+        """Handle received "open-ok"
 
         The server sends this method to signal to the client that this channel is ready for use.
         """
