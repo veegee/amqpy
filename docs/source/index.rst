@@ -24,9 +24,16 @@ amqpy is a pure-Python AMQP 0.9.1 client library for Python >= 3.2.0 (including 
 * clean, correct design
 * 100% compliance with the AMQP 0.9.1 protocol specification
 
-It has very good performance, as AMQP 0.9.1 is a very simple binary protocol, but does not sacrifice clean design and
-testability to save a few extra CPU cycles. This library has a strict zero-bug policy, so all submitted issues and bugs
-are always fixed as soon as possible.
+It has very good performance, as AMQP 0.9.1 is a very efficient binary protocol, but does not sacrifice clean design and
+testability to save a few extra CPU cycles.
+
+This library is actively maintained, and has a zero bug policy. Please submit issues and pull requests, and bugs will be
+fixed immediately.
+
+The current API is not final, but will progressively get more stable as version 1.0.0 is approached.
+
+This library is NOT Python 2 compatible, and will never support Python 2. If you are using Python 2, you should upgrade
+to Python 3 >= 3.2.0. However, this library maintains backwards compatibility for all Python 3 >= 3.2.0.
 
 
 Quickstart
@@ -85,25 +92,25 @@ shortly.
 Features
 ========
 
-* Draining events from multiple channels (`Connection.drain_events()`)
+* Draining events from multiple channels `Connection.drain_events()`
 * SSL is fully supported, it is highly recommended to use SSL when connecting to servers over the Internet.
 * Support for timeouts
-* Support for heartbeats (client must manually send heartbeats)
+* Support for manual and automatic heartbeats
 * Fully thread-safe
 
 Supports RabbitMQ extensions:
 
-* Consumer Cancel Notifications: by default a cancel results in `ChannelError` being raised, but not if a `on_cancel`
-  callback is passed to `basic_consume`
 * Publisher confirms: enable with `Channel.confirm_select()`, then use Channel.basic_publish_confirm
 * Exchange to exchange bindings: `Channel.exchange_bind()` and `Channel.exchange_unbind()`
+* Consumer Cancel Notifications: by default a cancel results in `ChannelError` being raised, but not if a `on_cancel`
+  callback is passed to `basic_consume`
 
 
 Testing
 =======
 
 amqpy uses the excellent **tox** and **pytest** frameworks. To run all tests, simply install a local RabbitMQ server.
-No additional configuration is necessary for RabbitMQ. Then install pytest and run in the project root::
+No additional configuration is necessary for RabbitMQ. Then run in the project root::
 
     pip install pytest
     py.test
