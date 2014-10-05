@@ -2,17 +2,17 @@
 
 import sys
 import os
-import subprocess
 
 from setuptools import setup, find_packages
 
 import amqpy
 
-name = 'amqpy'
-description = 'an AMQP 0.9.1 client library for Python >= 3.2.0'
-
 if sys.version_info < (3, 2):
     raise Exception('amqpy requires Python 3.2 or higher')
+
+name = 'amqpy'
+description = 'an AMQP 0.9.1 client library for Python >= 3.2.0'
+keywords = ['amqp', 'rabbitmq', 'qpid']
 
 classifiers = [
     'Development Status :: 4 - Beta',
@@ -25,19 +25,14 @@ classifiers = [
 ]
 
 package_data = {
-    '': ['*.md', '*.ini', 'AUTHORS', 'LICENSE'],
+    '': ['*.rst', '*.ini', 'AUTHORS', 'LICENSE'],
 }
-
-keywords = ['amqp', 'rabbitmq', 'qpid']
 
 
 def long_description():
-    if os.path.exists('README.md') and os.system('which pandoc > /dev/null') == 0:
-        args = ['pandoc', '-f', 'markdown', '-t', 'rst', 'README.md']
-        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
-        out, _ = p.communicate()
-        p.wait(1)
-        return out.decode('UTF-8')
+    if os.path.exists('README.rst'):
+        with open('README.rst') as f:
+            return f.read()
     else:
         return description
 
