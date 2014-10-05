@@ -19,10 +19,10 @@ Introduction
 
 amqpy is a pure-Python AMQP 0.9.1 client library for Python >= 3.2.0 (including PyPy3) with a focus on:
 
-* stability and reliability
-* well-tested and thoroughly documented code
-* clean, correct design
-* 100% compliance with the AMQP 0.9.1 protocol specification
+- stability and reliability
+- well-tested and thoroughly documented code
+- clean, correct design
+- 100% compliance with the AMQP 0.9.1 protocol specification
 
 It has very good performance, as AMQP 0.9.1 is a very efficient binary protocol, but does not sacrifice clean design and
 testability to save a few extra CPU cycles.
@@ -31,9 +31,6 @@ This library is actively maintained and has a zero bug policy. Please submit iss
 fixed immediately.
 
 The current API is not final, but will progressively get more stable as version 1.0.0 is approached.
-
-This library is NOT Python 2 compatible, and will never support Python 2. If you are using Python 2, you should upgrade
-to Python 3 >= 3.2.0. However, this library maintains backwards compatibility for all Python 3 >= 3.2.0.
 
 
 Guarantees
