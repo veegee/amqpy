@@ -110,7 +110,7 @@ Features
 
 Supports RabbitMQ extensions:
 
-* Publisher confirms: enable with ``Channel.confirm_select()``, then use Channel.basic_publish_confirm
+* Publisher confirms: enable with ``Channel.confirm_select()``, then use ``Channel.basic_publish_confirm``
 * Exchange to exchange bindings: ``Channel.exchange_bind()`` and ``Channel.exchange_unbind()``
 * Consumer Cancel Notifications: by default a cancel results in ``ChannelError`` being raised,
   but not if an ``on_cancel`` callback is passed to ``basic_consume``
