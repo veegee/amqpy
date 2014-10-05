@@ -1,11 +1,22 @@
+import re
+
+
+def get_field(doc: str, name: str):
+    match = re.search(':{}: (.*)$'.format(name), doc, re.IGNORECASE | re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+
+
 class TestVersion:
     def test_version_is_consistent(self):
         from .. import VERSION
 
         with open('README.rst') as f:
-            readme = f.read().split('\n')
-            version_list = readme[3].split(':')[2].strip().split('.')
-            version_list = [int(i) for i in version_list]
-            readme_version = tuple(version_list)
+            readme = f.read()
 
-        assert VERSION == readme_version
+            version = get_field(readme, 'version')
+            version = version.split('.')
+            version = [int(i) for i in version]
+            version = tuple(version)
+
+        assert VERSION == version
