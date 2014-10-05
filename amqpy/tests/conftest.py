@@ -67,8 +67,8 @@ if sys.version_info >= (3, 3):
     logging.basicConfig(level=logging.DEBUG, handlers=[h])
 else:
     # Python 3.2 doesn't support the `handlers` parameter for `logging.basicConfig()`
-    logging.basicConfig(level=logging.DEBUG, format='{asctime} {levelname:8} {message}', datefmt='%Y-%m-%d %H:%M:%S',
-                        style='{')
+    logging.basicConfig(level=logging.DEBUG)
+    logging.root.handlers[0] = h
 
 
 def get_server_props(cxn):
