@@ -55,12 +55,12 @@ To do (goals for version 1.0.0)
 * Add `.json()` method to `Message` for convenience
 * Add icons to Sphinx doc
 
-# Tests
+### Tests
 
 * Test for strict protocol compliance and behaviour
 * Test for thread safety, use PyTest monkey patching facilities to patch
   `socket` to slow down reads and writes
 
-# Low priority
+### Low priority
 
 * Asynchronous operation, Python 3.4 asyncio support
