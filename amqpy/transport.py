@@ -173,7 +173,7 @@ class AbstractTransport(metaclass=ABCMeta):
             i_last_byte = bytes(frame_terminator)[0]
 
         except (OSError, IOError, socket.error) as exc:
-            if get_errno(exc) not in _UNAVAIL:
+            if get_errno(exc) not in _UNAVAIL and not isinstance(exc, socket.timeout):
                 self.connected = False
             raise
         if i_last_byte == FrameType.END:
