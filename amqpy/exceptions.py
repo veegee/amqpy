@@ -9,7 +9,10 @@ and reply text to the client. However, amqpy will automatically re-open the chan
 """
 import struct
 from collections import namedtuple
-from .compat import TimeoutError
+
+from . import compat
+
+compat.patch()  # monkey-patch builtins.TimeoutError
 
 method_t = namedtuple('method_t', ('class_id', 'method_id'))
 

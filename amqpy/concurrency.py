@@ -1,6 +1,10 @@
-import time
 import logging
+import time
 from functools import wraps
+
+from . import compat
+
+compat.patch()  # monkey-patch time.perf_counter
 
 log = logging.getLogger('amqpy')
 
