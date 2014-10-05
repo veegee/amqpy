@@ -32,7 +32,7 @@ keywords = ['amqp', 'rabbitmq', 'qpid']
 
 
 def long_description():
-    if os.path.exists('README.md') and os.system('which pandoc') == 0:
+    if os.path.exists('README.md') and os.system('which pandoc > /dev/null') == 0:
         args = ['pandoc', '-f', 'markdown', '-t', 'rst', 'README.md']
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
         out, _ = p.communicate()
