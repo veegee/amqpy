@@ -36,6 +36,16 @@ This library is NOT Python 2 compatible, and will never support Python 2. If you
 to Python 3 >= 3.2.0. However, this library maintains backwards compatibility for all Python 3 >= 3.2.0.
 
 
+Guarantees
+----------
+
+This library makes the following guarantees:
+
+* [Semantic versioning](http://semver.org/) is strictly followed
+* Compatible with Python >= 3.2.0 and PyPy3 >= 2.3.1 (Python 3.2.5)
+* AMQP 0.9.1 compliant
+
+
 Quickstart
 ==========
 

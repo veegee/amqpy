@@ -26,8 +26,15 @@ fixed immediately.
 
 The current API is not final, but will progressively get more stable as version 1.0.0 is approached.
 
-This library is NOT Python 2 compatible, and will never support Python 2. If you are using Python 2, you should upgrade
-to Python 3 >= 3.2.0. However, this library maintains backwards compatibility for all Python 3 >= 3.2.0.
+
+Guarantees
+----------
+
+This library makes the following guarantees:
+
+* [Semantic versioning](http://semver.org/) is strictly followed
+* Compatible with Python >= 3.2.0 and PyPy3 >= 2.3.1 (Python 3.2.5)
+* AMQP 0.9.1 compliant
 
 
 Features
@@ -54,7 +61,8 @@ To do (goals for version 1.0.0)
 * [Kombu](https://github.com/celery/kombu) compatibility
 
 
-### Tests
+Tests
+-----
 
 * Test for strict protocol compliance and behaviour
 * Test for thread safety, use PyTest monkey patching facilities to patch
@@ -63,7 +71,8 @@ To do (goals for version 1.0.0)
 * Test with SSL (parametrize the connection fixture to use SSL)
 
 
-### Low priority
+Low priority
+------------
 
 * Asynchronous operation, Python 3.4 asyncio support
 * Add support for channel-level event draining, so that multiple threads can block while waiting for events on their
