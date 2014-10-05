@@ -68,7 +68,8 @@ class AbstractConsumer(metaclass=ABCMeta):
     def run(self, msg):
         """Consumer callback
 
-        This method is called when the consumer is delivered a message. This method may be overridden in the subclass.
+        This method is called when the consumer is delivered a message. This method **must** be overridden in the
+        subclass.
 
         :param msg: received message
         :type msg: amqpy.message.Message
@@ -78,7 +79,7 @@ class AbstractConsumer(metaclass=ABCMeta):
     def cancel_cb(self, consumer_tag):
         """Consumer cancel callback
 
-        This method is called when the consumer is cancelled. This method **must** be overridden in the subclass.
+        This method is called when the consumer is cancelled. This method may be overridden in the subclass.
 
         :param str consumer_tag: consumer tag
         """
