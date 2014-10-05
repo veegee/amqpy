@@ -140,9 +140,15 @@ class Message(GenericContent):
         """
         super().__init__(properties)
         # TODO: collapse **properties into a dict parameter
+
+        #: Message body (bytes or str)
         self.body = body
-        self.channel = channel  # associated channel
-        self.delivery_info = {}  # delivery info, set after receiving a message
+
+        #: Associated channel, set after receiving a message (amqpy.channel.Channel)
+        self.channel = channel
+
+        #: Delivery info, set after receiving a message (dict)
+        self.delivery_info = {}
 
     def __eq__(self, other):
         """Check if the properties and bodies of this Message and another Message are the same
@@ -156,10 +162,20 @@ class Message(GenericContent):
 
     @property
     def application_headers(self):
+        """Get application headers
+
+        :return: application headers
+        :rtype: dict
+        """
         return self.properties.get('application_headers')
 
     @property
     def delivery_tag(self):
+        """Get delivery tag
+
+        :return: delivery tag
+        :rtype: int
+        """
         return self.delivery_info.get('delivery_tag')
 
     def ack(self):
