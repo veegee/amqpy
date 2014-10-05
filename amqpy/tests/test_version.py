@@ -16,7 +16,6 @@ class TestVersion:
 
             version = get_field(readme, 'version')
             version = version.split('.')
-            version = [int(i) for i in version]
-            version = tuple(version)
+            version = tuple([int(i) for i in version])
 
         assert VERSION == version
