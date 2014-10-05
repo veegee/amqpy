@@ -4,6 +4,7 @@ import logging
 import socket
 from array import array
 import pprint
+from threading import Event, Thread
 
 from .method_framing import MethodReader, MethodWriter
 from .serialization import AMQPWriter
@@ -33,25 +34,12 @@ class Connection(AbstractChannel):
     """The connection class provides methods for a client to establish a network connection to a server, and for both
     peers to operate the connection thereafter
     """
-    #: Final heartbeat interval value (in float seconds) after negotiation
-    heartbeat = None
 
-    #: Original heartbeat interval value proposed by client
-    client_heartbeat = None
-
-    #: Original heartbeat interval proposed by server
-    server_heartbeat = None
-
-    #: Time of last heartbeat sent (in monotonic time, if available)
-    last_heartbeat_sent = 0
-
-    #: Time of last heartbeat received (in monotonic time, if available)
-    last_heartbeat_received = 0
-
-    def __init__(self, host='localhost', port=5672, userid='guest', password='guest', login_method='AMQPLAIN',
-                 virtual_host='/', locale='en_US', client_properties=None, ssl=None, connect_timeout=None,
-                 channel_max=65535, frame_max=131072, heartbeat=0, on_blocked=None, on_unblocked=None,
-                 enable_publisher_ack=False):
+    def __init__(self, *, host='localhost', port=5672, ssl=None, connect_timeout=None,
+                 userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/', locale='en_US',
+                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False,
+                 enable_publisher_ack=False, client_properties=None,
+                 on_blocked=None, on_unblocked=None):
         """Create a connection to the specified host
 
         If you are using SSL, make sure the correct port number is specified (usually 5671), as the default of 5672 is
@@ -87,7 +75,12 @@ class Connection(AbstractChannel):
         # properties set in the Tune method
         self.channel_max = channel_max
         self.frame_max = frame_max
+        # final heartbeat interval value (in float seconds) after negotiation
+        self.heartbeat = 0
+        # original heartbeat interval value proposed by client
         self.client_heartbeat = heartbeat
+        # original heartbeat interval proposed by server
+        self.server_heartbeat = None
 
         self.publisher_ack_enabled = enable_publisher_ack
 
@@ -130,6 +123,13 @@ class Connection(AbstractChannel):
 
         self._send_open(virtual_host)
 
+        # set up automatic heartbeats
+        self._close_event = Event()
+        if auto_heartbeat:
+            log.debug('Start automatic heartbeat thread')
+            t = Thread(target=self._heartbeat_thread, name='HeartbeatThread')
+            t.start()
+
     @property
     def connected(self):
         """Check if connection is connected
@@ -138,6 +138,27 @@ class Connection(AbstractChannel):
         :rtype: bool
         """
         return bool(self.transport and self.transport.connected)
+
+    @property
+    def sock(self):
+        """Access underlying TCP socket
+
+        :return: socket
+        :rtype: socket.socket
+        """
+        if self.transport and self.transport.sock:
+            return self.transport.sock
+
+    @property
+    def server_capabilities(self):
+        """Get server capabilities
+
+        These properties are set only after successfully connecting.
+
+        :return: server capabilities
+        :rtype: dict
+        """
+        return self.server_properties.get('capabilities') or {}
 
     @synchronized('lock')
     def channel(self, channel_id=None):
@@ -150,41 +171,10 @@ class Connection(AbstractChannel):
         """
         return self.channels.get(channel_id, Channel(self, channel_id))
 
-    def _close(self):
-        try:
-            self.transport.close()
-
-            channels = [x for x in self.channels.values() if x is not self]
-            for ch in channels:
-                # noinspection PyProtectedMember
-                ch._close()
-        except socket.error:
-            pass  # connection already closed on the other end
-        finally:
-            self.transport = self.connection = self.channels = None
-
-    def _get_free_channel_id(self):
-        """Get next free channel ID
-
-        :return: next free channel_id
-        :rtype: int
+    def send_heartbeat(self):
+        """Send a heartbeat to the server
         """
-        try:
-            return self._avail_channel_ids.pop()
-        except IndexError:
-            raise ResourceError('No free channel ids, current={0}, channel_max={1}'.format(
-                len(self.channels), self.channel_max), spec.Channel.Open)
-
-    def _claim_channel_id(self, channel_id):
-        """Claim channel ID
-
-        :param channel_id: channel ID
-        :type channel_id: int
-        """
-        try:
-            return self._avail_channel_ids.remove(channel_id)
-        except ValueError:
-            raise AMQPConnectionError('Channel {} already open'.format(channel_id))
+        self.transport.write_frame(Frame(FrameType.HEARTBEAT))
 
     def is_alive(self):
         """Check if connection is alive
@@ -254,6 +244,9 @@ class Connection(AbstractChannel):
         :param method_type: if close is triggered by a failing method, this is the method that caused it
         :type method_type: amqpy.spec.method_t
         """
+        # signal to the heartbeat thread to stop sending heartbeats
+        self._close_event.set()
+
         if not self.is_alive():
             # already closed
             log.debug('Already closed')
@@ -266,6 +259,50 @@ class Connection(AbstractChannel):
         args.write_short(method_type.method_id)
         self._send_method(Method(spec.Connection.Close, args))
         return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
+
+    def _heartbeat_thread(self):
+        # `is_alive()` sends heartbeats if the connection is alive
+        while self.is_alive():
+            # `close` is set to true if the `close_event` is signalled
+            close = self._close_event.wait(self.heartbeat / 1.5)
+            if close:
+                break
+
+    def _close(self):
+        try:
+            self.transport.close()
+
+            channels = [x for x in self.channels.values() if x is not self]
+            for ch in channels:
+                # noinspection PyProtectedMember
+                ch._close()
+        except socket.error:
+            pass  # connection already closed on the other end
+        finally:
+            self.transport = self.connection = self.channels = None
+
+    def _get_free_channel_id(self):
+        """Get next free channel ID
+
+        :return: next free channel_id
+        :rtype: int
+        """
+        try:
+            return self._avail_channel_ids.pop()
+        except IndexError:
+            raise ResourceError('No free channel ids, current={0}, channel_max={1}'.format(
+                len(self.channels), self.channel_max), spec.Channel.Open)
+
+    def _claim_channel_id(self, channel_id):
+        """Claim channel ID
+
+        :param channel_id: channel ID
+        :type channel_id: int
+        """
+        try:
+            return self._avail_channel_ids.remove(channel_id)
+        except ValueError:
+            raise AMQPConnectionError('Channel {} already open'.format(channel_id))
 
     def _cb_close(self, method):
         """Handle received connection close
@@ -468,7 +505,7 @@ class Connection(AbstractChannel):
         self._send_method(Method(spec.Connection.StartOk, args))
 
     def _cb_tune(self, method):
-        """Propose connection tuning parameters
+        """Handle received "tune" method
 
         This method is the handler for receiving a "tune" method. `channel_max` and `frame_max` are set to the lower
         of the values proposed by each party.
@@ -499,6 +536,7 @@ class Connection(AbstractChannel):
         # largest frame size the server proposes for the connection
         self.frame_max = min(args.read_long(), self.frame_max)
         self.method_writer.frame_max = self.frame_max
+        # heartbeat interval proposed by server
         self.server_heartbeat = args.read_short() or 0
 
         # negotiate the heartbeat interval to the smaller of the specified values
@@ -512,9 +550,6 @@ class Connection(AbstractChannel):
             self.heartbeat = 0
 
         self._send_tune_ok(self.channel_max, self.frame_max, self.heartbeat)
-
-    def send_heartbeat(self):
-        self.transport.write_frame(Frame(FrameType.HEARTBEAT))
 
     def _send_tune_ok(self, channel_max, frame_max, heartbeat):
         """Negotiate connection tuning parameters
@@ -549,15 +584,6 @@ class Connection(AbstractChannel):
         args.write_short(heartbeat or 0)
         self._send_method(Method(spec.Connection.TuneOk, args))
         self._wait_tune_ok = False
-
-    @property
-    def sock(self):
-        if self.transport and self.transport.sock:
-            return self.transport.sock
-
-    @property
-    def server_capabilities(self):
-        return self.server_properties.get('capabilities') or {}
 
     METHOD_MAP = {
         spec.Connection.Start: _cb_start,
