@@ -47,19 +47,21 @@ class Connection(AbstractChannel):
 
         :param str host: host
         :param int port: port
-        :param str userid: username
-        :param str password: password
-        :param str virtual_host: virtual host
-        :param str locale: locale
-        :param client_properties: dict of client properties
         :param ssl: dict of SSL options passed to :func:`ssl.wrap_socket()`, None to disable SSL
         :param float connect_timeout: connect timeout
+        :param str userid: username
+        :param str password: password
+        :param str login_method: login method (this is server-specific); default is for RabbitMQ
+        :param str virtual_host: virtual host
+        :param str locale: locale
         :param int channel_max: maximum number of channels
         :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
+        :param bool auto_heartbeat: enable automatic heartbeats thread
+        :param bool enable_publisher_ack: enable publisher acknowledgements by default for new channels
+        :param client_properties: dict of client properties
         :param on_blocked: callback on connection blocked
         :param on_unblocked: callback on connection unblocked
-        :param bool enable_publisher_ack: enable publisher acknowledgements by default for new channels
         :type connect_timeout: float or None
         :type client_properties: dict or None
         :type ssl: dict or None
