@@ -1,5 +1,6 @@
 """AMQP Connections
 """
+import ssl
 import logging
 import socket
 from array import array
@@ -198,7 +199,7 @@ class Connection(AbstractChannel):
 
         # recv with MSG_PEEK to check if the connection is alive
         # note: if there is data still in the buffer, this will not tell us anything
-        if hasattr(socket, 'MSG_PEEK'):
+        if hasattr(socket, 'MSG_PEEK') and not isinstance(self.sock, ssl.SSLSocket):
             prev = self.sock.gettimeout()
             self.sock.settimeout(0.0001)
             try:

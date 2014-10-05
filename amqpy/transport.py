@@ -4,6 +4,7 @@ import ssl
 from abc import ABCMeta, abstractmethod
 import logging
 from threading import Lock
+from ssl import SSLError
 
 from .concurrency import synchronized
 from .exceptions import UnexpectedFrame
@@ -173,6 +174,9 @@ class AbstractTransport(metaclass=ABCMeta):
             i_last_byte = bytes(frame_terminator)[0]
 
         except (OSError, IOError, socket.error) as exc:
+            # don't disconnect for ssl read time outs (Python 3.2): http://bugs.python.org/issue10272
+            if isinstance(exc, SSLError) and 'timed out' in str(exc):
+                raise socket.timeout()
             if get_errno(exc) not in _UNAVAIL and not isinstance(exc, socket.timeout):
                 self.connected = False
             raise
