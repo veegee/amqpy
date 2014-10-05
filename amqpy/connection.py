@@ -28,7 +28,7 @@ LIBRARY_PROPERTIES = {
     'capabilities': {},
 }
 
-log = logging.getLogger('amqpy.connection')
+log = logging.getLogger('amqpy')
 
 
 class Connection(AbstractChannel):
