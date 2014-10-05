@@ -2,6 +2,7 @@
 
 import sys
 import os
+import subprocess
 
 from setuptools import setup, find_packages
 
@@ -29,15 +30,22 @@ package_data = {
 
 keywords = ['amqp', 'rabbitmq', 'qpid']
 
-long_description = description
-if os.path.exists('README.md'):
-    with open('README.md') as f:
-        long_description = f.read()
+
+def long_description():
+    if os.path.exists('README.md') and os.system('which pandoc') == 0:
+        args = ['pandoc', '-f', 'markdown', '-t', 'rst', 'README.md']
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
+        out, _ = p.communicate()
+        p.wait(1)
+        return out.decode('UTF-8')
+    else:
+        return description
+
 
 setup(
     name=name,
     description=description,
-    long_description=long_description,
+    long_description=long_description(),
     version=amqpy.__version__,
     author=amqpy.__author__,
     author_email=amqpy.__contact__,
