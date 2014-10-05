@@ -41,7 +41,7 @@ Guarantees
 
 This library makes the following guarantees:
 
-* [Semantic versioning](http://semver.org/) is strictly followed
+* `Semantic versioning`_ is strictly followed
 * Compatible with Python >= 3.2.0 and PyPy3 >= 2.3.1 (Python 3.2.5)
 * AMQP 0.9.1 compliant
 
@@ -102,7 +102,7 @@ shortly.
 Features
 ========
 
-* Draining events from multiple channels `Connection.drain_events()`
+* Draining events from multiple channels ``Connection.drain_events()``
 * SSL is fully supported, it is highly recommended to use SSL when connecting to servers over the Internet.
 * Support for timeouts
 * Support for manual and automatic heartbeats
@@ -110,10 +110,10 @@ Features
 
 Supports RabbitMQ extensions:
 
-* Publisher confirms: enable with `Channel.confirm_select()`, then use Channel.basic_publish_confirm
-* Exchange to exchange bindings: `Channel.exchange_bind()` and `Channel.exchange_unbind()`
-* Consumer Cancel Notifications: by default a cancel results in `ChannelError` being raised, but not if a `on_cancel`
-  callback is passed to `basic_consume`
+* Publisher confirms: enable with ``Channel.confirm_select()``, then use Channel.basic_publish_confirm
+* Exchange to exchange bindings: ``Channel.exchange_bind()`` and ``Channel.exchange_unbind()``
+* Consumer Cancel Notifications: by default a cancel results in ``ChannelError`` being raised,
+  but not if an ``on_cancel`` callback is passed to ``basic_consume``
 
 
 Testing
@@ -133,3 +133,5 @@ Indices and Tables
 * :ref:`modindex`
 * :ref:`search`
 
+
+.. _Semantic versioning: http://semver.org
