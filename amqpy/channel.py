@@ -1175,6 +1175,12 @@ class Channel(AbstractChannel):
 
         This method sets the channel to use standard transactions. The client must use this method at least once on a
         channel before using the Commit or Rollback methods.
+
+        The channel must not be in publish acknowledge mode. If it is, the server raises a `PreconditionFailed`
+        exception and closes the channel. Note that amqpy will automatically reopen the channel, at which point this
+        method can be called again successfully.
+
+        :raises PreconditionFailed: if the channel is in publish acknowledge mode
         """
         self._send_method(Method(spec.Tx.Select))
         return self.wait(allowed_methods=[spec.Tx.SelectOk])
@@ -1188,11 +1194,14 @@ class Channel(AbstractChannel):
 
     @synchronized('lock')
     def confirm_select(self, nowait=False):
-        """Enable publisher confirms for this channel (a RabbitMQ extension)
+        """Enable publisher confirms for this channel (RabbitMQ extension)
 
-        Can now be used if the channel is in transactional mode.
+        The channel must not be in transactional mode. If it is, the server raises a `PreconditionFailed` exception
+        and closes the channel. Note that amqpy will automatically reopen the channel, at which point this method can be
+        called again successfully.
 
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :raises PreconditionFailed: if the channel is in transactional mode.
         """
         args = AMQPWriter()
         args.write_bit(nowait)
