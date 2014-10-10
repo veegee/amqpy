@@ -230,7 +230,7 @@ class Connection(AbstractChannel):
         :type timeout: float or None
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
-        chan_id, method = self._wait_multiple(self.channels, None, timeout=timeout)
+        chan_id, method = self._wait_multiple(self.channels, None, timeout)
         channel = self.channels[chan_id]
         return self.handle_method(method, channel=channel)
 
