@@ -220,6 +220,24 @@ class Connection(AbstractChannel):
 
         return True
 
+    def _wait_any(self, timeout=None):
+        """Wait for any event on the connection (for any channel)
+
+        This method is called by :meth:`Connection.drain_events()`.
+
+        :param float timeout: timeout
+        :return: method
+        :rtype: amqpy.spec.Method
+        """
+        # check the method queue of each channel
+        for ch_id, channel in self.channels.items():
+            if channel.method_queue:
+                return channel.method_queue.pop(0)
+
+        # do a blocking read for any incoming method
+        method = self.method_reader.read_method(timeout)
+        return method
+
     def drain_events(self, timeout=None):
         """Wait for an event on all channels
 
@@ -230,9 +248,10 @@ class Connection(AbstractChannel):
         :type timeout: float or None
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
-        chan_id, method = self._wait_multiple(self.channels, None, timeout)
-        channel = self.channels[chan_id]
-        return self.handle_method(method, channel=channel)
+        method = self._wait_any(timeout)
+        assert isinstance(method, Method)
+        channel = self.channels[method.channel_id]
+        return self.handle_method(method, channel)
 
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Close connection to the server

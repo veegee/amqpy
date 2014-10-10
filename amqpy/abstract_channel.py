@@ -118,58 +118,6 @@ class AbstractChannel(metaclass=ABCMeta):
             if ch_id == 0:
                 self.connection.wait()
 
-    def _wait_multiple(self, channels, allowed_methods, timeout=None):
-        """Wait for an event on multiple channels
-
-        It only makes sense for the `Connection` instance to call this method (as opposed to `Channel` instances).
-        This method gets called by :meth:`Connection.drain_events()`.
-
-        :param channels: dict of channels to watch
-        :param allowed_methods: list of allowed methods
-        :param timeout: timeout
-        :type channels: dict[ch_id int: channel Channel]
-        :return: tuple(channel_id, method)
-        :rtype: tuple(int, Method)
-        """
-        # create a more convenient list of methods to check
-        if isinstance(allowed_methods, list):
-            # we should always check of the incoming method is `Channel.Close`
-            allowed_methods = [spec.Channel.Close] + allowed_methods
-
-        # check the method queue of each channel
-        for ch_id, channel in channels.items():
-            for qm in channel.method_queue:
-                assert isinstance(qm, Method)
-                if allowed_methods is None or qm.method_type in allowed_methods:
-                    channel.method_queue.remove(qm)
-                    return ch_id, qm
-
-        # nothing queued for any channel, need to wait for a method from the server
-        while True:
-            # do a blocking read for any incoming method
-            method = self.connection.method_reader.read_method(timeout)
-            m_type = method.method_type
-            ch_id = method.channel_id
-
-            # check if the received method is the one we're waiting for
-            if ch_id in channels and (allowed_methods is None or m_type in allowed_methods):
-                return ch_id, method
-
-            # check if the received method needs to be handled immediately
-            if ch_id != 0 and m_type in self.IMMEDIATE_METHODS:
-                # certain methods like basic_return should be dispatched immediately rather than being queued, even if
-                # they're not one of the `allowed_methods` we're looking for
-                self.connection.channels[ch_id].handle_method(method)
-                continue
-
-            # not the channel and/or method we were looking for; queue this method for later
-            channels[ch_id].method_queue.append(method)
-
-            # if the method is destined for channel 0 (the connection itself), it's probably an exception, so handle it
-            # immediately
-            if ch_id == 0:
-                self.connection.wait()
-
     def handle_method(self, method, channel=None, callback=None):
         """Handle the specified received method
 
