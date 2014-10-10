@@ -202,6 +202,29 @@ class TestPublish:
         ch.confirm_select()
         ch.basic_publish_confirm(msg, rand_exch, rk)
 
+    def test_publish_tx(self, conn, rand_queue, rand_rk):
+        """Transactions must work as expected
+        """
+        #: :type: amqpy.channel.Channel
+        ch_a = conn.channel()
+        ch_a.queue_declare(rand_queue)
+        ch_a.queue_bind(rand_queue, 'amq.direct', rand_rk)
+        # select transactional mode and publish a message
+        ch_a.tx_select()
+        ch_a.basic_publish(Message('Hello, world!'), 'amq.direct', rand_rk)
+        ch_a.basic_publish(Message('Hello, world!'), 'amq.direct', rand_rk)
+
+        # create a new channel, and check that there are no messages on the queue
+        #: :type: amqpy.channel.Channel
+        ch_b = conn.channel()
+        ok = ch_b.queue_declare(rand_queue, passive=True)
+        assert ok.message_count == 0
+
+        # now commit the transaction, then make sure there are two messages on the queue
+        ch_a.tx_commit()
+        ok = ch_b.queue_declare(rand_queue, passive=True)
+        assert ok.message_count == 2
+
 
 class TestChannel:
     def test_defaults(self, ch):
