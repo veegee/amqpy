@@ -271,6 +271,7 @@ class Channel(AbstractChannel):
         The server sends this method to confirm a Declare method and confirms the name of the exchange, essential for
         automatically-named exchanges.
         """
+        # TODO: make sure the docstring is correct, and check the return type in tests
         pass
 
     @synchronized('lock')
@@ -492,8 +493,8 @@ class Channel(AbstractChannel):
         :raise NotFound: if `passive` is enabled and the queue does not exist
         :raise AccessRefused: if an attempt is made to declare a queue with a reserved name
         :raise ResourceLocked: if an attempt is made to access an exclusive queue declared by another open connection
-        :return: tuple(queue, message_count, consumer_count)
-        :rtype: tuple(str, int, int)
+        :return: queue_declare_ok_t(queue, message_count, consumer_count), or None if `nowait`
+        :rtype: queue_declare_ok_t or None
         """
         arguments = {} if arguments is None else arguments
         args = AMQPWriter()
@@ -511,29 +512,12 @@ class Channel(AbstractChannel):
             return self.wait(allowed_methods=[spec.Queue.DeclareOk])
 
     def _cb_queue_declare_ok(self, method):
-        """Confirms a queue definition
+        """Confirm a queue declare
 
-        This method confirms a Declare method and confirms the name of the queue, essential for automatically-named
-        queues.
+        This method is called when the server responds to a `queue.declare`.
 
-        PARAMETERS:
-
-            queue: shortstr
-
-                Reports the name of the queue. If the server generated a queue name, this field contains that name.
-
-            message_count: long
-
-                number of messages in queue
-
-                Reports the number of messages in the queue, which will be zero for newly-created queues.
-
-            consumer_count: long
-
-                number of consumers
-
-                Reports the number of active consumers for the queue. Note that consumers can suspend activity
-                (Channel.Flow) in which case they do not appear in this count.
+        :return: queue_declare_ok_t(queue, message_count, consumer_count), or None if `nowait`
+        :rtype: queue_declare_ok_t or None
         """
         args = method.args
         return queue_declare_ok_t(args.read_shortstr(), args.read_long(), args.read_long())

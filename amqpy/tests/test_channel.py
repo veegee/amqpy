@@ -5,6 +5,7 @@ import sys
 import pytest
 
 from .. import Channel, Message, FrameSyntaxError
+from ..spec import queue_declare_ok_t
 from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused
 from .conftest import get_server_props
 
@@ -109,6 +110,23 @@ class TestExchange:
 
 
 class TestQueue:
+    def test_queue_declare(self, ch, rand_queue):
+        ok = ch.queue_declare(rand_queue)
+        assert isinstance(ok, queue_declare_ok_t)
+        assert ok.queue == rand_queue
+        assert ok.message_count == 0
+        assert ok.consumer_count == 0
+
+    def test_queue_bind_publish(self, ch, rand_rk):
+        qname, _, _ = ch.queue_declare()
+        ch.queue_bind(qname, 'amq.direct', routing_key=rand_rk)
+
+        msg = Message('Hello, world!', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+        ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
+
+        msg2 = ch.basic_get(qname, no_ack=True)
+        assert msg == msg2
+
     def test_queue_delete_nonexistent(self, ch):
         """Test to ensure that deleting a nonexistent queue raises `NotFound`
 
@@ -126,18 +144,6 @@ class TestQueue:
         else:
             with pytest.raises(NotFound):
                 ch.queue_delete('bogus_queue_that_does_not_exist')
-
-    def test_queue(self, ch):
-        my_routing_key = 'funtest.test_queue'
-        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
-
-        qname, _, _ = ch.queue_declare()
-        ch.queue_bind(qname, 'amq.direct', routing_key=my_routing_key)
-
-        ch.basic_publish(msg, 'amq.direct', routing_key=my_routing_key)
-
-        msg2 = ch.basic_get(qname, no_ack=True)
-        assert msg == msg2
 
     def test_unbind(self, ch):
         my_routing_key = 'funtest.test_queue'
