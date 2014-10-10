@@ -63,7 +63,7 @@ class Channel(AbstractChannel):
         self.no_ack_consumers = set()
 
         # set first time basic_publish_confirm is called and publisher confirms are enabled for this channel.
-        self.publisher_ack_enabled = self.connection.publisher_ack_enabled
+        self.publisher_confirms_enabled = self.connection.publisher_confirms_enabled
 
         self._send_open()
 
@@ -954,6 +954,8 @@ class Channel(AbstractChannel):
         This method publishes a message to a specific exchange. The message will be routed to queues as defined by the
         exchange configuration and distributed to any active consumers when the transaction, if any, is committed.
 
+        If publisher confirms are enabled, this method will automatically wait to receive an "ack" from the server.
+
         :param msg: message
         :param str exchange: exchange name, empty string means default exchange
         :param str routing_key: routing key
@@ -961,9 +963,9 @@ class Channel(AbstractChannel):
         :param bool immediate: request immediate delivery
         :type msg: amqpy.Message
         """
-        if self.publisher_ack_enabled:
-            raise Exception('Publisher confirms are enabled, please use `basic_publish_confirm()` instead')
         self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
+        if self.publisher_confirms_enabled:
+            self.wait([spec.Basic.Ack])
 
     @synchronized('lock')
     def basic_publish_confirm(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
@@ -972,7 +974,7 @@ class Channel(AbstractChannel):
         This method publishes a message to a specific exchange. The message will be routed to queues as defined by the
         exchange configuration and distributed to any active consumers when the transaction, if any, is committed.
 
-        **This method requires the RabbitMQ publisher acknowledgements extension.**
+        **This method requires the RabbitMQ publisher acknowledgements extension, and enabled on the channel.**
 
         :param msg: message
         :param exchange: exchange name, empty string means default exchange
@@ -983,8 +985,9 @@ class Channel(AbstractChannel):
         :type exchange: str
         :type mandatory: bool
         :type immediate: bool
+        :raise Exception: if publisher confirms are not enabled on the channel
         """
-        if not self.publisher_ack_enabled:
+        if not self.publisher_confirms_enabled:
             raise Exception('Publisher confirms are NOT enabled')
         self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
         self.wait([spec.Basic.Ack])
@@ -1185,7 +1188,7 @@ class Channel(AbstractChannel):
         called again successfully.
 
         :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
-        :raises PreconditionFailed: if the channel is in transactional mode.
+        :raises PreconditionFailed: if the channel is in transactional mode
         """
         args = AMQPWriter()
         args.write_bit(nowait)
@@ -1193,7 +1196,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Confirm.Select, args))
         if not nowait:
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
-        self.publisher_ack_enabled = True
+        self.publisher_confirms_enabled = True
 
     def _cb_confirm_select_ok(self, method):
         """With this method, the broker confirms to the client that the channel is now using publisher confirms
