@@ -38,8 +38,7 @@ class Connection(AbstractChannel):
 
     def __init__(self, *, host='localhost', port=5672, ssl=None, connect_timeout=None,
                  userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/', locale='en_US',
-                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False,
-                 publisher_confirms=False, client_properties=None,
+                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False, client_properties=None,
                  on_blocked=None, on_unblocked=None):
         """Create a connection to the specified host
 
@@ -59,7 +58,6 @@ class Connection(AbstractChannel):
         :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
         :param bool auto_heartbeat: enable automatic heartbeats thread
-        :param bool publisher_confirms: enable publisher confirms by default for new channels
         :param client_properties: dict of client properties
         :param on_blocked: callback on connection blocked
         :param on_unblocked: callback on connection unblocked
@@ -84,8 +82,6 @@ class Connection(AbstractChannel):
         self.client_heartbeat = heartbeat
         # original heartbeat interval proposed by server
         self.server_heartbeat = None
-
-        self.publisher_confirms_enabled = publisher_confirms
 
         # callbacks
         self.on_blocked = on_blocked

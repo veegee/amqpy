@@ -97,6 +97,25 @@ class TestChannel:
             ch.basic_publish(msg, routing_key=qname)
 
 
+class TestChannelMode:
+    def test_confirm_select(self, ch):
+        ch.confirm_select()
+        assert ch.mode == Channel.CH_MODE_CONFIRM
+
+    def test_tx_select(self, ch):
+        ch.tx_select()
+        assert ch.mode == Channel.CH_MODE_TX
+
+    def test_change_mode_raises(self, ch):
+        ch.confirm_select()
+        assert ch.mode == Channel.CH_MODE_CONFIRM
+
+        with pytest.raises(PreconditionFailed):
+            ch.tx_select()
+
+        assert ch.mode == Channel.CH_MODE_NONE
+
+
 class TestExchange:
     def test_exchange_declare_and_delete(self, ch):
         exch_name = 'test_exchange_{}'.format(uuid.uuid4())

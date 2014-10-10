@@ -21,6 +21,13 @@ class Channel(AbstractChannel):
     The channel class provides methods for a client to establish a virtual connection (a channel) to a server and for
     both peers to operate the virtual connection thereafter.
     """
+    ### constants
+    #: Default channel mode
+    CH_MODE_NONE = 0
+    #: Transaction mode
+    CH_MODE_TX = 1
+    #: Publisher confirm mode (RabbitMQ extension)
+    CH_MODE_CONFIRM = 2
 
     def __init__(self, connection, channel_id=None, auto_decode=True):
         """Create a channel bound to a connection and using the specified numeric channel_id, and open on the server
@@ -45,10 +52,18 @@ class Channel(AbstractChannel):
 
         super().__init__(connection, channel_id)
 
-        self.is_open = False
-        self.active = True  # flow control
+        # auto decode received messages
+        self.auto_decode = auto_decode
 
-        # returned messages that the server was unable to deliver
+        ### channel state variables:
+        #: (bool) Current channel open/closed state
+        self.is_open = False
+        #: (bool) Current channel active state (flow control)
+        self.active = True
+        #: (int) Channel mode state (default, transactional, publisher confirm)
+        self.mode = 0
+
+        #: Returned messages that the server was unable to deliver
         self.returned_messages = Queue()
 
         # consumer callbacks dict[consumer_tag str: callable]
@@ -57,15 +72,11 @@ class Channel(AbstractChannel):
         # consumer cancel callbacks dict dict[consumer_tag str: callable]
         self.cancel_callbacks = {}
 
-        self.auto_decode = auto_decode  # auto decode received messages
-
         # set of consumers that have opted for `no_ack` delivery (server will not expect an ack for delivered messages)
         self.no_ack_consumers = set()
 
-        # set first time basic_publish_confirm is called and publisher confirms are enabled for this channel.
-        self.publisher_confirms_enabled = self.connection.publisher_confirms_enabled
-
-        self._send_open()
+        # open the channel
+        self._open()
 
     def _close(self):
         """Tear down this object, after we've agreed to close with the server
@@ -82,8 +93,17 @@ class Channel(AbstractChannel):
         self.cancel_callbacks.clear()
         self.no_ack_consumers.clear()
 
+    def _open(self):
+        """Open the channel
+        """
+        if self.is_open:
+            return
+
+        self._send_open()
+
     def _revive(self):
         self.is_open = False
+        self.mode = self.CH_MODE_NONE
         self._send_open()
 
     @synchronized('lock')
@@ -206,9 +226,6 @@ class Channel(AbstractChannel):
 
         This method opens a channel.
         """
-        if self.is_open:
-            return
-
         args = AMQPWriter()
         args.write_shortstr('')  # reserved
         self._send_method(Method(spec.Channel.Open, args))
@@ -964,7 +981,7 @@ class Channel(AbstractChannel):
         :type msg: amqpy.Message
         """
         self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
-        if self.publisher_confirms_enabled:
+        if self.mode == self.CH_MODE_CONFIRM:
             self.wait([spec.Basic.Ack])
 
     @synchronized('lock')
@@ -987,7 +1004,7 @@ class Channel(AbstractChannel):
         :type immediate: bool
         :raise Exception: if publisher confirms are not enabled on the channel
         """
-        if not self.publisher_confirms_enabled:
+        if self.mode != self.CH_MODE_CONFIRM:
             raise Exception('Publisher confirms are NOT enabled')
         self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
         self.wait([spec.Basic.Ack])
@@ -1170,7 +1187,8 @@ class Channel(AbstractChannel):
         :raises PreconditionFailed: if the channel is in publish acknowledge mode
         """
         self._send_method(Method(spec.Tx.Select))
-        return self.wait(allowed_methods=[spec.Tx.SelectOk])
+        self.wait(allowed_methods=[spec.Tx.SelectOk])
+        self.mode = self.CH_MODE_TX
 
     def _cb_tx_select_ok(self, method):
         """Confirm transaction mode
@@ -1196,7 +1214,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Confirm.Select, args))
         if not nowait:
             self.wait(allowed_methods=[spec.Confirm.SelectOk])
-        self.publisher_confirms_enabled = True
+        self.mode = self.CH_MODE_CONFIRM
 
     def _cb_confirm_select_ok(self, method):
         """With this method, the broker confirms to the client that the channel is now using publisher confirms
