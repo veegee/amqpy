@@ -10,6 +10,7 @@ from .message import Message
 from .channel import Channel
 from .connection import Connection
 from .consumer import AbstractConsumer
+from .spec import basic_return_t, queue_declare_ok_t
 from .exceptions import (
     Timeout,
     AMQPError,
