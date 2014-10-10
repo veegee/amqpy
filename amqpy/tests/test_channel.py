@@ -317,6 +317,7 @@ class TestPublish:
         ch.basic_publish(msg, rand_exch, mandatory=True)
         ch.basic_publish(msg, rand_exch, mandatory=True)
         ch.basic_publish(msg, rand_exch, mandatory=True)
+        # calling `close()` will cause all returned messages to be stored in the local queue before closing the channel
         ch.close()
 
         # 3 of the 4 messages we sent should have been returned
