@@ -18,8 +18,8 @@ log = logging.getLogger('amqpy')
 
 class Channel(AbstractChannel):
     """
-    The channel class provides methods for a client to establish a virtual connection (a channel) to a server and for
-    both peers to operate the virtual connection thereafter.
+    The channel class provides methods for a client to establish and operate an AMQP channel. All public members are
+    fully thread-safe.
     """
     ### constants
     #: Default channel mode
@@ -32,9 +32,8 @@ class Channel(AbstractChannel):
     def __init__(self, connection, channel_id=None, auto_decode=True):
         """Create a channel bound to a connection and using the specified numeric channel_id, and open on the server
 
-        The 'auto_decode' parameter (defaults to True), indicates whether the library should attempt to decode the body
-        of Messages to a Unicode string if there's a 'content_encoding' property for the message.  If there's no
-        'content_encoding' property, or the decode raises an Exception, the message body is left as plain bytes.
+        If `auto_decode` is enabled (default), incoming Message bodies will be automatically decoded to `str` if
+        possible.
 
         :param connection: the channel's associated Connection
         :param channel_id: the channel's assigned channel ID
@@ -63,7 +62,7 @@ class Channel(AbstractChannel):
         #: (int) Channel mode state (default, transactional, publisher confirm)
         self.mode = 0
 
-        #: Returned messages that the server was unable to deliver
+        #: (Queue) Returned messages that the server was unable to deliver
         self.returned_messages = Queue()
 
         # consumer callbacks dict[consumer_tag str: callable]
