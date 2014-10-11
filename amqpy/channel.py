@@ -55,14 +55,25 @@ class Channel(AbstractChannel):
         self.auto_decode = auto_decode
 
         ### channel state variables:
-        #: (bool) Current channel open/closed state
+
+        #: Current channel open/closed state
+        #:
+        #: :type: bool
         self.is_open = False
-        #: (bool) Current channel active state (flow control)
+
+        #: Current channel active state (flow control)
+        #:
+        #: :type: bool
         self.active = True
-        #: (int) Channel mode state (default, transactional, publisher confirm)
+
+        #: Channel mode state (default, transactional, publisher confirm)
+        #:
+        #: :type: int
         self.mode = 0
 
-        #: (Queue) Returned messages that the server was unable to deliver
+        #: Returned messages that the server was unable to deliver
+        #:
+        #: :type: queue.Queue
         self.returned_messages = Queue()
 
         # consumer callbacks dict[consumer_tag str: callable]

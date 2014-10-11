@@ -67,7 +67,9 @@ class Connection(AbstractChannel):
         :type on_blocked: Callable or None
         :type on_unblocked: Callable or None
         """
-        # `channels` map stores references to all active channels
+        #: Map of `{channel_id: Channel}` for all active channels
+        #:
+        #: :type: dict[int, Channel]
         self.channels = {}  # dict of {channel_id int: Channel}
 
         # the connection object itself is treated as channel 0
