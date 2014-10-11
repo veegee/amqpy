@@ -61,7 +61,6 @@ class PartialMessage:
         """
         self.body_parts.extend(payload)
         if self.complete:
-            # TODO: should we bother converting this to an immutable bytes object just to make tests pass?
             self.msg.body = bytes(self.body_parts)
 
     @property

@@ -288,7 +288,6 @@ class Channel(AbstractChannel):
         The server sends this method to confirm a Declare method and confirms the name of the exchange, essential for
         automatically-named exchanges.
         """
-        # TODO: make sure the docstring is correct, and check the return type in tests
         pass
 
     @synchronized('lock')

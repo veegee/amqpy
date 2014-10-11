@@ -11,7 +11,6 @@ class GenericContent:
 
     Subclasses should override the PROPERTIES attribute.
     """
-    # TODO: see if we can merge GenericContent into Message; why do we need this specific class?
     PROPERTIES = []
 
     def __init__(self, properties):
@@ -139,7 +138,6 @@ class Message(GenericContent):
             msg = Message('hello world', content_type='text/plain', application_headers={'foo': 7})
         """
         super().__init__(properties)
-        # TODO: collapse **properties into a dict parameter
 
         #: Message body (bytes or str)
         self.body = body
