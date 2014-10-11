@@ -1,7 +1,10 @@
 import sys
+import re
 import os
 
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+import sphinx.ext.autodoc
+
+#on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 sys.path.insert(0, os.path.abspath('../..'))
 
 import amqpy
@@ -11,7 +14,15 @@ needs_sphinx = '1.2'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode'
 ]
+
+# configure autodoc member grouping and ordering
+sphinx.ext.autodoc.DataDocumenter.member_order = 5
+sphinx.ext.autodoc.AttributeDocumenter.member_order = 6
+sphinx.ext.autodoc.InstanceAttributeDocumenter.member_order = 7
+autodoc_member_order = 'groupwise'
+autodoc_default_flags = ['members', 'show-inheritance']
 
 intersphinx_mapping = {'http://docs.python.org/3.4': None}
 
@@ -104,69 +115,68 @@ html_theme_options = {
     'bootswatch_theme': 'flatly',
 }
 
-# The name for this set of Sphinx documents.  If None, it defaults to
-# "<project> v<release> documentation".
-# html_title = None
-
-# A shorter title for the navigation bar.  Default is the same as html_title.
-# html_short_title = None
-
-# The name of an image file (relative to this directory) to place at the top
-# of the sidebar.
-# html_logo = None
-
-# The name of an image file (within the static path) to use as favicon of the
-# docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
-# pixels large.
-# html_favicon = None
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-
-# Add any extra paths that contain custom files (such as robots.txt or
-# .htaccess) here, relative to this directory. These files are copied
-# directly to the root of the documentation.
-# html_extra_path = []
-
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
-# using the given strftime format.
-# html_last_updated_fmt = '%b %d, %Y'
-
-# If true, SmartyPants will be used to convert quotes and dashes to
-# typographically correct entities.
-# html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
 # html_sidebars = {}
 
-# Additional templates that should be rendered to pages, maps page names to
-# template names.
-# html_additional_pages = {}
-
-# If false, no module index is generated.
-# html_domain_indices = True
-
-# If false, no index is generated.
-# html_use_index = True
-
-# If true, the index is split into individual pages for each letter.
-# html_split_index = False
-
-# If true, links to the reST sources are added to the pages.
-# html_show_sourcelink = True
-
-# If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
-# html_show_sphinx = True
-
-# If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
-# html_show_copyright = True
-
-# If true, an OpenSearch description file will be output, and all pages will
-# contain a <link> tag referring to it.  The value of this option must be the
-# base URL from which the finished HTML is served.
-# html_use_opensearch = ''
-
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'amqpydoc'
+
+
+def get_field(doc: str, name: str):
+    match = re.search(':{}: (.*)$'.format(name), doc, re.IGNORECASE | re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+
+
+def process_sig(app, what, name, obj, options, signature, return_annotation):
+    doc = str(obj.__doc__)
+    otype = str(type(obj))
+    msg_meth = '{what:11} {otype:23} {name:50} -> {rt}'
+    msg_class = '{what:11} {otype:23} {name:50} {sig}'
+
+    rt = None
+    if what == 'method' and not name.endswith('__init__'):
+        if 'rtype' in doc:
+            rt = get_field(doc, 'rtype')
+            print(msg_meth.format(**locals()))
+        else:
+            # assume methods with undocumented rtype return `None`
+            rt = 'None'
+            print(msg_meth.format(**locals()))
+    elif type(obj) is property:
+        if 'rtype' in doc:
+            rt = get_field(doc, 'rtype')
+            print(msg_meth.format(**locals()))
+        else:
+            rt = '?'
+            print(msg_meth.format(**locals()))
+    elif what == 'class':
+        # bases = []
+        # for cls in obj.__bases__:
+        #     bases.append('{}.{}'.format(cls.__module__, cls.__name__))
+        # sig = ', '.join(bases)
+        # sig = '({})'.format(sig)
+        sig = ''
+        print(msg_class.format(**locals()))
+        return sig, None
+    else:
+        rt = 'skip'
+        print(msg_meth.format(**locals()))
+
+    if rt and rt not in ['?', 'skip']:
+        return signature, rt
+
+
+def process_doc(app, what, name, obj, options, lines):
+    otype = str(type(obj))
+    msg = '{what:11} {otype:23} {name:50}'
+    if type(obj) == property:
+        s = '`(property)`'
+        lines.insert(0, s)
+
+
+def setup(app):
+    app.connect('autodoc-process-signature', process_sig)
+    app.connect('autodoc-process-docstring', process_doc)
