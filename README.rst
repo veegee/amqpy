@@ -67,14 +67,12 @@ To do (goals for  v1.0.0)
 - Add support for multiple authentication mechanisms such as CRAM-MD5 for Apache
   Qpid
 - `Kombu`_ compatibility
+- Add explicit callback in calls to ``wait()``
 
 
 Tests
 -----
 
-- Test for strict protocol compliance and behaviour
-- Test for thread safety, use PyTest monkey patching facilities to patch
-  ``socket`` to slow down reads and writes
 - Test for ``Connection.is_alive()`` behaviour after various exceptions and
   timeouts
 - Test with SSL (parametrize the connection fixture to use SSL)
