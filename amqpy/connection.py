@@ -416,7 +416,7 @@ class Connection(AbstractChannel):
         """Security mechanism challenge
 
         The SASL protocol works by exchanging challenges and responses until both peers have
-        received sufficient information to authenticate each other.  This method challenges the
+        received sufficient information to authenticate each other This method challenges the
         client to provide more information.
 
         PARAMETERS:
@@ -475,7 +475,7 @@ class Connection(AbstractChannel):
                 Currently ASL supports these mechanisms: PLAIN.
             locales: longstr
                 available message locales
-                A list of the message locales that the server supports, delimited by spaces.  The
+                A list of the message locales that the server supports, delimited by spaces The
                 locale defines the language in which the server will send reply texts.
                 RULE:
                     All servers MUST support at least the en_US locale.
@@ -519,7 +519,7 @@ class Connection(AbstractChannel):
                 security response data
                 A block of opaque data passed to the security mechanism. The contents of this
                 data are defined by the
-                SASL security mechanism.  For the PLAIN security mechanism this is defined as a
+                SASL security mechanism For the PLAIN security mechanism this is defined as a
                 field table holding two
                 fields, LOGIN and PASSWORD.
             locale: shortstr
@@ -561,7 +561,7 @@ class Connection(AbstractChannel):
                 proposed maximum frame size
                 The largest frame size that the server proposes for the connection. The client
                 can negotiate a lower
-                value.  Zero means that the server does not impose any specific limit but may
+                value Zero means that the server does not impose any specific limit but may
                 reject very large frames
                 if it cannot allocate resources for them.
                 RULE:
@@ -570,7 +570,7 @@ class Connection(AbstractChannel):
                     The minimum non-zero value for the frame-max field is 4096.
             heartbeat: short
                 desired heartbeat delay
-                The delay, in seconds, of the connection heartbeat that the server wants.  Zero
+                The delay, in seconds, of the connection heartbeat that the server wants Zero
                 means the server does
                 not want a heartbeat.
         """

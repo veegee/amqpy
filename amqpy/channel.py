@@ -123,7 +123,7 @@ class Channel(AbstractChannel):
 
         This method indicates that the sender wants to close the channel. This may be due to
         internal conditions (e.g. a forced shut-down) or due to an error handling a specific method,
-        i.e. an exception.  When a close is due to an exception, the sender provides the class and
+        i.e. an exception When a close is due to an exception, the sender provides the class and
         method id of the method which caused the exception.
 
         :param reply_code: the reply code
@@ -190,7 +190,7 @@ class Channel(AbstractChannel):
         This method asks the peer to pause or restart the flow of content data. This is a simple
         flow-control mechanism that a peer can use to avoid overflowing its queues or otherwise
         finding itself receiving more messages than it can process. Note that this method is not
-        intended for window control.  The peer that receives a request to stop sending content
+        intended for window control The peer that receives a request to stop sending content
         should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.
 
@@ -209,7 +209,7 @@ class Channel(AbstractChannel):
         This method asks the peer to pause or restart the flow of content data. This is a simple
         flow-control mechanism that a peer can use to avoid overflowing its queues or otherwise
         finding itself receiving more messages than it can process. Note that this method is not
-        intended for window control.  The peer that receives a request to stop sending content
+        intended for window control The peer that receives a request to stop sending content
         should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.
         """
@@ -886,13 +886,13 @@ class Channel(AbstractChannel):
                 RULE:
 
                     The delivery tag is valid only within the channel from which the message was
-                    received.  I.e. a
+                    received I.e. a
                     client MUST NOT receive a message on one channel and then acknowledge it on
                     another.
 
                 RULE:
 
-                    The server MUST NOT use a zero value for delivery tags.  Zero is reserved for
+                    The server MUST NOT use a zero value for delivery tags Zero is reserved for
                     client use, meaning
                     "all messages so far received".
 
@@ -981,13 +981,13 @@ class Channel(AbstractChannel):
                 RULE:
 
                     The delivery tag is valid only within the channel from which the message was
-                    received.  I.e. a
+                    received I.e. a
                     client MUST NOT receive a message on one channel and then acknowledge it on
                     another.
 
                 RULE:
 
-                    The server MUST NOT use a zero value for delivery tags.  Zero is reserved for
+                    The server MUST NOT use a zero value for delivery tags Zero is reserved for
                     client use, meaning
                     "all messages so far received".
 
@@ -1199,13 +1199,13 @@ class Channel(AbstractChannel):
         or return untreatable messages to their original queue.
 
         * The server SHOULD be capable of accepting and process the Reject method while sending
-          message content with a Deliver or Get-Ok method.  I.e. the server should read and process
+          message content with a Deliver or Get-Ok method I.e. the server should read and process
           incoming methods while sending output frames. To cancel a partially-send content, the
           server sends a content body frame of size 1 (i.e. with no data except the frame-end
           octet).
         * The server SHOULD interpret this method as meaning that the client is unable to process
           the message at this time.
-        * A client MUST NOT use this method as a means of selecting messages to process.  A
+        * A client MUST NOT use this method as a means of selecting messages to process A
           rejected message MAY be discarded or dead-lettered, not necessarily passed to another
           client.
         * The server MUST NOT deliver the message to the same client within the context of the
