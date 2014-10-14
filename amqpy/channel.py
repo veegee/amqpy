@@ -353,18 +353,22 @@ class Channel(AbstractChannel):
                       arguments=None):
         """Bind an exchange to an exchange
 
-        * Both the `dest_exch` and `source_exch` must already exist. Blank exchange names mean the default exchange.
-        * A server MUST allow and ignore duplicate bindings - that is, two or more bind methods for a specific
-          exchanges, with identical arguments - without treating these as an error.
-        * A server MUST allow cycles of exchange bindings to be created including allowing an exchange to be bound to
-          itself.
-        * A server MUST not deliver the same message more than once to a destination exchange, even if the topology of
-          exchanges and bindings results in multiple (even infinite) routes to that exchange.
+        * Both the `dest_exch` and `source_exch` must already exist. Blank exchange names mean
+          the default exchange.
+        * A server MUST allow and ignore duplicate bindings - that is, two or more bind methods
+          for a specific exchanges, with identical arguments - without treating these as an error.
+        * A server MUST allow cycles of exchange bindings to be created including allowing an
+          exchange to be bound to itself.
+        * A server MUST not deliver the same message more than once to a destination exchange,
+          even if the topology of exchanges and bindings results in multiple (even infinite)
+          routes to that exchange.
 
         :param str dest_exch: name of destination exchange to bind
         :param str source_exch: name of source exchange to bind
-        :param str routing_key: routing key for the binding (note: not all exchanges use a routing key)
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param str routing_key: routing key for the binding (note: not all exchanges use a
+        routing key)
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
         :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
@@ -381,17 +385,20 @@ class Channel(AbstractChannel):
             return self.wait(allowed_methods=[spec.Exchange.BindOk])
 
     @synchronized('lock')
-    def exchange_unbind(self, dest_exch, source_exch='', routing_key='', nowait=False, arguments=None):
+    def exchange_unbind(self, dest_exch, source_exch='', routing_key='', nowait=False,
+                        arguments=None):
         """Unbind an exchange from an exchange
 
-        * If the unbind fails, the server must raise a connection exception. The server must not attempt to unbind an
+        * If the unbind fails, the server must raise a connection exception. The server must not
+        attempt to unbind an
           exchange that does not exist from an exchange.
         * Blank exchange names mean the default exchange.
 
         :param str dest_exch: destination exchange name
         :param str source_exch: source exchange name
         :param str routing_key: routing key to unbind
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
         :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
@@ -425,26 +432,32 @@ class Channel(AbstractChannel):
     def queue_bind(self, queue, exchange='', routing_key='', nowait=False, arguments=None):
         """Bind queue to an exchange
 
-        This method binds a queue to an exchange. Until a queue is bound it will not receive any messages. In a classic
-        messaging model, store-and-forward queues are bound to a dest exchange and subscription queues are bound to a
+        This method binds a queue to an exchange. Until a queue is bound it will not receive any
+        messages. In a classic
+        messaging model, store-and-forward queues are bound to a dest exchange and subscription
+        queues are bound to a
         dest_wild exchange.
 
         * The server must allow and ignore duplicate bindings without treating these as an error.
         * If a bind fails, the server must raise a connection exception.
-        * The server must not allow a durable queue to bind to a transient exchange. If a client attempts this,
-          the server must raise a channel exception.
-        * The server should support at least 4 bindings per queue, and ideally, impose no limit except as defined by
-          available resources.
+        * The server must not allow a durable queue to bind to a transient exchange. If a client
+          attempts this, the server must raise a channel exception.
+        * The server should support at least 4 bindings per queue, and ideally, impose no limit
+          except as defined by available resources.
 
-        * If the client did not previously declare a queue, and the `queue` is empty, the server must raise a
-          connection exception with reply code 530 (not allowed).
-        * If `queue` does not exist, the server must raise a channel exception with reply code 404 (not found).
-        * If `exchange` does not exist, the server must raise a channel exception with reply code 404 (not found).
+        * If the client did not previously declare a queue, and the `queue` is empty, the server
+          must raise a connection exception with reply code 530 (not allowed).
+        * If `queue` does not exist, the server must raise a channel exception with reply code
+          404 (not found).
+        * If `exchange` does not exist, the server must raise a channel exception with reply code
+          404 (not found).
 
-        :param str queue: name of queue to bind; blank refers to the last declared queue for this channel
+        :param str queue: name of queue to bind; blank refers to the last declared queue for this
+        channel
         :param str exchange: name of exchange to bind to
         :param str routing_key: routing key for the binding
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
         :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
@@ -477,7 +490,8 @@ class Channel(AbstractChannel):
         * The client must not attempt to unbind a queue that does not exist.
         * The client must not attempt to unbind a queue from an exchange that does not exist.
 
-        :param str queue: name of queue to unbind, leave blank to refer to the last declared queue on this channel
+        :param str queue: name of queue to unbind, leave blank to refer to the last declared
+        queue on this channel
         :param str exchange: name of exchange to unbind, leave blank to refer to default exchange
         :param str routing_key: routing key of binding
         :param dict arguments: binding arguments, specific to the exchange class
@@ -503,37 +517,46 @@ class Channel(AbstractChannel):
         pass
 
     @synchronized('lock')
-    def queue_declare(self, queue='', passive=False, durable=False, exclusive=False, auto_delete=True, nowait=False,
+    def queue_declare(self, queue='', passive=False, durable=False, exclusive=False,
+                      auto_delete=True, nowait=False,
                       arguments=None):
         """Declare queue, create if needed
 
-        This method creates or checks a queue. When creating a new queue the client can specify various properties that
-        control the durability of the queue and its contents, and the level of sharing for the queue. A tuple
-        containing the queue name, message count, and consumer count is returned, which is essential for declaring
+        This method creates or checks a queue. When creating a new queue the client can specify
+        various properties that
+        control the durability of the queue and its contents, and the level of sharing for the
+        queue. A tuple
+        containing the queue name, message count, and consumer count is returned, which is
+        essential for declaring
         automatically named queues.
 
-        * If `passive` is specified, the server state is not modified (a queue will not be declared), and the server
-          only checks if the specified queue exists and returns its properties. If the queue does not exist,
-          the server must raise a 404 NOT FOUND channel exception.
-        * The server must create a default binding for a newly-created queue to the default exchange, which is an
-          exchange of type 'direct'.
-        * Queue names starting with 'amq.' are reserved for use by the server. If an attempt is made to declare a
-          queue with such a name, and the `passive` flag is disabled, the server must raise a 403 ACCESS REFUSED
-          connection exception.
-        * The server must raise a 405 RESOURCE LOCKED channel exception if an attempt is made to access a queue declared
-          as exclusive by another open connection.
+        * If `passive` is specified, the server state is not modified (a queue will not be
+          declared), and the server only checks if the specified queue exists and returns its
+          properties. If the queue does  not exist, the server must raise a 404 NOT FOUND channel
+          exception.
+        * The server must create a default binding for a newly-created queue to the default
+          exchange, which is an exchange of type 'direct'.
+        * Queue names starting with 'amq.' are reserved for use by the server. If an attempt is
+          made to declare a queue with such a name, and the `passive` flag is disabled, the server
+          must raise a 403  ACCESS REFUSED connection exception.
+        * The server must raise a 405 RESOURCE LOCKED channel exception if an attempt is made to
+          access a queue declared as exclusive by another open connection.
         * The server must ignore the `auto_delete` flag if the queue already exists.
 
         :param str queue: queue name; leave blank to let the server generate a name automatically
-        :param bool passive: do not create queue; client can use this to check whether a queue exists
+        :param bool passive: do not create queue; client can use this to check whether a queue
+        exists
         :param bool durable: mark as durable (remain active after server restarts)
-        :param bool exclusive: mark as exclusive (can only be consumed from by this connection); implies `auto_delete`
+        :param bool exclusive: mark as exclusive (can only be consumed from by this connection);
+        implies `auto_delete`
         :param bool auto_delete: auto-delete queue when all consumers have finished using it
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
         :param dict arguments: exchange declare arguments
         :raise NotFound: if `passive` is enabled and the queue does not exist
         :raise AccessRefused: if an attempt is made to declare a queue with a reserved name
-        :raise ResourceLocked: if an attempt is made to access an exclusive queue declared by another open connection
+        :raise ResourceLocked: if an attempt is made to access an exclusive queue declared by
+        another open connection
         :return: queue_declare_ok_t(queue, message_count, consumer_count), or None if `nowait`
         :rtype: queue_declare_ok_t or None
         """
@@ -567,13 +590,17 @@ class Channel(AbstractChannel):
     def queue_delete(self, queue='', if_unused=False, if_empty=False, nowait=False):
         """Delete a queue
 
-        This method deletes a queue. When a queue is deleted any pending messages are sent to a dead-letter queue if
+        This method deletes a queue. When a queue is deleted any pending messages are sent to a
+        dead-letter queue if
         this is defined in the server configuration, and all consumers on the queue are cancelled.
 
-        :param str queue: name of queue to delete, empty string refers to last declared queue on this channel
-        :param bool if_unused: delete only if unused (has no consumers); raise a channel exception otherwise
+        :param str queue: name of queue to delete, empty string refers to last declared queue on
+        this channel
+        :param bool if_unused: delete only if unused (has no consumers); raise a channel
+        exception otherwise
         :param bool if_empty: delete only if empty; raise a channel exception otherwise
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
         :raise NotFound: if `queue` does not exist
         :raise PreconditionFailed: if `if_unused` or `if_empty` conditions are not met
         :return: number of messages deleted
@@ -609,15 +636,18 @@ class Channel(AbstractChannel):
     def queue_purge(self, queue='', nowait=False):
         """Purge a queue
 
-        This method removes all messages from a queue. It does not cancel consumers. Purged messages are deleted
+        This method removes all messages from a queue. It does not cancel consumers. Purged
+        messages are deleted
         without any formal "undo" mechanism.
 
-        * On transacted channels the server MUST not purge messages that have already been sent to a client but not yet
-          acknowledged.
+        * On transacted channels the server MUST not purge messages that have already been sent
+          to a client but not yet acknowledged.
         * If nowait is False, this method returns a message count.
 
-        :param str queue: queue name to purge; leave blank to refer to last declared queue for this channel
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param str queue: queue name to purge; leave blank to refer to last declared queue for
+        this channel
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
         :return: message count (if nowait is False)
         :rtype: int or None
         """
@@ -649,15 +679,19 @@ class Channel(AbstractChannel):
     def basic_ack(self, delivery_tag, multiple=False):
         """Acknowledge one or more messages
 
-        This method acknowledges one or more messages delivered via the Deliver or Get-Ok methods. The client can ask
+        This method acknowledges one or more messages delivered via the Deliver or Get-Ok
+        methods. The client can ask
         to confirm a single message or a set of messages up to and including a specific message.
 
         * The delivery tag is valid only within the same channel that the message was received.
-        * Set `delivery_tag` to `0` and `multiple` to `True` to acknowledge all outstanding messages.
+        * Set `delivery_tag` to `0` and `multiple` to `True` to acknowledge all outstanding
+          messages.
         * If the `delivery_tag` is invalid, the server must raise a channel exception.
 
-        :param int delivery_tag: server-assigned delivery tag; 0 means "all messages received so far"
-        :param bool multiple: if set, the `delivery_tag` is treated as "all messages up to and including"
+        :param int delivery_tag: server-assigned delivery tag; 0 means "all messages received so
+        far"
+        :param bool multiple: if set, the `delivery_tag` is treated as "all messages up to and
+        including"
         """
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
@@ -668,15 +702,18 @@ class Channel(AbstractChannel):
     def basic_cancel(self, consumer_tag, nowait=False):
         """End a queue consumer
 
-        This method cancels a consumer. This does not affect already delivered messages, but it does mean the server
-        will not send any more messages for that consumer. The client may receive an arbitrary number of messages in
+        This method cancels a consumer. This does not affect already delivered messages,
+        but it does mean the server
+        will not send any more messages for that consumer. The client may receive an arbitrary
+        number of messages in
         between sending the cancel method and receiving the cancel-ok reply.
 
-        * If the queue no longer exists when the client sends a cancel command, or the consumer has been cancelled for
-          other reasons, this command has no effect.
+        * If the queue no longer exists when the client sends a cancel command, or the consumer
+          has been cancelled for other reasons, this command has no effect.
 
         :param str consumer_tag: consumer tag, valid only within the current connection and channel
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
         """
         if self.connection is not None:
             self.no_ack_consumers.discard(consumer_tag)
@@ -712,7 +749,8 @@ class Channel(AbstractChannel):
 
                 RULE:
 
-                    The consumer tag is valid only within the channel from which the consumer was created. I.e. a client
+                    The consumer tag is valid only within the channel from which the consumer was
+                    created. I.e. a client
                     MUST NOT create a consumer in one channel and then use it in another.
         """
         args = method.args
@@ -729,29 +767,35 @@ class Channel(AbstractChannel):
         return self.cancel_callbacks.pop(consumer_tag, None)
 
     @synchronized('lock')
-    def basic_consume(self, queue='', consumer_tag='', no_local=False, no_ack=False, exclusive=False, nowait=False,
+    def basic_consume(self, queue='', consumer_tag='', no_local=False, no_ack=False,
+                      exclusive=False, nowait=False,
                       callback=None, arguments=None, on_cancel=None):
         """Start a queue consumer
 
-        This method asks the server to start a "consumer", which is a transient request for messages from a specific
-        queue. Consumers last as long as the channel they were created on, or until the client cancels them.
+        This method asks the server to start a "consumer", which is a transient request for
+        messages from a specific
+        queue. Consumers last as long as the channel they were created on, or until the client
+        cancels them.
 
-        * The `consumer_tag` is local to a connection, so two clients can use the same consumer tags. But on the same
-          connection, the `consumer_tag` must be unique, or the server must raise a 530 NOT ALLOWED connection
-          exception.
-        * If `no_ack` is set, the server automatically acknowledges each message on behalf of the client.
-        * If `exclusive` is set, the client asks for this consumer to have exclusive access to the queue. If the
-          server cannot grant exclusive access to the queue because there are other consumers active, it must raise a
-          403 ACCESS REFUSED channel exception.
-        * `callback` must be a `Callable(message)` which is called for each messaged delivered by the broker. If no
-          callback is specified, messages are quietly discarded; `no_ack` should probably be set to True in that case.
+        * The `consumer_tag` is local to a connection, so two clients can use the same consumer
+          tags. But on the same connection, the `consumer_tag` must be unique, or the server must
+          raise a 530 NOT  ALLOWED connection exception.
+        * If `no_ack` is set, the server automatically acknowledges each message on behalf of the
+          client.
+        * If `exclusive` is set, the client asks for this consumer to have exclusive access to
+          the queue. If the server cannot grant exclusive access to the queue because there are
+          other consumers  active, it must raise a 403 ACCESS REFUSED channel exception.
+        * `callback` must be a `Callable(message)` which is called for each messaged delivered by
+          the broker. If no callback is specified, messages are quietly discarded; `no_ack` should
+          probably be set  to True in that case.
 
         :param str queue: name of queue; if None, refers to last declared queue for this channel
         :param str consumer_tag: consumer tag, local to the connection
         :param bool no_local: if True: do not deliver own messages
         :param bool no_ack: server will not expect an ack for each message
         :param bool exclusive: request exclusive access
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
         :param Callable callback: a callback callable(message) for each delivered message
         :param dict arguments: AMQP method arguments
         :param Callable on_cancel: a callback callable
@@ -785,7 +829,8 @@ class Channel(AbstractChannel):
     def _cb_basic_consume_ok(self, method):
         """Confirm a new consumer
 
-        The server provides the client with a consumer tag, which is used by the client for methods called on the
+        The server provides the client with a consumer tag, which is used by the client for
+        methods called on the
         consumer at a later stage.
 
         PARAMETERS:
@@ -800,8 +845,10 @@ class Channel(AbstractChannel):
     def _cb_basic_deliver(self, method):
         """Notify the client of a consumer message
 
-        This method delivers a message to the client, via a consumer. In the asynchronous message delivery model, the
-        client starts a consumer using the Consume method, then the server responds with Deliver methods as and when
+        This method delivers a message to the client, via a consumer. In the asynchronous message
+        delivery model, the
+        client starts a consumer using the Consume method, then the server responds with Deliver
+        methods as and when
         messages arrive for that consumer.
 
         This method can be called in a "classmethod" style static-context and is done so by
@@ -809,9 +856,12 @@ class Channel(AbstractChannel):
 
         RULE:
 
-            The server SHOULD track the number of times a message has been delivered to clients and when a message is
-            redelivered a certain number of times - e.g. 5 times - without being acknowledged, the server SHOULD
-            consider the message to be unprocessable (possibly causing client applications to abort), and move the
+            The server SHOULD track the number of times a message has been delivered to clients
+            and when a message is
+            redelivered a certain number of times - e.g. 5 times - without being acknowledged,
+            the server SHOULD
+            consider the message to be unprocessable (possibly causing client applications to
+            abort), and move the
             message to a dead letter queue.
 
         PARAMETERS:
@@ -824,7 +874,8 @@ class Channel(AbstractChannel):
 
                 RULE:
 
-                    The consumer tag is valid only within the channel from which the consumer was created. I.e. a client
+                    The consumer tag is valid only within the channel from which the consumer was
+                    created. I.e. a client
                     MUST NOT create a consumer in one channel and then use it in another.
 
             delivery_tag: longlong
@@ -835,19 +886,23 @@ class Channel(AbstractChannel):
 
                 RULE:
 
-                    The delivery tag is valid only within the channel from which the message was received.  I.e. a
-                    client MUST NOT receive a message on one channel and then acknowledge it on another.
+                    The delivery tag is valid only within the channel from which the message was
+                    received.  I.e. a
+                    client MUST NOT receive a message on one channel and then acknowledge it on
+                    another.
 
                 RULE:
 
-                    The server MUST NOT use a zero value for delivery tags.  Zero is reserved for client use, meaning
+                    The server MUST NOT use a zero value for delivery tags.  Zero is reserved for
+                    client use, meaning
                     "all messages so far received".
 
             redelivered: boolean
 
                 message is being redelivered
 
-                This indicates that the message has been previously delivered to this or another client.
+                This indicates that the message has been previously delivered to this or another
+                client.
 
             exchange: shortstr
 
@@ -913,8 +968,8 @@ class Channel(AbstractChannel):
     def _cb_basic_get_ok(self, method):
         """Provide client with a message
 
-        This method delivers a message to the client following a get method.  A message delivered by 'get-ok' must be
-        acknowledged unless the no-ack option was set in the get method.
+        This method delivers a message to the client following a get method. A message delivered
+        by 'get-ok' must be acknowledged unless the no-ack option was set in the get method.
 
         PARAMETERS:
 
@@ -926,23 +981,28 @@ class Channel(AbstractChannel):
 
                 RULE:
 
-                    The delivery tag is valid only within the channel from which the message was received.  I.e. a
-                    client MUST NOT receive a message on one channel and then acknowledge it on another.
+                    The delivery tag is valid only within the channel from which the message was
+                    received.  I.e. a
+                    client MUST NOT receive a message on one channel and then acknowledge it on
+                    another.
 
                 RULE:
 
-                    The server MUST NOT use a zero value for delivery tags.  Zero is reserved for client use, meaning
+                    The server MUST NOT use a zero value for delivery tags.  Zero is reserved for
+                    client use, meaning
                     "all messages so far received".
 
             redelivered: boolean
 
                 message is being redelivered
 
-                This indicates that the message has been previously delivered to this or another client.
+                This indicates that the message has been previously delivered to this or another
+                client.
 
             exchange: shortstr
 
-                Specifies the name of the exchange that the message was originally published to.  If empty, the message
+                Specifies the name of the exchange that the message was originally published to.
+                If empty, the message
                 was published to the default exchange.
 
             routing_key: shortstr
@@ -955,8 +1015,10 @@ class Channel(AbstractChannel):
 
                 number of messages pending
 
-                This field reports the number of messages pending on the queue, excluding the message being delivered.
-                Note that this figure is indicative, not reliable, and can change arbitrarily as messages are added to
+                This field reports the number of messages pending on the queue, excluding the
+                message being delivered.
+                Note that this figure is indicative, not reliable, and can change arbitrarily as
+                messages are added to
                 the queue and removed by other clients.
         """
         args = method.args
@@ -992,15 +1054,18 @@ class Channel(AbstractChannel):
     def basic_publish(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
         """Publish a message
 
-        This method publishes a message to a specific exchange. The message will be routed to queues as defined by the
-        exchange configuration and distributed to any active consumers when the transaction, if any, is committed.
+        This method publishes a message to a specific exchange. The message will be routed to
+        queues as defined by the exchange configuration and distributed to any active consumers when
+        the transaction,  if any, is committed.
 
-        If publisher confirms are enabled, this method will automatically wait to receive an "ack" from the server.
+        If publisher confirms are enabled, this method will automatically wait to receive an "ack"
+        from the server.
 
         :param msg: message
         :param str exchange: exchange name, empty string means default exchange
         :param str routing_key: routing key
-        :param bool mandatory: True: deliver to at least one queue, or return it; False: drop the unroutable message
+        :param bool mandatory: True: deliver to at least one queue, or return it; False: drop the
+        unroutable message
         :param bool immediate: request immediate delivery
         :type msg: amqpy.Message
         """
@@ -1009,18 +1074,22 @@ class Channel(AbstractChannel):
             self.wait([spec.Basic.Ack])
 
     @synchronized('lock')
-    def basic_publish_confirm(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
+    def basic_publish_confirm(self, msg, exchange='', routing_key='', mandatory=False,
+                              immediate=False):
         """Publish a message and wait for a confirmation from the server
 
-        This method publishes a message to a specific exchange. The message will be routed to queues as defined by the
-        exchange configuration and distributed to any active consumers when the transaction, if any, is committed.
+        This method publishes a message to a specific exchange. The message will be routed to
+        queues as defined by the exchange configuration and distributed to any active consumers when
+        the transaction, if any, is committed.
 
-        **This method requires the RabbitMQ publisher acknowledgements extension, and enabled on the channel.**
+        **This method requires the RabbitMQ publisher acknowledgements extension, and enabled on
+        the channel.**
 
         :param msg: message
         :param exchange: exchange name, empty string means default exchange
         :param routing_key: routing key
-        :param mandatory: True: deliver to at least one queue or return the message; False: drop the unroutable message
+        :param mandatory: True: deliver to at least one queue or return the message; False: drop
+        the unroutable message
         :param immediate: request immediate delivery
         :type msg: amqpy.Message
         :type exchange: str
@@ -1037,26 +1106,30 @@ class Channel(AbstractChannel):
     def basic_qos(self, prefetch_size=0, prefetch_count=0, a_global=False):
         """Specify quality of service
 
-        This method requests a specific quality of service. The QoS can be specified for the current channel or for all
-        channels on the connection. The particular properties and semantics of a qos method always depend on the content
-        class semantics. Though the qos method could in principle apply to both peers, it is currently meaningful only
-        for the server.
+        This method requests a specific quality of service. The QoS can be specified for the
+        current channel or for all channels on the connection. The particular properties and
+        semantics of a qos method  always depend on the content class semantics. Though the qos
+        method could in principle apply to both peers, it is currently meaningful only for the
+        server.
 
-        * The client can request that messages be sent in advance so that when the client finishes processing a
-          message, the following message is already held locally, rather than needing to be sent down the channel.
-          Prefetching gives a performance improvement. This field specifies the prefetch window size in octets. The
-          server will send a message in advance if it is equal to or smaller in size than the available prefetch size
-          (and also falls into other prefetch limits). May be set to zero, meaning "no specific limit", although other
-          prefetch limits may still apply. The prefetch-size is ignored if the no-ack option is set.
-        * The server must ignore `prefetch_size` setting when the client is not processing any messages - i.e. the
-          prefetch size does not limit the transfer of single messages to a client, only the sending in advance of more
-          messages while the client still has one or more unacknowledged messages.
-        * The `prefetch_count` specifies a prefetch window in terms of whole messages. This field may be used in
-          combination  with the prefetch-size field; a message will only be sent in advance if both prefetch windows
-          (and those at the channel and connection level) allow it. The prefetch-count is ignored if the no-ack option
+        * The client can request that messages be sent in advance so that when the client  finishes
+          processing a message, the following message is already held locally, rather than needing
+          to be sent  down the channel. Prefetching gives a performance improvement. This field
+          specifies the prefetch window  size in octets. The server will send a message in advance
+          if it is equal to or smaller in size than the  available prefetch size (and also falls
+          into other prefetch limits). May be set to zero, meaning "no specific  limit", although
+          other prefetch limits may still apply. The prefetch-size is ignored if the no-ack option
           is set.
-        * The server may send less data in advance than allowed by the client's specified prefetch windows but it
-          must not send more.
+        * The server must ignore `prefetch_size` setting when the client is not processing any
+          messages - i.e. the prefetch size does not limit the transfer of single messages to a
+          client, only the  sending in advance of more messages while the client still has one or
+          more unacknowledged messages.
+        * The `prefetch_count` specifies a prefetch window in terms of whole messages. This field
+          may be used in combination  with the prefetch-size field; a message will only be sent in
+          advance if  both prefetch windows (and those at the channel and connection level) allow
+          it. The prefetch-count is ignored  if the no-ack option is set.
+        * The server may send less data in advance than allowed by the client's specified
+          prefetch windows but it must not send more.
 
         :param int prefetch_size: prefetch window in octets
         :param int prefetch_count: prefetch window in messages
@@ -1072,8 +1145,8 @@ class Channel(AbstractChannel):
     def _cb_basic_qos_ok(self, method):
         """Confirm the requested qos
 
-        This method tells the client that the requested QoS levels could be handled by the server.  The requested QoS
-        applies to all active consumers until a new QoS is defined.
+        This method tells the client that the requested QoS levels could be handled by the  server.
+        The requested QoS applies to all active consumers until a new QoS is defined.
         """
         pass
 
@@ -1081,14 +1154,15 @@ class Channel(AbstractChannel):
     def basic_recover(self, requeue=False):
         """Redeliver unacknowledged messages
 
-        This method asks the broker to redeliver all unacknowledged messages on a specified channel. Zero or more
-        messages may be redelivered. This method is only allowed on non-transacted channels.
+        This method asks the broker to redeliver all unacknowledged messages on a specified
+        channel. Zero or more messages may be redelivered. This method is only allowed on
+        non-transacted channels.
 
         * The server MUST set the redelivered flag on all messages that are resent.
         * The server MUST raise a channel exception if this is called on a transacted channel.
 
-        :param bool requeue: if set, the server will attempt to requeue the message, potentially then delivering it
-            to a different subscriber
+        :param bool requeue: if set, the server will attempt to requeue the message, potentially
+        then delivering it to a different subscriber
         """
         args = AMQPWriter()
         args.write_bit(requeue)
@@ -1098,14 +1172,15 @@ class Channel(AbstractChannel):
     def basic_recover_async(self, requeue=False):
         """Redeliver unacknowledged messages (async)
 
-        This method asks the broker to redeliver all unacknowledged messages on a specified channel. Zero or more
-        messages may be redelivered. This method is only allowed on non-transacted channels.
+        This method asks the broker to redeliver all unacknowledged messages on a specified
+        channel. Zero or more messages may be redelivered. This method is only allowed on
+        non-transacted channels.
 
         * The server MUST set the redelivered flag on all messages that are resent.
         * The server MUST raise a channel exception if this is called on a transacted channel.
 
-        :param bool requeue: if set, the server will attempt to requeue the message, potentially then delivering it
-            to a different subscriber
+        :param bool requeue: if set, the server will attempt to requeue the message, potentially
+        then delivering it to a different subscriber
         """
         args = AMQPWriter()
         args.write_bit(requeue)
@@ -1120,21 +1195,25 @@ class Channel(AbstractChannel):
     def basic_reject(self, delivery_tag, requeue):
         """Reject an incoming message
 
-        This method allows a client to reject a message. It can be used to interrupt and cancel large incoming messages,
+        This method allows a client to reject a message. It can be used to interrupt and cancel
+        large incoming messages,
         or return untreatable messages to their original queue.
 
-        * The server SHOULD be capable of accepting and process the Reject method while sending message content with a
-          Deliver or Get-Ok method.  I.e. the server should read and process incoming methods while sending output
-          frames. To cancel a partially-send content, the server sends a content body frame of size 1 (i.e. with no data
-          except the frame-end octet).
-        * The server SHOULD interpret this method as meaning that the client is unable to process the message at this
-          time.
-        * A client MUST NOT use this method as a means of selecting messages to process.  A rejected message MAY be
-          discarded or dead-lettered, not necessarily passed to another client.
-        * The server MUST NOT deliver the message to the same client within the context of the current channel. The
-          recommended strategy is to attempt to deliver the message to an alternative consumer, and if that is not
-          possible, to move the message to a dead-letter queue. The server MAY use more sophisticated tracking to hold
-          the message on the queue and redeliver it to the same client at a later stage.
+        * The server SHOULD be capable of accepting and process the Reject method while sending
+          message content with a Deliver or Get-Ok method.  I.e. the server should read and process
+          incoming methods  while sending output frames. To cancel a partially-send content, the
+          server sends a content body frame of size 1 (i.e. with no data except the frame-end
+          octet).
+        * The server SHOULD interpret this method as meaning that the client is unable to process
+          the message at this time.
+        * A client MUST NOT use this method as a means of selecting messages to process.  A
+          rejected message MAY be discarded or dead-lettered, not necessarily passed to another
+          client.
+        * The server MUST NOT deliver the message to the same client within the context of the
+          current channel. The recommended strategy is to attempt to deliver the message to an
+          alternative consumer, and if that is not possible, to move the message to a dead-letter
+          queue. The server MAY use more sophisticated tracking to hold the message on the queue and
+          redeliver it to the same client at a later stage.
 
         :param int delivery_tag: server-assigned channel-specific delivery tag
         :param bool requeue: True: requeue the message; False: discard the message
@@ -1147,9 +1226,9 @@ class Channel(AbstractChannel):
     def _cb_basic_return(self, method):
         """Return a failed message
 
-        This method returns an undeliverable message that was published with the `immediate` flag set, or an unroutable
-        message published with the `mandatory` flag set. The reply code and text provide information about the reason
-        that the message was undeliverable.
+        This method returns an undeliverable message that was published with the `immediate` flag
+        set, or an unroutable message published with the `mandatory` flag set. The reply code and
+        text provide information about the reason that the message was undeliverable.
         """
         args = method.args
         msg = method.content
@@ -1165,8 +1244,8 @@ class Channel(AbstractChannel):
     def tx_commit(self):
         """Commit the current transaction
 
-        This method commits all messages published and acknowledged in the current transaction. A new transaction
-        starts immediately after a commit.
+        This method commits all messages published and acknowledged in the current transaction. A
+        new transaction starts immediately after a commit.
         """
         self._send_method(Method(spec.Tx.Commit))
         return self.wait(allowed_methods=[spec.Tx.CommitOk])
@@ -1174,8 +1253,8 @@ class Channel(AbstractChannel):
     def _cb_tx_commit_ok(self, method):
         """Confirm a successful commit
 
-        This method confirms to the client that the commit succeeded. Note that if a commit fails, the server raises a
-        channel exception.
+        This method confirms to the client that the commit succeeded. Note that if a commit fails,
+        the server raises a channel exception.
         """
         pass
 
@@ -1183,8 +1262,8 @@ class Channel(AbstractChannel):
     def tx_rollback(self):
         """Abandon the current transaction
 
-        This method abandons all messages published and acknowledged in the current transaction.  A new transaction
-        starts immediately after a rollback.
+        This method abandons all messages published and acknowledged in the current transaction. A
+        new transaction starts immediately after a rollback.
         """
         self._send_method(Method(spec.Tx.Rollback))
         return self.wait(allowed_methods=[spec.Tx.RollbackOk])
@@ -1192,8 +1271,8 @@ class Channel(AbstractChannel):
     def _cb_tx_rollback_ok(self, method):
         """Confirm a successful rollback
 
-        This method confirms to the client that the rollback succeeded. Note that if an rollback fails, the server
-        raises a channel exception.
+        This method confirms to the client that the rollback succeeded. Note that if an rollback
+        fails, the server raises a channel exception.
         """
         pass
 
@@ -1201,14 +1280,14 @@ class Channel(AbstractChannel):
     def tx_select(self):
         """Select standard transaction mode
 
-        This method sets the channel to use standard transactions. The client must use this method at least once on a
-        channel before using the Commit or Rollback methods.
+        This method sets the channel to use standard transactions. The client must use this method
+        at least once on a channel before using the Commit or Rollback methods.
 
-        The channel must not be in publish acknowledge mode. If it is, the server raises a `PreconditionFailed`
-        exception and closes the channel. Note that amqpy will automatically reopen the channel, at which point this
-        method can be called again successfully.
+        The channel must not be in publish acknowledge mode. If it is, the server raises a
+        `PreconditionFailed` exception and closes the channel. Note that amqpy will automatically
+        reopen the channel, at which point this method can be called again successfully.
 
-        :raises PreconditionFailed: if the channel is in publish acknowledge mode
+        :raise PreconditionFailed: if the channel is in publish acknowledge mode
         """
         self._send_method(Method(spec.Tx.Select))
         self.wait(allowed_methods=[spec.Tx.SelectOk])
@@ -1217,7 +1296,8 @@ class Channel(AbstractChannel):
     def _cb_tx_select_ok(self, method):
         """Confirm transaction mode
 
-        This method confirms to the client that the channel was successfully set to use standard transactions.
+        This method confirms to the client that the channel was successfully set to use standard
+        transactions.
         """
         pass
 
@@ -1225,12 +1305,13 @@ class Channel(AbstractChannel):
     def confirm_select(self, nowait=False):
         """Enable publisher confirms for this channel (RabbitMQ extension)
 
-        The channel must not be in transactional mode. If it is, the server raises a `PreconditionFailed` exception
-        and closes the channel. Note that amqpy will automatically reopen the channel, at which point this method can be
-        called again successfully.
+        The channel must not be in transactional mode. If it is, the server raises a
+        `PreconditionFailed` exception and closes the channel. Note that amqpy will automatically
+        reopen the channel, at which point this method can be called again successfully.
 
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
-        :raises PreconditionFailed: if the channel is in transactional mode
+        :param bool nowait: if set, the server will not respond to the method and the client
+        should not wait for a reply
+        :raise PreconditionFailed: if the channel is in transactional mode
         """
         args = AMQPWriter()
         args.write_bit(nowait)
@@ -1241,7 +1322,8 @@ class Channel(AbstractChannel):
         self.mode = self.CH_MODE_CONFIRM
 
     def _cb_confirm_select_ok(self, method):
-        """With this method, the broker confirms to the client that the channel is now using publisher confirms
+        """With this method, the broker confirms to the client that the channel is now using
+        publisher confirms
         """
         pass
 
