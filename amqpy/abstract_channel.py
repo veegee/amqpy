@@ -1,5 +1,6 @@
 """Code common to Connection and Channel objects
 """
+import inspect
 from abc import ABCMeta, abstractmethod
 from threading import Lock
 
@@ -56,20 +57,30 @@ class AbstractChannel(metaclass=ABCMeta):
 
         self.connection.method_writer.write_method(self.channel_id, method)
 
-    def wait(self, allowed_methods=None, callback=None):
-        """Wait for a method that matches any one of `allowed_methods`
+    def wait(self, method=None, callback=None):
+        """Wait for the specified method from the server
 
         If `callback` is specified, `callback(channel, method)` will be called after a method has
         been received. If `callback` is `None`, the default callback for the received method will be
         called (as specified in the channel's `METHOD_MAP`).
 
-        :param allowed_methods: list of possible methods to wait for, or `None` to wait for any
-        method
-        :param callback: callable with the following signature: callable(AbstractChannel, Method)
-        :type allowed_methods: list or None :type callback: Callable(AbstractChannel, Method)
+        :param method: method to wait for, or `None` to wait for any method
+        :param callback: callable with the following signature: callable(AbstractChannel, Method);
+        may be a function or bound method
+        :type method: spec.method_t
+        :type callback: Callable or None
         """
-        method = self._wait_method(allowed_methods)
-        return self.handle_method(method, callback=callback)
+        m = self._wait_method([method])
+        return self.handle_method(m, callback=callback)
+
+    def wait_any(self, allowed_methods=None):
+        """Wait for a method that matches any one of `allowed_methods`
+
+        :param allowed_methods: method to wait for, or `None` to wait for any method
+        :type allowed_methods: list[spec.method_t]
+        """
+        m = self._wait_method(allowed_methods)
+        return self.handle_method(m)
 
     def _wait_method(self, allowed_methods):
         """Wait for a method from the server destined for the current channel
@@ -129,7 +140,8 @@ class AbstractChannel(metaclass=ABCMeta):
 
         :param method: freshly received method from the server
         :param channel: channel object
-        :param callback: callable with the following signature: callable(AbstractChannel, Method)
+        :param callback: callable with the following signature: callable(AbstractChannel, Method);
+        may be a function or bound method
         :type method: amqpy.spec.Method
         :type channel: amqpy.channel.Channel
         :type callback: Callable(AbstractChannel, Method) or None
@@ -152,4 +164,7 @@ class AbstractChannel(metaclass=ABCMeta):
         except KeyError:
             raise AMQPNotImplementedError('Unknown AMQP method {0}'.format(method.method_type))
 
-        return callback(channel, method)
+        if inspect.isfunction(callback):
+            return callback(channel, method)
+        elif inspect.ismethod(callback):
+            return callback(method)

@@ -144,7 +144,7 @@ class Channel(AbstractChannel):
             args.write_short(method_type.class_id)
             args.write_short(method_type.method_id)
             self._send_method(Method(spec.Channel.Close, args))
-            return self.wait(allowed_methods=[spec.Channel.Close, spec.Channel.CloseOk])
+            return self.wait_any([spec.Channel.Close, spec.Channel.CloseOk])
         finally:
             self.connection = None
 
@@ -201,7 +201,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_bit(active)
         self._send_method(Method(spec.Channel.Flow, args))
-        return self.wait(allowed_methods=[spec.Channel.FlowOk])
+        return self.wait_any([spec.Channel.FlowOk, self._cb_flow_ok])
 
     def _cb_flow(self, method):
         """Enable/disable flow from peer
@@ -246,7 +246,7 @@ class Channel(AbstractChannel):
         args = AMQPWriter()
         args.write_shortstr('')  # reserved
         self._send_method(Method(spec.Channel.Open, args))
-        return self.wait(allowed_methods=[spec.Channel.OpenOk])
+        return self.wait(spec.Channel.OpenOk, self._cb_open_ok)
 
     def _cb_open_ok(self, method):
         """Handle received "open-ok"
@@ -300,7 +300,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Exchange.Declare, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Exchange.DeclareOk])
+            return self.wait(spec.Exchange.DeclareOk, self._cb_exchange_declare_ok)
 
     def _cb_exchange_declare_ok(self, method):
         """Confirms an exchange declaration
@@ -338,7 +338,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Exchange.Delete, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Exchange.DeleteOk])
+            return self.wait(spec.Exchange.DeleteOk, self._cb_exchange_delete_ok)
 
     def _cb_exchange_delete_ok(self, method):
         """Confirm deletion of an exchange
@@ -381,7 +381,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Exchange.Bind, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Exchange.BindOk])
+            return self.wait(spec.Exchange.BindOk, self._cb_exchange_bind_ok)
 
     @synchronized('lock')
     def exchange_unbind(self, dest_exch, source_exch='', routing_key='', nowait=False,
@@ -411,7 +411,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Exchange.Unbind, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Exchange.UnbindOk])
+            return self.wait(spec.Exchange.UnbindOk, self._cb_exchange_unbind_ok)
 
     def _cb_exchange_bind_ok(self, method):
         """Confirm bind successful
@@ -468,7 +468,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Queue.Bind, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Queue.BindOk])
+            return self.wait(spec.Queue.BindOk, self._cb_queue_bind_ok)
 
     def _cb_queue_bind_ok(self, method):
         """Confirm bind successful
@@ -504,7 +504,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Queue.Unbind, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Queue.UnbindOk])
+            return self.wait(spec.Queue.UnbindOk, self._cb_queue_unbind_ok)
 
     def _cb_queue_unbind_ok(self, method):
         """Confirm unbind successful
@@ -567,7 +567,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Queue.Declare, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Queue.DeclareOk])
+            return self.wait(spec.Queue.DeclareOk, self._cb_queue_declare_ok)
 
     def _cb_queue_declare_ok(self, method):
         """Confirm a queue declare
@@ -609,7 +609,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Queue.Delete, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Queue.DeleteOk])
+            return self.wait(spec.Queue.DeleteOk)
 
     def _cb_queue_delete_ok(self, method):
         """Confirm deletion of a queue
@@ -651,7 +651,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Queue.Purge, args))
 
         if not nowait:
-            return self.wait(allowed_methods=[spec.Queue.PurgeOk])
+            return self.wait(spec.Queue.PurgeOk, self._cb_queue_purge_ok)
 
     def _cb_queue_purge_ok(self, method):
         """Confirms a queue purge
@@ -713,7 +713,7 @@ class Channel(AbstractChannel):
             args.write_shortstr(consumer_tag)
             args.write_bit(nowait)
             self._send_method(Method(spec.Basic.Cancel, args))
-            return self.wait(allowed_methods=[spec.Basic.CancelOk])
+            return self.wait(spec.Basic.CancelOk)
 
     def _cb_basic_cancel_notify(self, method):
         """Consumer cancelled by server.
@@ -805,7 +805,7 @@ class Channel(AbstractChannel):
         self._send_method(Method(spec.Basic.Consume, args))
 
         if not nowait:
-            consumer_tag = self.wait(allowed_methods=[spec.Basic.ConsumeOk])
+            consumer_tag = self.wait(spec.Basic.ConsumeOk, self._cb_basic_consume_ok)
 
         self.callbacks[consumer_tag] = callback
 
@@ -939,7 +939,7 @@ class Channel(AbstractChannel):
         args.write_shortstr(queue)
         args.write_bit(no_ack)
         self._send_method(Method(spec.Basic.Get, args))
-        return self.wait(allowed_methods=[spec.Basic.GetOk, spec.Basic.GetEmpty])
+        return self.wait_any([spec.Basic.GetOk, spec.Basic.GetEmpty])
 
     def _cb_basic_get_empty(self, method):
         """Indicate no messages available
@@ -1056,7 +1056,7 @@ class Channel(AbstractChannel):
         """
         self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
         if self.mode == self.CH_MODE_CONFIRM:
-            self.wait([spec.Basic.Ack])
+            self.wait(spec.Basic.Ack, self._cb_basic_ack_recv)
 
     @synchronized('lock')
     def basic_publish_confirm(self, msg, exchange='', routing_key='', mandatory=False,
@@ -1085,7 +1085,7 @@ class Channel(AbstractChannel):
         if self.mode != self.CH_MODE_CONFIRM:
             raise Exception('Publisher confirms are NOT enabled')
         self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
-        self.wait([spec.Basic.Ack])
+        self.wait(spec.Basic.Ack, self._cb_basic_ack_recv)
 
     @synchronized('lock')
     def basic_qos(self, prefetch_size=0, prefetch_count=0, a_global=False):
@@ -1125,7 +1125,7 @@ class Channel(AbstractChannel):
         args.write_short(prefetch_count)
         args.write_bit(a_global)
         self._send_method(Method(spec.Basic.Qos, args))
-        return self.wait(allowed_methods=[spec.Basic.QosOk])
+        return self.wait(spec.Basic.QosOk, self._cb_basic_qos_ok)
 
     def _cb_basic_qos_ok(self, method):
         """Confirm the requested qos
@@ -1233,7 +1233,7 @@ class Channel(AbstractChannel):
         new transaction starts immediately after a commit.
         """
         self._send_method(Method(spec.Tx.Commit))
-        return self.wait(allowed_methods=[spec.Tx.CommitOk])
+        return self.wait(spec.Tx.CommitOk, self._cb_tx_commit_ok)
 
     def _cb_tx_commit_ok(self, method):
         """Confirm a successful commit
@@ -1251,7 +1251,7 @@ class Channel(AbstractChannel):
         new transaction starts immediately after a rollback.
         """
         self._send_method(Method(spec.Tx.Rollback))
-        return self.wait(allowed_methods=[spec.Tx.RollbackOk])
+        return self.wait(spec.Tx.RollbackOk, self._cb_tx_rollback_ok)
 
     def _cb_tx_rollback_ok(self, method):
         """Confirm a successful rollback
@@ -1275,7 +1275,7 @@ class Channel(AbstractChannel):
         :raise PreconditionFailed: if the channel is in publish acknowledge mode
         """
         self._send_method(Method(spec.Tx.Select))
-        self.wait(allowed_methods=[spec.Tx.SelectOk])
+        self.wait(spec.Tx.SelectOk, self._cb_tx_select_ok)
         self.mode = self.CH_MODE_TX
 
     def _cb_tx_select_ok(self, method):
@@ -1303,7 +1303,7 @@ class Channel(AbstractChannel):
 
         self._send_method(Method(spec.Confirm.Select, args))
         if not nowait:
-            self.wait(allowed_methods=[spec.Confirm.SelectOk])
+            self.wait(spec.Confirm.SelectOk, self._cb_confirm_select_ok)
         self.mode = self.CH_MODE_CONFIRM
 
     def _cb_confirm_select_ok(self, method):

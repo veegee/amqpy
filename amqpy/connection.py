@@ -109,7 +109,7 @@ class Connection(AbstractChannel):
         self.method_writer = MethodWriter(self.transport, self.frame_max)
 
         # wait for server to send the 'start' method
-        self.wait(allowed_methods=[spec.Connection.Start])
+        self.wait(spec.Connection.Start)
 
         # create 'login response' to send to server
         login_response = AMQPWriter()
@@ -123,7 +123,7 @@ class Connection(AbstractChannel):
 
         self._wait_tune_ok = True
         while self._wait_tune_ok:
-            self.wait(allowed_methods=[spec.Connection.Secure, spec.Connection.Tune])
+            self.wait_any([spec.Connection.Secure, spec.Connection.Tune])
 
         self._send_open(virtual_host)
 
@@ -285,7 +285,7 @@ class Connection(AbstractChannel):
         args.write_short(method_type.class_id)
         args.write_short(method_type.method_id)
         self._send_method(Method(spec.Connection.Close, args))
-        return self.wait(allowed_methods=[spec.Connection.Close, spec.Connection.CloseOk])
+        return self.wait_any([spec.Connection.Close, spec.Connection.CloseOk])
 
     def _heartbeat_thread(self):
         # `is_alive()` sends heartbeats if the connection is alive
@@ -402,7 +402,7 @@ class Connection(AbstractChannel):
         args.write_shortstr(capabilities)
         args.write_bit(False)
         self._send_method(Method(spec.Connection.Open, args))
-        return self.wait(allowed_methods=[spec.Connection.OpenOk])
+        return self.wait(spec.Connection.OpenOk)
 
     def _cb_open_ok(self, method):
         """Signal that the connection is ready
