@@ -79,7 +79,7 @@ def get_server_props(cxn):
         ('RabbitMQ', (3, 3, 5))
 
     :param cxn: connection object
-    :type cxn: amqpy.Connection
+    :type cxn: amqpy.connection.Connection
     :return: tuple(server product name, version)
     :rtype: tuple(str, tuple(int...))
     """
