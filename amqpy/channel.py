@@ -1275,7 +1275,8 @@ class Channel(AbstractChannel):
         :raise PreconditionFailed: if the channel is in publish acknowledge mode
         """
         self._send_method(Method(spec.Tx.Select))
-        self.wait(spec.Tx.SelectOk, self._cb_tx_select_ok)
+        #self.wait(spec.Tx.SelectOk, self._cb_tx_select_ok)
+        self.wait(spec.Tx.SelectOk)
         self.mode = self.CH_MODE_TX
 
     def _cb_tx_select_ok(self, method):
