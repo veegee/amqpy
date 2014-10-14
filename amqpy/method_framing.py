@@ -95,7 +95,8 @@ class MethodReader:
         # dict[channel_id int: PartialMessage]
         self.partial_messages = {}
         # dict[channel_id int: frame_type int]
-        self.expected_types = defaultdict(lambda: FrameType.METHOD)  # next expected frame type for each channel
+        self.expected_types = defaultdict(
+            lambda: FrameType.METHOD)  # next expected frame type for each channel
 
         self.heartbeats = 0  # total number of heartbeats received
         self.frames_recv = 0  # total number of frames received
@@ -105,8 +106,9 @@ class MethodReader:
     def _next_method(self):
         """Read the next method from the source and process it
 
-        Once one complete method has been assembled, it is placed in the internal queue. This method will block until a
-        complete `Method` has been constructed, which may consist of one or more frames.
+        Once one complete method has been assembled, it is placed in the internal queue. This
+        method will block until a complete `Method` has been constructed, which may consist of one
+        or more frames.
         """
         while not self.method_queue:
             # keep reading frames until we have at least one complete method in the queue
@@ -196,7 +198,8 @@ class MethodReader:
         if isinstance(method, Exception):
             raise method
 
-        log.debug('{:7} {} {}'.format('Read:', method.method_type, METHOD_NAME_MAP[method.method_type]))
+        log.debug(
+            '{:7} {} {}'.format('Read:', method.method_type, METHOD_NAME_MAP[method.method_type]))
         return method
 
     def read_method(self, timeout=None):
@@ -227,9 +230,9 @@ class MethodReader:
 class MethodWriter:
     """Write methods to the server by breaking them up and constructing multiple frames
 
-    There should be one `MethodWriter` instance per connection, and all channels share that instance. This class is
-    thread-safe. Any thread may call :meth:`write_method()` as long as no more than one thread is writing to any
-    given `channel_id` at a time.
+    There should be one `MethodWriter` instance per connection, and all channels share that
+    instance. This class is thread-safe. Any thread may call :meth:`write_method()` as long as no
+    more than one thread is writing to any given `channel_id` at a time.
     """
 
     def __init__(self, dest, frame_max):
@@ -246,18 +249,21 @@ class MethodWriter:
     def write_method(self, channel_id, method):
         """Write method to connection, destined for the specified `channel_id`
 
-        This implementation uses a queue internally to prepare all frames before writing in order to detect issues.
+        This implementation uses a queue internally to prepare all frames before writing in order
+        to detect issues.
 
-        This method is thread safe only if the `channel_id` parameter is unique across concurrent invocations. The AMQP
-        protocol allows interleaving frames destined for different channels, but not within the same channel. This means
-        no more than one thread may safely operate on any given channel.
+        This method is thread safe only if the `channel_id` parameter is unique across concurrent
+        invocations. The AMQP protocol allows interleaving frames destined for different channels,
+        but not within the same channel. This means no more than one thread may safely operate on
+        any given channel.
 
         :param channel_id: channel
         :param method: method to write
         :type channel_id: int
         :type method: Method
         """
-        log.debug('{:7} {} {}'.format('Write:', method.method_type, METHOD_NAME_MAP[method.method_type]))
+        log.debug(
+            '{:7} {} {}'.format('Write:', method.method_type, METHOD_NAME_MAP[method.method_type]))
         frames = Queue()
 
         # construct a method frame

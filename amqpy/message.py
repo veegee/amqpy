@@ -28,7 +28,8 @@ class GenericContent:
     def load_properties(self, raw_bytes):
         """Load raw bytes into `self.properties`
 
-        The `raw_bytes` are the payload of a `FrameType.HEADER` frame, starting at a byte-offset of 12.
+        The `raw_bytes` are the payload of a `FrameType.HEADER` frame, starting at a byte-offset
+        of 12.
         """
         r = AMQPReader(raw_bytes)
 
@@ -56,7 +57,8 @@ class GenericContent:
         self.properties = d
 
     def serialize_properties(self):
-        """Serialize `self.properties` into raw bytes suitable to append to the payload of `FrameType.HEADER` frames
+        """Serialize `self.properties` into raw bytes suitable to append to the payload of
+        `FrameType.HEADER` frames
         """
         shift = 15
         flag_bits = 0
@@ -90,8 +92,8 @@ class Message(GenericContent):
     """
     CLASS_ID = spec.Basic.CLASS_ID
 
-    # : Instances of this class have these attributes, which are passed back and forth as message properties between
-    # : client and server
+    #: Instances of this class have these attributes, which are passed back and forth as message
+    #: properties between client and server
     PROPERTIES = [
         ('content_type', 'shortstr'),
         ('content_encoding', 'shortstr'),
@@ -120,7 +122,8 @@ class Message(GenericContent):
 
         * content_type (shortstr): MIME content type
         * content_encoding (shortstr): MIME content encoding
-        * application_headers: (table): Message header field table: dict[str, str|int|Decimal|datetime|dict]
+        * application_headers: (table): Message header field table: dict[str,
+        str|int|Decimal|datetime|dict]
         * delivery_mode: (octet): Non-persistent (1) or persistent (2)
         * priority (octet): The message priority, 0 to 9
         * correlation_id (shortstr) The application correlation identifier

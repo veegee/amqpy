@@ -187,8 +187,8 @@ class AMQPReader:
         return result
 
     def read_timestamp(self):
-        """Read and AMQP timestamp, which is a 64-bit integer representing seconds since the Unix epoch in 1-second
-        resolution
+        """Read and AMQP timestamp, which is a 64-bit integer representing seconds since the Unix
+        epoch in 1-second resolution
 
         Return as a Python datetime.datetime object, expressed as localtime.
         """
@@ -324,8 +324,9 @@ class AMQPWriter:
         self.out.write(s)
 
     def write_table(self, d):
-        """Write out a Python dictionary made of up string keys, and values that are strings, signed integers, Decimal,
-        datetime.datetime, or sub-dictionaries following the same constraints
+        """Write out a Python dictionary made of up string keys, and values that are strings,
+        signed integers, Decimal, datetime.datetime, or sub-dictionaries following the same
+        constraints
         """
         self._flushbits()
         table_data = AMQPWriter()
@@ -371,7 +372,8 @@ class AMQPWriter:
             self.write(b'V')
         else:
             if k:
-                err = 'Table type {!r} for key {!r} not handled by amqpy. [value: {!r}]'.format(type(v), k, v)
+                err = 'Table type {!r} for key {!r} not handled by amqpy. [value: {!r}]'.format(
+                    type(v), k, v)
             else:
                 err = 'Table type {!r} not handled by amqpy. [value: {!r}]'.format(type(v), v)
             raise FrameSyntaxError(err)
@@ -385,6 +387,7 @@ class AMQPWriter:
         self.out.write(array_data)
 
     def write_timestamp(self, v):
-        """Write out a Python datetime.datetime object as a 64-bit integer representing seconds since the Unix epoch
+        """Write out a Python datetime.datetime object as a 64-bit integer representing seconds
+        since the Unix epoch
         """
         self.out.write(pack('>q', int(mktime(v.timetuple()))))

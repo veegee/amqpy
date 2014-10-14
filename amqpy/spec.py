@@ -5,7 +5,8 @@ from .serialization import AMQPReader, AMQPWriter
 
 queue_declare_ok_t = namedtuple('queue_declare_ok_t', ('queue', 'message_count', 'consumer_count'))
 
-basic_return_t = namedtuple('basic_return_t', ('reply_code', 'reply_text', 'exchange', 'routing_key', 'message'))
+basic_return_t = namedtuple('basic_return_t',
+                            ('reply_code', 'reply_text', 'exchange', 'routing_key', 'message'))
 
 method_t = namedtuple('method_t', ('class_id', 'method_id'))
 
@@ -16,8 +17,8 @@ FRAME_MIN_SIZE = 4096
 class FrameType:
     """This class contains frame-related constants
 
-    METHOD, HEADER, BODY, and HEARTBEAT are all frame type constants which make up the first byte of every frame. The
-    END constant is the termination value which is the last byte of every frame.
+    METHOD, HEADER, BODY, and HEARTBEAT are all frame type constants which make up the first byte
+    of every frame. The END constant is the termination value which is the last byte of every frame.
     """
     METHOD = 1  # method frame
     HEADER = 2  # content header frame
@@ -137,8 +138,8 @@ class Frame:
     def __init__(self, frame_type=None, channel=0, payload=bytes()):
         """Create new Frame
 
-        Leave all three parameters as default to create an empty frame whose `data` can be manually written to
-        afterwards.
+        Leave all three parameters as default to create an empty frame whose `data` can be manually
+        written to afterwards.
 
         :param frame_type: frame type
         :param channel: associated channel number
@@ -160,7 +161,8 @@ class Frame:
             self._channel = channel
             self._payload_size = len(payload)
             frame_format = '>BHI{}sB'.format(self._payload_size)
-            self.data = struct.pack(frame_format, frame_type, channel, self._payload_size, payload, FrameType.END)
+            self.data = struct.pack(frame_format, frame_type, channel, self._payload_size, payload,
+                                    FrameType.END)
 
     @property
     def frame_type(self):
@@ -248,15 +250,18 @@ class Method:
         self._body_bytes = bytes()  # used internally to store encoded body
 
     def pack_method(self):
-        """Pack this method into a bytes object suitable for using as a payload for `FrameType.METHOD` frames
+        """Pack this method into a bytes object suitable for using as a payload for
+        `FrameType.METHOD` frames
 
         :return: bytes
         :rtype: bytes
         """
-        return struct.pack('>HH', self.method_type.class_id, self.method_type.method_id) + self.args.getvalue()
+        return struct.pack('>HH', self.method_type.class_id,
+                           self.method_type.method_id) + self.args.getvalue()
 
     def pack_header(self):
-        """Pack this method into a bytes object suitable for using as a payload for `FrameType.HEADER` frames
+        """Pack this method into a bytes object suitable for using as a payload for
+        `FrameType.HEADER` frames
 
         :return: bytes
         :rtype: bytes
@@ -273,7 +278,8 @@ class Method:
         return struct.pack('>HHQ', self.method_type.class_id, 0, len(self._body_bytes)) + properties
 
     def pack_body(self, chunk_size):
-        """Pack this method into a bytes object suitable for using as a payload for `FrameType.BODY` frames
+        """Pack this method into a bytes object suitable for using as a payload for
+        `FrameType.BODY` frames
 
         :param chunk_size: split up body into pices that are at most `chunk_size` bytes each
         :type chunk_size: int

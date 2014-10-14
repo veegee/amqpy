@@ -33,8 +33,8 @@ class AbstractTransport(metaclass=ABCMeta):
         """
         self._rbuf = bytearray(buf_size)
 
-        # the purpose of the frame lock is to allow no more than one thread to read/write a frame to the connection
-        # at any time
+        # the purpose of the frame lock is to allow no more than one thread to read/write a frame
+        # to the connection at any time
         self._frame_lock = Lock()
 
         self.sock = None
@@ -87,11 +87,11 @@ class AbstractTransport(metaclass=ABCMeta):
     def _read(self, n, initial, _errnos):
         """Read from socket
 
-        This is the default implementation. Subclasses may implement `read()` to simply call this method, or provide
-        their  own `read()` implementation.
+        This is the default implementation. Subclasses may implement `read()` to simply call this
+        method, or provide their own `read()` implementation.
 
-        Note: According to SSL_read(3), it can at most return 16kB of data. Thus, we use an internal read buffer like
-        to get the exact number of bytes wanted.
+        Note: According to SSL_read(3), it can at most return 16kB of data. Thus, we use an internal
+        read buffer like to get the exact number of bytes wanted.
 
         Note: ssl.sock.read may cause ENOENT if the operation couldn't be performed (?).
 
@@ -139,8 +139,8 @@ class AbstractTransport(metaclass=ABCMeta):
 
     def close(self):
         if self.sock is not None:
-            # call shutdown first to make sure that pending messages reach the AMQP broker if the program exits after
-            # calling this method
+            # call shutdown first to make sure that pending messages reach the AMQP broker if the
+            # program exits after calling this method
             self.sock.shutdown(socket.SHUT_RDWR)
             self.sock.close()
             self.sock = None
@@ -150,8 +150,8 @@ class AbstractTransport(metaclass=ABCMeta):
     def read_frame(self):
         """Read frame from connection
 
-        Note that the frame may be destined for any channel. It is permitted to interleave frames from different
-        channels.
+        Note that the frame may be destined for any channel. It is permitted to interleave frames
+        from different channels.
 
         :return: frame
         :rtype: amqpy.spec.Frame
@@ -170,11 +170,13 @@ class AbstractTransport(metaclass=ABCMeta):
             frame_terminator = self.read(1)
             frame.data.extend(frame_terminator)
 
-            # this fixes the change in memoryview in Python 3.3 (accessing an element returns the correct type)
+            # this fixes the change in memoryview in Python 3.3 (accessing an element returns the
+            #  correct type)
             i_last_byte = bytes(frame_terminator)[0]
 
         except (OSError, IOError, socket.error) as exc:
-            # don't disconnect for ssl read time outs (Python 3.2): http://bugs.python.org/issue10272
+            # don't disconnect for ssl read time outs (Python 3.2):
+            # http://bugs.python.org/issue10272
             if isinstance(exc, SSLError) and 'timed out' in str(exc):
                 raise socket.timeout()
             if get_errno(exc) not in _UNAVAIL and not isinstance(exc, socket.timeout):
@@ -183,14 +185,15 @@ class AbstractTransport(metaclass=ABCMeta):
         if i_last_byte == FrameType.END:
             return frame
         else:
-            raise UnexpectedFrame('Received {} while expecting 0xCE (FrameType.END)'.format(hex(i_last_byte)))
+            raise UnexpectedFrame(
+                'Received {} while expecting 0xCE (FrameType.END)'.format(hex(i_last_byte)))
 
     @synchronized('_frame_lock')
     def write_frame(self, frame):
         """Write frame to connection
 
-        Note that the frame may be destined for any channel. It is permitted to interleave frames from different
-        channels.
+        Note that the frame may be destined for any channel. It is permitted to interleave frames
+        from different channels.
 
         :param frame: frame
         :type frame: amqpy.spec.Frame
@@ -221,8 +224,8 @@ class SSLTransport(AbstractTransport):
     def read(self, n, initial=False):
         """Read from socket
 
-        According to SSL_read(3), it can at most return 16kb of data. Thus, we use an internal read buffer like
-        TCPTransport.read to get the exact number of bytes wanted.
+        According to SSL_read(3), it can at most return 16kb of data. Thus, we use an internal read
+        buffer like `TCPTransport.read()` to get the exact number of bytes wanted.
 
         :param int n: exact number of bytes to read
         :return: data read
@@ -264,10 +267,11 @@ class TCPTransport(AbstractTransport):
 
 
 def create_transport(host, port, connect_timeout, frame_max, ssl_opts=None):
-    """Given a few parameters from the Connection constructor, select and create a subclass of AbstractTransport
+    """Given a few parameters from the Connection constructor, select and create a subclass of
+    AbstractTransport
 
-    If `ssl_opts` is a dict, SSL will be used and `ssl_opts` will be passed to :func:`ssl.wrap_socket()`. In all other
-    cases, SSL will not be used.
+    If `ssl_opts` is a dict, SSL will be used and `ssl_opts` will be passed to
+    :func:`ssl.wrap_socket()`. In all other cases, SSL will not be used.
 
     :param host: host
     :param connect_timeout: connect timeout
