@@ -1,11 +1,14 @@
 """
 AMQP uses exceptions to handle errors:
 
-* Any operational error (message queue not found, insufficient access rights, etc.) results in a channel exception.
-* Any structural error (invalid argument, bad sequence of methods, etc.) results in a connection exception.
+* Any operational error (message queue not found, insufficient access rights, etc.) results in a
+channel exception.
+* Any structural error (invalid argument, bad sequence of methods, etc.) results in a connection
+exception.
 
-According to the AMQP specification, an exception closes the associated channel or connection, and returns a reply code
-and reply text to the client. However, amqpy will automatically re-open the channel after a channel error.
+According to the AMQP specification, an exception closes the associated channel or connection,  and
+returns a reply code and reply text to the client. However, amqpy will automatically re-open the
+channel after a channel error.
 """
 import struct
 from collections import namedtuple
@@ -39,7 +42,8 @@ class Timeout(TimeoutError):
 class AMQPError(Exception):
     code = 0
 
-    def __init__(self, reply_text=None, method_type=None, method_name=None, reply_code=None, channel_id=None):
+    def __init__(self, reply_text=None, method_type=None, method_name=None, reply_code=None,
+                 channel_id=None):
         """
         :param reply_text: localized reply text
         :param method_type: method type
@@ -105,21 +109,22 @@ class ConsumerCancelled(RecoverableConnectionError):
 
 
 class ContentTooLarge(RecoverableChannelError):
-    """The client attempted to transfer content larger than the server could accept at the present time. The client may
-    retry at a later time.
+    """The client attempted to transfer content larger than the server could accept at the present
+    time. The client may retry at a later time.
     """
     code = 311
 
 
 class NoConsumers(RecoverableChannelError):
-    """When the exchange cannot deliver to a consumer when the immediate flag is set. As a result of pending data on the
-    queue or the absence of any consumers of the queue.
+    """When the exchange cannot deliver to a consumer when the immediate flag is set. As a result
+    of pending data on the queue or the absence of any consumers of the queue.
     """
     code = 313
 
 
 class ConnectionForced(RecoverableConnectionError):
-    """An operator intervened to close the connection for some reason. The client may retry at some later date.
+    """An operator intervened to close the connection for some reason. The client may retry at some
+    later date.
     """
     code = 320
 
@@ -131,7 +136,8 @@ class InvalidPath(IrrecoverableConnectionError):
 
 
 class AccessRefused(IrrecoverableChannelError):
-    """The client attempted to work with a server entity to which it has no access due to security settings.
+    """The client attempted to work with a server entity to which it has no access due to
+    security settings.
     """
     code = 403
 
@@ -143,7 +149,8 @@ class NotFound(IrrecoverableChannelError):
 
 
 class ResourceLocked(RecoverableChannelError):
-    """The client attempted to work with a server entity to which it has no access because another client is working
+    """The client attempted to work with a server entity to which it has no access because
+    another client is working
     with it.
     """
     code = 405
@@ -156,50 +163,50 @@ class PreconditionFailed(IrrecoverableChannelError):
 
 
 class FrameError(IrrecoverableConnectionError):
-    """The sender sent a malformed frame that the recipient could not decode. This strongly implies a programming error
-    in the sending peer.
+    """The sender sent a malformed frame that the recipient could not decode. This strongly implies
+    a programming error in the sending peer.
     """
     code = 501
 
 
 class FrameSyntaxError(IrrecoverableConnectionError):
-    """The sender sent a frame that contained illegal values for one or more fields. This strongly implies a programming
-    error in the sending peer.
+    """The sender sent a frame that contained illegal values for one or more fields. This strongly
+    implies a programming error in the sending peer.
     """
     code = 502
 
 
 class InvalidCommand(IrrecoverableConnectionError):
-    """The client sent an invalid sequence of frames, attempting to perform an operation that was considered invalid by
-    the server. This usually implies a programming error in the client. '
+    """The client sent an invalid sequence of frames, attempting to perform an operation that was
+    considered invalid by the server. This usually implies a programming error in the client. '
     """
     code = 503
 
 
 class ChannelNotOpen(IrrecoverableConnectionError):
-    """The client attempted to work with a channel that had not been correctly opened. This most likely indicates a
-    fault in the client layer.
+    """The client attempted to work with a channel that had not been correctly opened. This most
+    likely indicates a fault in the client layer.
     """
     code = 504
 
 
 class UnexpectedFrame(IrrecoverableConnectionError):
-    """The peer sent a frame that was not expected, usually in the context of a content header and body. This strongly
-    indicates a fault in the peer's content processing.
+    """The peer sent a frame that was not expected, usually in the context of a content header and
+    body. This strongly indicates a fault in the peer's content processing.
     """
     code = 505
 
 
 class ResourceError(RecoverableConnectionError):
-    """The server could not complete the method because it lacked sufficient resources. This may be due to the client
-    creating too many of some type of entity.
+    """The server could not complete the method because it lacked sufficient resources. This may be
+    due to the client creating too many of some type of entity.
     """
     code = 506
 
 
 class NotAllowed(IrrecoverableConnectionError):
-    """The client tried to work with some entity in a manner that is prohibited by the server, due to security settings
-    or by some other criteria.
+    """The client tried to work with some entity in a manner that is prohibited by the server,  due
+    to security settings or by some other criteria.
     """
     code = 530
 
@@ -211,8 +218,8 @@ class AMQPNotImplementedError(IrrecoverableConnectionError):
 
 
 class InternalError(IrrecoverableConnectionError):
-    """The server could not complete the method because of an internal error. The server may require intervention by an
-    operator in order to resume normal operations.
+    """The server could not complete the method because of an internal error. The server may
+    require intervention by an operator in order to resume normal operations.
     """
     code = 541
 
