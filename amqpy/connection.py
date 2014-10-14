@@ -597,7 +597,7 @@ class Connection(AbstractChannel):
         self._send_tune_ok(self.channel_max, self.frame_max, self.heartbeat)
 
     def _send_tune_ok(self, channel_max, frame_max, heartbeat):
-        """Negotiate connection tuning parameters
+        """Negotiate cnnection tuning parameters
 
         This method sends the client's connection tuning parameters to the server. Certain fields
         are negotiated, others provide capability information.

@@ -67,7 +67,6 @@ To do (goals for  v1.0.0)
 - Add support for multiple authentication mechanisms such as CRAM-MD5 for Apache
   Qpid
 - `Kombu`_ compatibility
-- Add explicit callback in calls to ``wait()``
 
 
 Tests
