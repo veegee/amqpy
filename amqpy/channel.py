@@ -18,8 +18,8 @@ log = logging.getLogger('amqpy')
 
 class Channel(AbstractChannel):
     """
-    The channel class provides methods for a client to establish and operate an AMQP channel. All public members are
-    fully thread-safe.
+    The channel class provides methods for a client to establish and operate an AMQP channel. All
+    public members are fully thread-safe.
     """
     ### constants
     #: Default channel mode
@@ -30,10 +30,11 @@ class Channel(AbstractChannel):
     CH_MODE_CONFIRM = 2
 
     def __init__(self, connection, channel_id=None, auto_decode=True):
-        """Create a channel bound to a connection and using the specified numeric channel_id, and open on the server
+        """Create a channel bound to a connection and using the specified numeric channel_id, and
+        open on the server
 
-        If `auto_decode` is enabled (default), incoming Message bodies will be automatically decoded to `str` if
-        possible.
+        If `auto_decode` is enabled (default), incoming Message bodies will be automatically decoded
+        to `str` if possible.
 
         :param connection: the channel's associated Connection
         :param channel_id: the channel's assigned channel ID
@@ -82,7 +83,8 @@ class Channel(AbstractChannel):
         # consumer cancel callbacks dict dict[consumer_tag str: callable]
         self.cancel_callbacks = {}
 
-        # set of consumers that have opted for `no_ack` delivery (server will not expect an ack for delivered messages)
+        # set of consumers that have opted for `no_ack` delivery (server will not expect an ack
+        # for delivered messages)
         self.no_ack_consumers = set()
 
         # open the channel
@@ -120,13 +122,15 @@ class Channel(AbstractChannel):
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Request a channel close
 
-        This method indicates that the sender wants to close the channel. This may be due to internal conditions (e.g. a
-        forced shut-down) or due to an error handling a specific method, i.e. an exception.  When a close is due to an
-        exception, the sender provides the class and method id of the method which caused the exception.
+        This method indicates that the sender wants to close the channel. This may be due to
+        internal conditions (e.g. a forced shut-down) or due to an error handling a specific method,
+        i.e. an exception.  When a close is due to an exception, the sender provides the class and
+        method id of the method which caused the exception.
 
         :param reply_code: the reply code
         :param reply_text: localized reply text
-        :param method_type: if close is triggered by a failing method, this is the method that caused it
+        :param method_type: if close is triggered by a failing method, this is the method that
+        caused it
         :type reply_code: int
         :type reply_text: str
         :type method_type: amqpy.spec.method_t
@@ -148,10 +152,10 @@ class Channel(AbstractChannel):
     def _cb_close(self, method):
         """Respond to a channel close sent by the server
 
-        This method indicates that the sender (server) wants to close the channel. This may be due to internal
-        conditions (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a
-        close is due to an exception, the sender provides the class and method id of the method which caused the
-        exception.
+        This method indicates that the sender (server) wants to close the channel. This may be due
+        to internal conditions (e.g. a forced shut-down) or due to an error handling a specific
+        method, i.e. an exception. When a close is due to an exception, the sender provides the
+        class and method id of the method which caused the exception.
 
         This method sends a "close-ok" to the server, then re-opens the channel.
         """
@@ -174,8 +178,8 @@ class Channel(AbstractChannel):
     def _cb_close_ok(self, method):
         """Confirm a channel close
 
-        This method confirms a Channel.Close method and tells the recipient that it is safe to release resources for the
-        channel and close the socket.
+        This method confirms a Channel.Close method and tells the recipient that it is safe to
+        release resources for the channel and close the socket.
         """
         assert method
         self._close()
@@ -184,13 +188,15 @@ class Channel(AbstractChannel):
     def flow(self, active):
         """Enable/disable flow from peer
 
-        This method asks the peer to pause or restart the flow of content data. This is a simple flow-control mechanism
-        that a peer can use to avoid overflowing its queues or otherwise finding itself receiving more messages than it
-        can process. Note that this method is not intended for window control.  The peer that receives a request to stop
-        sending content should finish sending the current content, if any, and then wait until it receives a Flow
+        This method asks the peer to pause or restart the flow of content data. This is a simple
+        flow-control mechanism that a peer can use to avoid overflowing its queues or otherwise
+        finding itself receiving more messages than it can process. Note that this method is not
+        intended for window control.  The peer that receives a request to stop sending content
+        should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.
 
-        :param active: True: peer starts sending content frames; False: peer stops sending content frames
+        :param active: True: peer starts sending content frames; False: peer stops sending content
+        frames
         :type active: bool
         """
         args = AMQPWriter()
@@ -201,10 +207,11 @@ class Channel(AbstractChannel):
     def _cb_flow(self, method):
         """Enable/disable flow from peer
 
-        This method asks the peer to pause or restart the flow of content data. This is a simple flow-control mechanism
-        that a peer can use to avoid overflowing its queues or otherwise finding itself receiving more messages than it
-        can process. Note that this method is not intended for window control.  The peer that receives a request to stop
-        sending content should finish sending the current content, if any, and then wait until it receives a Flow
+        This method asks the peer to pause or restart the flow of content data. This is a simple
+        flow-control mechanism that a peer can use to avoid overflowing its queues or otherwise
+        finding itself receiving more messages than it can process. Note that this method is not
+        intended for window control.  The peer that receives a request to stop sending content
+        should finish sending the current content, if any, and then wait until it receives a Flow
         restart method.
         """
         args = method.args
@@ -216,7 +223,8 @@ class Channel(AbstractChannel):
 
         Confirms to the peer that a flow command was received and processed.
 
-        :param active: True: peer starts sending content frames; False: peer stops sending content frames
+        :param active: True: peer starts sending content frames; False: peer stops sending content
+        frames
         :type active: bool
         """
         args = AMQPWriter()
@@ -251,26 +259,29 @@ class Channel(AbstractChannel):
         log.debug('Channel open')
 
     @synchronized('lock')
-    def exchange_declare(self, exchange, exch_type, passive=False, durable=False, auto_delete=True, nowait=False,
-                         arguments=None):
+    def exchange_declare(self, exchange, exch_type, passive=False, durable=False, auto_delete=True,
+                         nowait=False, arguments=None):
         """Declare exchange, create if needed
 
-        * Exchanges cannot be redeclared with different types. The client MUST not attempt to redeclare an existing
-          exchange with a different type than used in the original Exchange.Declare method.
-        * This method creates an exchange if it does not already exist, and if the exchange exists, verifies that it
-          is of the correct and expected class.
+        * Exchanges cannot be redeclared with different types. The client MUST not attempt to
+          redeclare an existing exchange with a different type than used in the original
+          Exchange.Declare method.
+        * This method creates an exchange if it does not already exist, and if the exchange
+          exists, verifies that it is of the correct and expected class.
         * The server must ignore the `durable` field if the exchange already exists.
         * The server must ignore the `auto_delete` field if the exchange already exists.
-        * If `nowait` is enabled and the server could not complete the method, it will raise a channel or connection
-          exception.
+        * If `nowait` is enabled and the server could not complete the method, it will raise a
+          channel or connection exception.
         * `arguments` is ignored if passive is True.
 
         :param str exchange: exchange name
         :param str exch_type: exchange type (direct, fanout, etc.)
-        :param bool passive: do not create exchange; client can use this to check whether an exchange exists
+        :param bool passive: do not create exchange; client can use this to check whether an
+        exchange exists
         :param bool durable: mark exchange as durable (remain active after server restarts)
         :param bool auto_delete: auto-delete exchange when all queues have finished using it
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param bool nowait: if set, the server will not respond to the method and the client should
+        not wait for a reply
         :param dict arguments: exchange declare arguments
         :raise AccessRefused: if attempting to declare an exchange with a reserved name (amq.*)
         :raise NotFound: if `passive` is enabled and the exchange does not exist
@@ -295,8 +306,8 @@ class Channel(AbstractChannel):
     def _cb_exchange_declare_ok(self, method):
         """Confirms an exchange declaration
 
-        The server sends this method to confirm a Declare method and confirms the name of the exchange, essential for
-        automatically-named exchanges.
+        The server sends this method to confirm a Declare method and confirms the name of the
+        exchange, essential for automatically-named exchanges.
         """
         pass
 
@@ -306,15 +317,18 @@ class Channel(AbstractChannel):
 
         This method deletes an exchange.
 
-        * If the exchange does not exist, the server must raise a channel exception. When an exchange is deleted,
-          all queue bindings on the exchange are cancelled.
-        * If `if_unused` is set, and the exchange has queue bindings, the server must raise a channel exception.
+        * If the exchange does not exist, the server must raise a channel exception. When an
+          exchange is deleted, all queue bindings on the exchange are cancelled.
+        * If `if_unused` is set, and the exchange has queue bindings, the server must raise a
+          channel exception.
 
         :param str exchange: exchange name
         :param bool if_unused: delete only if unused (has no queue bindings)
-        :param bool nowait: if set, the server will not respond to the method and the client should not wait for a reply
+        :param bool nowait: if set, the server will not respond to the method and the client should
+        not wait for a reply
         :raise NotFound: if exchange with `exchange` does not exist
-        :raise PreconditionFailed: if attempting to delete a queue with bindings and `if_unused` is set
+        :raise PreconditionFailed: if attempting to delete a queue with bindings and `if_unused` is
+        set
         :return: None
         """
         args = AMQPWriter()
@@ -335,7 +349,8 @@ class Channel(AbstractChannel):
         pass
 
     @synchronized('lock')
-    def exchange_bind(self, dest_exch, source_exch='', routing_key='', nowait=False, arguments=None):
+    def exchange_bind(self, dest_exch, source_exch='', routing_key='', nowait=False,
+                      arguments=None):
         """Bind an exchange to an exchange
 
         * Both the `dest_exch` and `source_exch` must already exist. Blank exchange names mean the default exchange.

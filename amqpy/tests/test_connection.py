@@ -16,7 +16,8 @@ class TestConnection:
         ch2.close()
 
     def test_close(self, conn):
-        """Make sure we've broken various references when closing channels and connections, to help with GC
+        """Make sure we've broken various references when closing channels and connections, to help
+        with GC
         """
         # create a channel and make sure it's linked as we'd expect
         ch = conn.channel()
@@ -37,7 +38,8 @@ class TestConnection:
         assert conn.channels is None
 
     def test_gc_closed(self, conn):
-        """Make sure we've broken various references when closing channels and connections, to help with GC
+        """Make sure we've broken various references when closing channels and connections, to help
+        with GC
         """
         unreachable_before = len(gc.garbage)
         # create a channel and make sure it's linked as we'd expect

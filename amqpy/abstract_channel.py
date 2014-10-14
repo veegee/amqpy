@@ -11,9 +11,11 @@ __all__ = ['AbstractChannel']
 
 
 class AbstractChannel(metaclass=ABCMeta):
-    """Superclass for both the Connection, which is treated as channel 0, and other user-created Channel objects
+    """Superclass for both the Connection, which is treated as channel 0, and other user-created
+    Channel objects
 
-    The subclasses must have a METHOD_MAP class variable, mapping between AMQP method signatures and Python methods.
+    The subclasses must have a METHOD_MAP class variable, mapping between AMQP method signatures and
+    Python methods.
     """
 
     #: Placeholder, implementations must override this
@@ -57,14 +59,14 @@ class AbstractChannel(metaclass=ABCMeta):
     def wait(self, allowed_methods=None, callback=None):
         """Wait for a method that matches any one of `allowed_methods`
 
-        If `callback` is specified, `callback(channel, method)` will be called after a method has been received. If
-        `callback` is `None`, the default callback for the received method will be called (as specified in the channel's
-        `METHOD_MAP`).
+        If `callback` is specified, `callback(channel, method)` will be called after a method has
+        been received. If `callback` is `None`, the default callback for the received method will be
+        called (as specified in the channel's `METHOD_MAP`).
 
-        :param allowed_methods: list of possible methods to wait for, or `None` to wait for any method
+        :param allowed_methods: list of possible methods to wait for, or `None` to wait for any
+        method
         :param callback: callable with the following signature: callable(AbstractChannel, Method)
-        :type allowed_methods: list or None
-        :type callback: Callable(AbstractChannel, Method)
+        :type allowed_methods: list or None :type callback: Callable(AbstractChannel, Method)
         """
         method = self._wait_method(allowed_methods)
         return self.handle_method(method, callback=callback)
@@ -99,29 +101,31 @@ class AbstractChannel(metaclass=ABCMeta):
             m_type = method.method_type
 
             # check if the received method is the one we're waiting for
-            if method.channel_id == self.channel_id and (allowed_methods is None or m_type in allowed_methods):
+            if method.channel_id == self.channel_id and (allowed_methods is None
+                                                         or m_type in allowed_methods):
                 # received the method we're waiting for
                 return method
 
             # check if the received method needs to be handled immediately
             if ch_id != 0 and m_type in self.IMMEDIATE_METHODS:
-                # certain methods like basic_return should be dispatched immediately rather than being queued, even if
-                # they're not one of the `allowed_methods` we're looking for
+                # certain methods like basic_return should be dispatched immediately rather than
+                # being queued, even if they're not one of the `allowed_methods` we're looking for
                 self.connection.channels[ch_id].handle_method(method)
                 continue
 
             # not the channel and/or method we were looking for; queue this method for later
             self.connection.channels[ch_id].method_queue.append(method)
 
-            # if the method is destined for channel 0 (the connection itself), it's probably an exception, so handle it
-            # immediately
+            # if the method is destined for channel 0 (the connection itself), it's probably an
+            # exception, so handle it immediately
             if ch_id == 0:
                 self.connection.wait()
 
     def handle_method(self, method, channel=None, callback=None):
         """Handle the specified received method
 
-        The appropriate handler as defined in `self.METHOD_MAP` will be called to handle this method.
+        The appropriate handler as defined in `self.METHOD_MAP` will be called to handle this
+        method.
 
         :param method: freshly received method from the server
         :param channel: channel object

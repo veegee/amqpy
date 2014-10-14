@@ -21,8 +21,8 @@ class TestBasicMessage:
         msg = Message('hello', content_type='text/plain')
         assert msg
 
-        # Make sure that something that looks vaguely like a Message doesn't raise an Attribute error when compared to
-        # a Message, and instead returns False
+        # Make sure that something that looks vaguely like a Message doesn't raise an Attribute
+        # error when compared to a Message, and instead returns False
         class FakeMsg:
             pass
 
