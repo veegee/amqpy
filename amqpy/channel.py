@@ -432,10 +432,8 @@ class Channel(AbstractChannel):
         """Bind queue to an exchange
 
         This method binds a queue to an exchange. Until a queue is bound it will not receive any
-        messages. In a classic
-        messaging model, store-and-forward queues are bound to a dest exchange and subscription
-        queues are bound to a
-        dest_wild exchange.
+        messages. In a classic messaging model, store-and-forward queues are bound to a dest
+        exchange and subscription queues are bound to a dest_wild exchange.
 
         * The server must allow and ignore duplicate bindings without treating these as an error.
         * If a bind fails, the server must raise a connection exception.
@@ -522,12 +520,9 @@ class Channel(AbstractChannel):
         """Declare queue, create if needed
 
         This method creates or checks a queue. When creating a new queue the client can specify
-        various properties that
-        control the durability of the queue and its contents, and the level of sharing for the
-        queue. A tuple
-        containing the queue name, message count, and consumer count is returned, which is
-        essential for declaring
-        automatically named queues.
+        various properties that control the durability of the queue and its contents, and the level
+        of sharing for the queue. A tuple containing the queue name, message count, and consumer
+        count is returned, which is essential for declaring automatically named queues.
 
         * If `passive` is specified, the server state is not modified (a queue will not be
           declared), and the server only checks if the specified queue exists and returns its
@@ -590,8 +585,8 @@ class Channel(AbstractChannel):
         """Delete a queue
 
         This method deletes a queue. When a queue is deleted any pending messages are sent to a
-        dead-letter queue if
-        this is defined in the server configuration, and all consumers on the queue are cancelled.
+        dead-letter queue if this is defined in the server configuration, and all consumers on the
+        queue are cancelled.
 
         :param str queue: name of queue to delete, empty string refers to last declared queue on
         this channel
@@ -635,9 +630,8 @@ class Channel(AbstractChannel):
     def queue_purge(self, queue='', nowait=False):
         """Purge a queue
 
-        This method removes all messages from a queue. It does not cancel consumers. Purged
-        messages are deleted
-        without any formal "undo" mechanism.
+        This method removes all messages from a queue. It does not cancel consumers. Purged messages
+        are deleted without any formal "undo" mechanism.
 
         * On transacted channels the server MUST not purge messages that have already been sent
           to a client but not yet acknowledged.
@@ -678,9 +672,9 @@ class Channel(AbstractChannel):
     def basic_ack(self, delivery_tag, multiple=False):
         """Acknowledge one or more messages
 
-        This method acknowledges one or more messages delivered via the Deliver or Get-Ok
-        methods. The client can ask
-        to confirm a single message or a set of messages up to and including a specific message.
+        This method acknowledges one or more messages delivered via the Deliver or Get-Ok methods.
+        The client can ask to confirm a single message or a set of messages up to and including a
+        specific message.
 
         * The delivery tag is valid only within the same channel that the message was received.
         * Set `delivery_tag` to `0` and `multiple` to `True` to acknowledge all outstanding
@@ -701,11 +695,10 @@ class Channel(AbstractChannel):
     def basic_cancel(self, consumer_tag, nowait=False):
         """End a queue consumer
 
-        This method cancels a consumer. This does not affect already delivered messages,
-        but it does mean the server
-        will not send any more messages for that consumer. The client may receive an arbitrary
-        number of messages in
-        between sending the cancel method and receiving the cancel-ok reply.
+        This method cancels a consumer. This does not affect already delivered messages, but it does
+        mean the server will not send any more messages for that consumer. The client may receive an
+        arbitrary number of messages in between sending the cancel method and receiving the
+        cancel-ok reply.
 
         * If the queue no longer exists when the client sends a cancel command, or the consumer
           has been cancelled for other reasons, this command has no effect.
@@ -771,10 +764,9 @@ class Channel(AbstractChannel):
                       callback=None, arguments=None, on_cancel=None):
         """Start a queue consumer
 
-        This method asks the server to start a "consumer", which is a transient request for
-        messages from a specific
-        queue. Consumers last as long as the channel they were created on, or until the client
-        cancels them.
+        This method asks the server to start a "consumer", which is a transient request for messages
+        from a specific queue. Consumers last as long as the channel they were created on, or until
+        the client cancels them.
 
         * The `consumer_tag` is local to a connection, so two clients can use the same consumer
           tags. But on the same connection, the `consumer_tag` must be unique, or the server must
@@ -828,9 +820,8 @@ class Channel(AbstractChannel):
     def _cb_basic_consume_ok(self, method):
         """Confirm a new consumer
 
-        The server provides the client with a consumer tag, which is used by the client for
-        methods called on the
-        consumer at a later stage.
+        The server provides the client with a consumer tag, which is used by the client for methods
+        called on the consumer at a later stage.
 
         PARAMETERS:
 
@@ -845,23 +836,18 @@ class Channel(AbstractChannel):
         """Notify the client of a consumer message
 
         This method delivers a message to the client, via a consumer. In the asynchronous message
-        delivery model, the
-        client starts a consumer using the Consume method, then the server responds with Deliver
-        methods as and when
-        messages arrive for that consumer.
+        delivery model, the client starts a consumer using the Consume method, then the server
+        responds with Deliver methods as and when messages arrive for that consumer.
 
         This method can be called in a "classmethod" style static-context and is done so by
         :meth:`~amqpy.connection.Connection.drain_events()`.
 
         RULE:
 
-            The server SHOULD track the number of times a message has been delivered to clients
-            and when a message is
-            redelivered a certain number of times - e.g. 5 times - without being acknowledged,
-            the server SHOULD
-            consider the message to be unprocessable (possibly causing client applications to
-            abort), and move the
-            message to a dead letter queue.
+            The server SHOULD track the number of times a message has been delivered to clients and
+            when a message is redelivered a certain number of times - e.g. 5 times - without being
+            acknowledged, the server SHOULD consider the message to be unprocessable (possibly
+            causing client applications to abort), and move the message to a dead letter queue.
 
         PARAMETERS:
 
@@ -1055,7 +1041,7 @@ class Channel(AbstractChannel):
 
         This method publishes a message to a specific exchange. The message will be routed to
         queues as defined by the exchange configuration and distributed to any active consumers when
-        the transaction,  if any, is committed.
+        the transaction, if any, is committed.
 
         If publisher confirms are enabled, this method will automatically wait to receive an "ack"
         from the server.

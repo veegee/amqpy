@@ -44,7 +44,7 @@ class Connection(AbstractChannel):
                  on_blocked=None, on_unblocked=None):
         """Create a connection to the specified host
 
-        If you are using SSL, make sure the correct port number is specified (usually 5671),  as the
+        If you are using SSL, make sure the correct port number is specified (usually 5671), as the
         default of 5672 is for non-SSL connections.
 
         :param str host: host
