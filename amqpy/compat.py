@@ -1,12 +1,10 @@
 """
-This module's purpose is to provide compatibility for Python 3.2 and PyPy3 (which is based on Python 3.2).
+This module's purpose is to provide compatibility for Python 3.2 and PyPy3 (which is based on Python
+3.2).
 
-.. note::
-
-    Python 3.2 support may be removed when PyPy3 becomes Python 3.3+ compatible.
-
-The primary method of providing compatibility is by backporting Python 3.3+ features through monkey-patching. However,
-this is only done when safe, i.e., when monkey-patching does not change the behaviour of existing objects.
+The primary method of providing compatibility is by backporting Python 3.3+ features through
+monkey-patching. However, this is only done when safe, i.e., when monkey-patching does not change
+the behaviour of existing objects.
 """
 
 import sys

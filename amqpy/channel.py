@@ -532,13 +532,13 @@ class Channel(AbstractChannel):
 
         * If `passive` is specified, the server state is not modified (a queue will not be
           declared), and the server only checks if the specified queue exists and returns its
-          properties. If the queue does  not exist, the server must raise a 404 NOT FOUND channel
+          properties. If the queue does not exist, the server must raise a 404 NOT FOUND channel
           exception.
         * The server must create a default binding for a newly-created queue to the default
           exchange, which is an exchange of type 'direct'.
         * Queue names starting with 'amq.' are reserved for use by the server. If an attempt is
           made to declare a queue with such a name, and the `passive` flag is disabled, the server
-          must raise a 403  ACCESS REFUSED connection exception.
+          must raise a 403 ACCESS REFUSED connection exception.
         * The server must raise a 405 RESOURCE LOCKED channel exception if an attempt is made to
           access a queue declared as exclusive by another open connection.
         * The server must ignore the `auto_delete` flag if the queue already exists.
@@ -779,15 +779,15 @@ class Channel(AbstractChannel):
 
         * The `consumer_tag` is local to a connection, so two clients can use the same consumer
           tags. But on the same connection, the `consumer_tag` must be unique, or the server must
-          raise a 530 NOT  ALLOWED connection exception.
+          raise a 530 NOT ALLOWED connection exception.
         * If `no_ack` is set, the server automatically acknowledges each message on behalf of the
           client.
         * If `exclusive` is set, the client asks for this consumer to have exclusive access to
           the queue. If the server cannot grant exclusive access to the queue because there are
-          other consumers  active, it must raise a 403 ACCESS REFUSED channel exception.
+          other consumers active, it must raise a 403 ACCESS REFUSED channel exception.
         * `callback` must be a `Callable(message)` which is called for each messaged delivered by
           the broker. If no callback is specified, messages are quietly discarded; `no_ack` should
-          probably be set  to True in that case.
+          probably be set to True in that case.
 
         :param str queue: name of queue; if None, refers to last declared queue for this channel
         :param str consumer_tag: consumer tag, local to the connection
@@ -1108,26 +1108,26 @@ class Channel(AbstractChannel):
 
         This method requests a specific quality of service. The QoS can be specified for the
         current channel or for all channels on the connection. The particular properties and
-        semantics of a qos method  always depend on the content class semantics. Though the qos
+        semantics of a qos method always depend on the content class semantics. Though the qos
         method could in principle apply to both peers, it is currently meaningful only for the
         server.
 
-        * The client can request that messages be sent in advance so that when the client  finishes
+        * The client can request that messages be sent in advance so that when the client finishes
           processing a message, the following message is already held locally, rather than needing
-          to be sent  down the channel. Prefetching gives a performance improvement. This field
-          specifies the prefetch window  size in octets. The server will send a message in advance
-          if it is equal to or smaller in size than the  available prefetch size (and also falls
-          into other prefetch limits). May be set to zero, meaning "no specific  limit", although
+          to be sent down the channel. Prefetching gives a performance improvement. This field
+          specifies the prefetch window size in octets. The server will send a message in advance
+          if it is equal to or smaller in size than the available prefetch size (and also falls
+          into other prefetch limits). May be set to zero, meaning "no specific limit", although
           other prefetch limits may still apply. The prefetch-size is ignored if the no-ack option
           is set.
         * The server must ignore `prefetch_size` setting when the client is not processing any
           messages - i.e. the prefetch size does not limit the transfer of single messages to a
-          client, only the  sending in advance of more messages while the client still has one or
+          client, only the sending in advance of more messages while the client still has one or
           more unacknowledged messages.
         * The `prefetch_count` specifies a prefetch window in terms of whole messages. This field
-          may be used in combination  with the prefetch-size field; a message will only be sent in
-          advance if  both prefetch windows (and those at the channel and connection level) allow
-          it. The prefetch-count is ignored  if the no-ack option is set.
+          may be used in combination with the prefetch-size field; a message will only be sent in
+          advance if both prefetch windows (and those at the channel and connection level) allow
+          it. The prefetch-count is ignored if the no-ack option is set.
         * The server may send less data in advance than allowed by the client's specified
           prefetch windows but it must not send more.
 
@@ -1145,7 +1145,7 @@ class Channel(AbstractChannel):
     def _cb_basic_qos_ok(self, method):
         """Confirm the requested qos
 
-        This method tells the client that the requested QoS levels could be handled by the  server.
+        This method tells the client that the requested QoS levels could be handled by the server.
         The requested QoS applies to all active consumers until a new QoS is defined.
         """
         pass
@@ -1201,7 +1201,7 @@ class Channel(AbstractChannel):
 
         * The server SHOULD be capable of accepting and process the Reject method while sending
           message content with a Deliver or Get-Ok method.  I.e. the server should read and process
-          incoming methods  while sending output frames. To cancel a partially-send content, the
+          incoming methods while sending output frames. To cancel a partially-send content, the
           server sends a content body frame of size 1 (i.e. with no data except the frame-end
           octet).
         * The server SHOULD interpret this method as meaning that the client is unable to process

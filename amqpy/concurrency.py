@@ -12,12 +12,12 @@ log = logging.getLogger('amqpy')
 def synchronized(lock_name):
     """Decorator for automatically acquiring and releasing lock for method call
 
-    This decorator accesses the `lock_name` :class:`threading.Lock` attribute of the instance that the wrapped method is
-    bound to. The lock is acquired (blocks indefinitely) before the method is called. After the method has executed,
-    the lock is released.
+    This decorator accesses the `lock_name` :class:`threading.Lock` attribute of the instance that
+    the wrapped method is bound to. The lock is acquired (blocks indefinitely) before the method is
+    called. After the method has executed, the lock is released.
 
-    Decorated methods should not be long-running operations, since the lock is held for the duration of the method's
-    execution.
+    Decorated methods should not be long-running operations, since the lock is held for the duration
+    of the method's execution.
 
     :param lock_name: name of :class:`threading.Lock` object
     """

@@ -32,18 +32,20 @@ log = logging.getLogger('amqpy')
 
 
 class Connection(AbstractChannel):
-    """The connection class provides methods for a client to establish a network connection to a server, and for both
-    peers to operate the connection thereafter
+    """The connection class provides methods for a client to establish a network connection to a
+    server, and for both peers to operate the connection thereafter
     """
 
     def __init__(self, *, host='localhost', port=5672, ssl=None, connect_timeout=None,
-                 userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/', locale='en_US',
-                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False, client_properties=None,
+                 userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/',
+                 locale='en_US',
+                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False,
+                 client_properties=None,
                  on_blocked=None, on_unblocked=None):
         """Create a connection to the specified host
 
-        If you are using SSL, make sure the correct port number is specified (usually 5671), as the default of 5672 is
-        for non-SSL connections.
+        If you are using SSL, make sure the correct port number is specified (usually 5671),  as the
+        default of 5672 is for non-SSL connections.
 
         :param str host: host
         :param int port: port
@@ -101,7 +103,8 @@ class Connection(AbstractChannel):
         # start the connection; this also sends the connection protocol header
         self.transport = create_transport(host, port, connect_timeout, frame_max, ssl)
 
-        # create global instances of `MethodReader` and `MethodWriter` which can be used by all channels
+        # create global instances of `MethodReader` and `MethodWriter` which can be used by all
+        # channels
         self.method_reader = MethodReader(self.transport)
         self.method_writer = MethodWriter(self.transport, self.frame_max)
 
@@ -182,7 +185,8 @@ class Connection(AbstractChannel):
 
         This method is the primary way to check if the connection is alive.
 
-        Side effects: This method may send a heartbeat as a last resort to check if the connection is alive.
+        Side effects: This method may send a heartbeat as a last resort to check if the connection
+        is alive.
 
         :return: True if connection is alive, else False
         :rtype: bool
@@ -239,8 +243,8 @@ class Connection(AbstractChannel):
     def drain_events(self, timeout=None):
         """Wait for an event on all channels
 
-        This method should be called after creating consumers in order to receive delivered messages and execute
-        consumer callbacks.
+        This method should be called after creating consumers in order to receive delivered messages
+        and execute consumer callbacks.
 
         :param timeout: maximum allowed time wait for an event
         :type timeout: float or None
@@ -254,14 +258,17 @@ class Connection(AbstractChannel):
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Close connection to the server
 
-        This method performs a connection close handshake with the server, then closes the underlying connection.
+        This method performs a connection close handshake with the server, then closes the
+        underlying connection.
 
-        If this connection close is due to a client error, the client may provide a `reply_code`, `reply_text`,
-        and `method_type` to indicate to the server the reason for closing the connection.
+        If this connection close is due to a client error, the client may provide a `reply_code`,
+        `reply_text`, and `method_type` to indicate to the server the reason for closing the
+        connection.
 
         :param int reply_code: the reply code
         :param str reply_text: localized reply text
-        :param method_type: if close is triggered by a failing method, this is the method that caused it
+        :param method_type: if close is triggered by a failing method, this is the method that
+        caused it
         :type method_type: amqpy.spec.method_t
         """
         # signal to the heartbeat thread to stop sending heartbeats
@@ -327,10 +334,10 @@ class Connection(AbstractChannel):
     def _cb_close(self, method):
         """Handle received connection close
 
-        This method indicates that the sender (server) wants to close the connection. This may be due to internal
-        conditions (e.g. a forced shut-down) or due to an error handling a specific method, i.e. an exception. When a
-        close is due to an exception, the sender provides the class and method id of the method which caused the
-        exception.
+        This method indicates that the sender (server) wants to close the connection. This may be
+        due to internal conditions (e.g. a forced shut-down) or due to an error handling a specific
+        method, i.e. an exception. When a close is due to an exception, the sender provides the
+        class and method id of the method which caused the exception.
         """
         args = method.args
         reply_code = args.read_short()  # the AMQP reply code
@@ -338,10 +345,12 @@ class Connection(AbstractChannel):
         class_id = args.read_short()  # class_id of method
         method_id = args.read_short()  # method_id of method
 
-        self._send_close_ok()  # send a close-ok to the server, to confirm that we've acknowledged the close request
+        self._send_close_ok()  # send a close-ok to the server, to confirm that we've
+        # acknowledged the close request
 
         method_type = method_t(class_id, method_id)
-        raise error_for_code(reply_code, reply_text, method_type, AMQPConnectionError, self.channel_id)
+        raise error_for_code(reply_code, reply_text, method_type, AMQPConnectionError,
+                             self.channel_id)
 
     def _cb_blocked(self, method):
         """RabbitMQ Extension
@@ -360,9 +369,9 @@ class Connection(AbstractChannel):
     def _send_close_ok(self):
         """Confirm a connection close that has been requested by the server
 
-        This method confirms a Connection.Close method and tells the recipient that it is safe to release resources for
-        the connection and close the socket. RULE: A peer that detects a socket closure without having received a
-        Close-Ok handshake method SHOULD log the error.
+        This method confirms a Connection.Close method and tells the recipient that it is safe to
+        release resources for the connection and close the socket. RULE: A peer that detects a
+        socket closure without having received a Close-Ok handshake method SHOULD log the error.
         """
         self._send_method(Method(spec.Connection.CloseOk))
         self._close()
@@ -370,8 +379,8 @@ class Connection(AbstractChannel):
     def _cb_close_ok(self, method):
         """Confirm a connection close
 
-        This method is called when the server send a close-ok in response to our close request. It is now safe to
-        close the underlying connection.
+        This method is called when the server send a close-ok in response to our close request. It
+        is now safe to close the underlying connection.
         """
         assert method
         self._close()
@@ -379,9 +388,9 @@ class Connection(AbstractChannel):
     def _send_open(self, virtual_host, capabilities=''):
         """Open connection to virtual host
 
-        This method opens a connection to a virtual host, which is a collection of resources, and acts to separate
-        multiple application domains within a server. RULE: The client MUST open the context before doing any work on
-        the connection.
+        This method opens a connection to a virtual host, which is a collection of resources, and
+        acts to separate multiple application domains within a server. RULE: The client MUST open
+        the context before doing any work on the connection.
 
         :param virtual_host: virtual host path
         :param capabilities: required capabilities
@@ -406,13 +415,15 @@ class Connection(AbstractChannel):
     def _cb_secure(self, method):
         """Security mechanism challenge
 
-        The SASL protocol works by exchanging challenges and responses until both peers have received sufficient
-        information to authenticate each other.  This method challenges the client to provide more information.
+        The SASL protocol works by exchanging challenges and responses until both peers have
+        received sufficient information to authenticate each other.  This method challenges the
+        client to provide more information.
 
         PARAMETERS:
             challenge: longstr
                 security challenge data
-                Challenge information, a block of opaque binary data passed to the security mechanism.
+                Challenge information, a block of opaque binary data passed to the security
+                mechanism.
         """
         challenge = method.args.read_longstr()
         assert challenge
@@ -420,14 +431,14 @@ class Connection(AbstractChannel):
     def _send_secure_ok(self, response):
         """Security mechanism response
 
-        This method attempts to authenticate, passing a block of SASL data for the security mechanism at the server
-        side.
+        This method attempts to authenticate, passing a block of SASL data for the security
+        mechanism at the server side.
 
         PARAMETERS:
             response: longstr
                 security response data
-                A block of opaque data passed to the security mechanism. The contents of this data are defined by the
-                SASL security mechanism.
+                A block of opaque data passed to the security mechanism. The contents of this data
+                are defined by the SASL security mechanism.
         """
         args = AMQPWriter()
         args.write_longstr(response)
@@ -436,35 +447,36 @@ class Connection(AbstractChannel):
     def _cb_start(self, method):
         """Start connection negotiation callback
 
-        This method starts the connection negotiation process by telling the client the protocol version that the server
-        proposes, along with a list of security mechanisms which the client can use for authentication.
+        This method starts the connection negotiation process by telling the client the protocol
+        version that the server proposes, along with a list of security mechanisms which the client
+        can use for authentication.
 
-        RULE: If the client cannot handle the protocol version suggested by the server it MUST close the socket
-        connection.
+        RULE: If the client cannot handle the protocol version suggested by the server it MUST close
+        the socket connection.
 
-        RULE: The server MUST provide a protocol version that is lower than or equal to that requested by the client in
-        the protocol header. If the server cannot support the specified protocol it MUST NOT send this method, but MUST
-        close the socket connection.
+        RULE: The server MUST provide a protocol version that is lower than or equal to that
+        requested by the client in the protocol header. If the server cannot support the specified
+        protocol it MUST NOT send this method, but MUST close the socket connection.
 
         PARAMETERS:
             version_major: octet
                 protocol major version
-                The protocol major version that the server agrees to use, which cannot be higher than the client's major
-                version.
+                The protocol major version that the server agrees to use, which cannot be higher
+                than the client's major version.
             version_minor: octet
                 protocol major version
-                The protocol minor version that the server agrees to use, which cannot be higher than the client's minor
-                version.
+                The protocol minor version that the server agrees to use, which cannot be higher
+                than the client's minor version.
             server_properties: table
                 server properties
             mechanisms: longstr
                 available security mechanisms
-                A list of the security mechanisms that the server supports, delimited by spaces.  Currently ASL supports
-                these mechanisms: PLAIN.
+                A list of the security mechanisms that the server supports, delimited by spaces.
+                Currently ASL supports these mechanisms: PLAIN.
             locales: longstr
                 available message locales
-                A list of the message locales that the server supports, delimited by spaces.  The locale defines the
-                language in which the server will send reply texts.
+                A list of the message locales that the server supports, delimited by spaces.  The
+                locale defines the language in which the server will send reply texts.
                 RULE:
                     All servers MUST support at least the en_US locale.
         """
@@ -485,29 +497,35 @@ class Connection(AbstractChannel):
     def _send_start_ok(self, client_properties, mechanism, response, locale):
         """Select security mechanism and locale
 
-        This method selects a SASL security mechanism. ASL uses SASL (RFC2222) to negotiate authentication and
-        encryption.
+        This method selects a SASL security mechanism. ASL uses SASL (RFC2222) to negotiate
+        authentication and encryption.
 
         PARAMETERS:
             client_properties: table
                 client properties
             mechanism: shortstr
                 selected security mechanism
-                A single security mechanisms selected by the client, which must be one of those specified by the server.
+                A single security mechanisms selected by the client, which must be one of those
+                specified by the server.
                 RULE:
-                    The client SHOULD authenticate using the highest- level security profile it can handle from the list
+                    The client SHOULD authenticate using the highest- level security profile it
+                    can handle from the list
                     provided by the server.
                 RULE:
-                    The mechanism field MUST contain one of the security mechanisms proposed by the server in the Start
+                    The mechanism field MUST contain one of the security mechanisms proposed by
+                    the server in the Start
                     method. If it doesn't, the server MUST close the socket.
             response: longstr
                 security response data
-                A block of opaque data passed to the security mechanism. The contents of this data are defined by the
-                SASL security mechanism.  For the PLAIN security mechanism this is defined as a field table holding two
+                A block of opaque data passed to the security mechanism. The contents of this
+                data are defined by the
+                SASL security mechanism.  For the PLAIN security mechanism this is defined as a
+                field table holding two
                 fields, LOGIN and PASSWORD.
             locale: shortstr
                 selected message locale
-                A single message local selected by the client, which must be one of those specified by the server.
+                A single message local selected by the client, which must be one of those
+                specified by the server.
         """
         if self.server_capabilities.get('consumer_cancel_notify'):
             if 'capabilities' not in client_properties:
@@ -527,26 +545,33 @@ class Connection(AbstractChannel):
     def _cb_tune(self, method):
         """Handle received "tune" method
 
-        This method is the handler for receiving a "tune" method. `channel_max` and `frame_max` are set to the lower
+        This method is the handler for receiving a "tune" method. `channel_max` and `frame_max`
+        are set to the lower
         of the values proposed by each party.
 
         PARAMETERS:
             channel_max: short
                 proposed maximum channels
-                The maximum total number of channels that the server allows per connection. Zero means that the server
-                does not impose a fixed limit, but the number of allowed channels may be limited by available server
+                The maximum total number of channels that the server allows per connection. Zero
+                means that the server
+                does not impose a fixed limit, but the number of allowed channels may be limited
+                by available server
                 resources.
             frame_max: long
                 proposed maximum frame size
-                The largest frame size that the server proposes for the connection. The client can negotiate a lower
-                value.  Zero means that the server does not impose any specific limit but may reject very large frames
+                The largest frame size that the server proposes for the connection. The client
+                can negotiate a lower
+                value.  Zero means that the server does not impose any specific limit but may
+                reject very large frames
                 if it cannot allocate resources for them.
                 RULE:
-                    Until the frame-max has been negotiated, both peers MUST accept frames of up to 4096 octets large.
+                    Until the frame-max has been negotiated, both peers MUST accept frames of up
+                    to 4096 octets large.
                     The minimum non-zero value for the frame-max field is 4096.
             heartbeat: short
                 desired heartbeat delay
-                The delay, in seconds, of the connection heartbeat that the server wants.  Zero means the server does
+                The delay, in seconds, of the connection heartbeat that the server wants.  Zero
+                means the server does
                 not want a heartbeat.
         """
         args = method.args
@@ -574,28 +599,35 @@ class Connection(AbstractChannel):
     def _send_tune_ok(self, channel_max, frame_max, heartbeat):
         """Negotiate connection tuning parameters
 
-        This method sends the client's connection tuning parameters to the server. Certain fields are negotiated, others
-        provide capability information.
+        This method sends the client's connection tuning parameters to the server. Certain fields
+        are negotiated, others provide capability information.
 
         PARAMETERS:
             channel_max: short
                 negotiated maximum channels
-                The maximum total number of channels that the client will use per connection.  May not be higher than
+                The maximum total number of channels that the client will use per connection.
+                May not be higher than
                 the value specified by the server.
                 RULE:
-                    The server MAY ignore the channel-max value or MAY use it for tuning its resource allocation.
+                    The server MAY ignore the channel-max value or MAY use it for tuning its
+                    resource allocation.
             frame_max: long
                 negotiated maximum frame size
-                The largest frame size that the client and server will use for the connection.  Zero means that the
-                client does not impose any specific limit but may reject very large frames if it cannot allocate
-                resources for them. Note that the frame-max limit applies principally to content frames, where large
+                The largest frame size that the client and server will use for the connection.
+                Zero means that the
+                client does not impose any specific limit but may reject very large frames if it
+                cannot allocate
+                resources for them. Note that the frame-max limit applies principally to content
+                frames, where large
                 contents can be broken into frames of arbitrary size.
                 RULE:
-                    Until the frame-max has been negotiated, both peers must accept frames of up to 4096 octets large.
+                    Until the frame-max has been negotiated, both peers must accept frames of up
+                    to 4096 octets large.
                     The minimum non-zero value for the frame- max field is 4096.
             heartbeat: short
                 desired heartbeat delay
-                The delay, in seconds, of the connection heartbeat that the client wants. Zero means the client does not
+                The delay, in seconds, of the connection heartbeat that the client wants. Zero
+                means the client does not
                 want a heartbeat.
         """
         args = AMQPWriter()
