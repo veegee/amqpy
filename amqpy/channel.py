@@ -129,7 +129,7 @@ class Channel(AbstractChannel):
         :param reply_code: the reply code
         :param reply_text: localized reply text
         :param method_type: if close is triggered by a failing method, this is the method that
-        caused it
+            caused it
         :type reply_code: int
         :type reply_text: str
         :type method_type: amqpy.spec.method_t
@@ -195,7 +195,7 @@ class Channel(AbstractChannel):
         restart method.
 
         :param active: True: peer starts sending content frames; False: peer stops sending content
-        frames
+            frames
         :type active: bool
         """
         args = AMQPWriter()
@@ -223,7 +223,7 @@ class Channel(AbstractChannel):
         Confirms to the peer that a flow command was received and processed.
 
         :param active: True: peer starts sending content frames; False: peer stops sending content
-        frames
+            frames
         :type active: bool
         """
         args = AMQPWriter()
@@ -276,11 +276,11 @@ class Channel(AbstractChannel):
         :param str exchange: exchange name
         :param str exch_type: exchange type (direct, fanout, etc.)
         :param bool passive: do not create exchange; client can use this to check whether an
-        exchange exists
+            exchange exists
         :param bool durable: mark exchange as durable (remain active after server restarts)
         :param bool auto_delete: auto-delete exchange when all queues have finished using it
         :param bool nowait: if set, the server will not respond to the method and the client should
-        not wait for a reply
+            not wait for a reply
         :param dict arguments: exchange declare arguments
         :raise AccessRefused: if attempting to declare an exchange with a reserved name (amq.*)
         :raise NotFound: if `passive` is enabled and the exchange does not exist
@@ -324,10 +324,10 @@ class Channel(AbstractChannel):
         :param str exchange: exchange name
         :param bool if_unused: delete only if unused (has no queue bindings)
         :param bool nowait: if set, the server will not respond to the method and the client should
-        not wait for a reply
+            not wait for a reply
         :raise NotFound: if exchange with `exchange` does not exist
         :raise PreconditionFailed: if attempting to delete a queue with bindings and `if_unused` is
-        set
+            set
         :return: None
         """
         args = AMQPWriter()
@@ -365,9 +365,9 @@ class Channel(AbstractChannel):
         :param str dest_exch: name of destination exchange to bind
         :param str source_exch: name of source exchange to bind
         :param str routing_key: routing key for the binding (note: not all exchanges use a
-        routing key)
+            routing key)
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
@@ -389,15 +389,14 @@ class Channel(AbstractChannel):
         """Unbind an exchange from an exchange
 
         * If the unbind fails, the server must raise a connection exception. The server must not
-        attempt to unbind an
-          exchange that does not exist from an exchange.
+            attempt to unbind an exchange that does not exist from an exchange.
         * Blank exchange names mean the default exchange.
 
         :param str dest_exch: destination exchange name
         :param str source_exch: source exchange name
         :param str routing_key: routing key to unbind
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
@@ -450,11 +449,11 @@ class Channel(AbstractChannel):
           404 (not found).
 
         :param str queue: name of queue to bind; blank refers to the last declared queue for this
-        channel
+            channel
         :param str exchange: name of exchange to bind to
         :param str routing_key: routing key for the binding
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         :param dict arguments: binding arguments, specific to the exchange class
         """
         arguments = {} if arguments is None else arguments
@@ -488,7 +487,7 @@ class Channel(AbstractChannel):
         * The client must not attempt to unbind a queue from an exchange that does not exist.
 
         :param str queue: name of queue to unbind, leave blank to refer to the last declared
-        queue on this channel
+            queue on this channel
         :param str exchange: name of exchange to unbind, leave blank to refer to default exchange
         :param str routing_key: routing key of binding
         :param dict arguments: binding arguments, specific to the exchange class
@@ -539,18 +538,18 @@ class Channel(AbstractChannel):
 
         :param str queue: queue name; leave blank to let the server generate a name automatically
         :param bool passive: do not create queue; client can use this to check whether a queue
-        exists
+            exists
         :param bool durable: mark as durable (remain active after server restarts)
         :param bool exclusive: mark as exclusive (can only be consumed from by this connection);
-        implies `auto_delete`
+            implies `auto_delete`
         :param bool auto_delete: auto-delete queue when all consumers have finished using it
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         :param dict arguments: exchange declare arguments
         :raise NotFound: if `passive` is enabled and the queue does not exist
         :raise AccessRefused: if an attempt is made to declare a queue with a reserved name
         :raise ResourceLocked: if an attempt is made to access an exclusive queue declared by
-        another open connection
+            another open connection
         :return: queue_declare_ok_t(queue, message_count, consumer_count), or None if `nowait`
         :rtype: queue_declare_ok_t or None
         """
@@ -589,12 +588,12 @@ class Channel(AbstractChannel):
         queue are cancelled.
 
         :param str queue: name of queue to delete, empty string refers to last declared queue on
-        this channel
+            this channel
         :param bool if_unused: delete only if unused (has no consumers); raise a channel
-        exception otherwise
+            exception otherwise
         :param bool if_empty: delete only if empty; raise a channel exception otherwise
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         :raise NotFound: if `queue` does not exist
         :raise PreconditionFailed: if `if_unused` or `if_empty` conditions are not met
         :return: number of messages deleted
@@ -638,9 +637,9 @@ class Channel(AbstractChannel):
         * If nowait is False, this method returns a message count.
 
         :param str queue: queue name to purge; leave blank to refer to last declared queue for
-        this channel
+            this channel
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         :return: message count (if nowait is False)
         :rtype: int or None
         """
@@ -682,9 +681,9 @@ class Channel(AbstractChannel):
         * If the `delivery_tag` is invalid, the server must raise a channel exception.
 
         :param int delivery_tag: server-assigned delivery tag; 0 means "all messages received so
-        far"
+            far"
         :param bool multiple: if set, the `delivery_tag` is treated as "all messages up to and
-        including"
+            including"
         """
         args = AMQPWriter()
         args.write_longlong(delivery_tag)
@@ -705,7 +704,7 @@ class Channel(AbstractChannel):
 
         :param str consumer_tag: consumer tag, valid only within the current connection and channel
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         """
         if self.connection is not None:
             self.no_ack_consumers.discard(consumer_tag)
@@ -786,7 +785,7 @@ class Channel(AbstractChannel):
         :param bool no_ack: server will not expect an ack for each message
         :param bool exclusive: request exclusive access
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         :param Callable callback: a callback callable(message) for each delivered message
         :param dict arguments: AMQP method arguments
         :param Callable on_cancel: a callback callable
@@ -1050,7 +1049,7 @@ class Channel(AbstractChannel):
         :param str exchange: exchange name, empty string means default exchange
         :param str routing_key: routing key
         :param bool mandatory: True: deliver to at least one queue, or return it; False: drop the
-        unroutable message
+            unroutable message
         :param bool immediate: request immediate delivery
         :type msg: amqpy.Message
         """
@@ -1074,7 +1073,7 @@ class Channel(AbstractChannel):
         :param exchange: exchange name, empty string means default exchange
         :param routing_key: routing key
         :param mandatory: True: deliver to at least one queue or return the message; False: drop
-        the unroutable message
+            the unroutable message
         :param immediate: request immediate delivery
         :type msg: amqpy.Message
         :type exchange: str
@@ -1147,7 +1146,7 @@ class Channel(AbstractChannel):
         * The server MUST raise a channel exception if this is called on a transacted channel.
 
         :param bool requeue: if set, the server will attempt to requeue the message, potentially
-        then delivering it to a different subscriber
+            then delivering it to a different subscriber
         """
         args = AMQPWriter()
         args.write_bit(requeue)
@@ -1165,7 +1164,7 @@ class Channel(AbstractChannel):
         * The server MUST raise a channel exception if this is called on a transacted channel.
 
         :param bool requeue: if set, the server will attempt to requeue the message, potentially
-        then delivering it to a different subscriber
+            then delivering it to a different subscriber
         """
         args = AMQPWriter()
         args.write_bit(requeue)
@@ -1296,7 +1295,7 @@ class Channel(AbstractChannel):
         reopen the channel, at which point this method can be called again successfully.
 
         :param bool nowait: if set, the server will not respond to the method and the client
-        should not wait for a reply
+            should not wait for a reply
         :raise PreconditionFailed: if the channel is in transactional mode
         """
         args = AMQPWriter()

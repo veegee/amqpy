@@ -123,7 +123,7 @@ class Message(GenericContent):
         * content_type (shortstr): MIME content type
         * content_encoding (shortstr): MIME content encoding
         * application_headers: (table): Message header field table: dict[str,
-        str|int|Decimal|datetime|dict]
+          str|int|Decimal|datetime|dict]
         * delivery_mode: (octet): Non-persistent (1) or persistent (2)
         * priority (octet): The message priority, 0 to 9
         * correlation_id (shortstr) The application correlation identifier
