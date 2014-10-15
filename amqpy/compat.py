@@ -19,7 +19,7 @@ if sys.version_info < (3, 3):
 
 def patch():
     if sys.version_info >= (3, 3):
-        pass
+        return
 
     time.perf_counter = time.clock
     builtins.TimeoutError = TimeoutError
