@@ -3,7 +3,6 @@ import re
 import os
 
 from docutils import nodes
-
 import sphinx.ext.autodoc
 
 sys.path.insert(0, os.path.abspath('../..'))
@@ -46,23 +45,12 @@ release = amqpy.__version__
 # directories to ignore when looking for source files.
 exclude_patterns = []
 
-# The reST default role (used for this markup: `text`) to use for all
-# documents.
 # default_role = None
 
-# If true, the current module name will be prepended to all description
-# unit titles (such as .. function::).
-# add_module_names = True
-
-# The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
-
-# If true, keep warnings as "system message" paragraphs in the built documents.
-# keep_warnings = False
-
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -126,6 +114,13 @@ htmlhelp_basename = 'amqpydoc'
 
 
 def get_field(doc: str, name: str):
+    """Parse ReST field from document
+
+    :param str doc: string of whole document
+    :param name: name of field excluding the surrounding `:`
+    :return: value of field
+    :rtype: str
+    """
     match = re.search(':{}: (.*)$'.format(name), doc, re.IGNORECASE | re.MULTILINE)
     if match:
         return match.group(1).strip()
@@ -139,27 +134,46 @@ def process_sig(app, what, name, obj, options, signature, return_annotation):
 
     rt = None
     if what == 'method' and not name.endswith('__init__'):
+        # annotate return type for methods (excluding __init__)
         if 'rtype' in doc:
             rt = get_field(doc, 'rtype')
             print(msg_meth.format(**locals()))
-        else:
-            # assume methods with undocumented rtype return `None`
+        elif obj.__doc__ is not None:
+            # assume methods with a docstring but undocumented rtype return `None`
             rt = 'None'
             print(msg_meth.format(**locals()))
+        else:
+            # no docstring defined
+            rt = '?'
+            print(msg_meth.format(**locals()))
     elif type(obj) is property:
+        # annotate return type for properties
         if 'rtype' in doc:
             rt = get_field(doc, 'rtype')
             print(msg_meth.format(**locals()))
         else:
+            # no docstring defined
             rt = '?'
             print(msg_meth.format(**locals()))
     elif what == 'class':
-        # bases = []
-        # for cls in obj.__bases__:
-        #     bases.append('{}.{}'.format(cls.__module__, cls.__name__))
-        # sig = ', '.join(bases)
-        # sig = '({})'.format(sig)
-        sig = ''
+        # modify the signature of classes to look like Python code
+        # check base classes
+        sig_items = []
+        for cls in obj.__bases__:
+            if cls.__module__ == 'builtins':
+                name = cls.__name__
+            else:
+                name = '{}.{}'.format(cls.__module__, cls.__name__)
+
+            if name in ['object']:
+                # exclude 'object'
+                continue
+
+            sig_items.append(name)
+
+        sig_str = ', '.join(sig_items)
+        sig = '({})'.format(sig_str) if sig_str else ''
+
         print(msg_class.format(**locals()))
         return sig, None
     else:
