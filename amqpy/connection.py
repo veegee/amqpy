@@ -268,7 +268,7 @@ class Connection(AbstractChannel):
         :param int reply_code: the reply code
         :param str reply_text: localized reply text
         :param method_type: if close is triggered by a failing method, this is the method that
-        caused it
+            caused it
         :type method_type: amqpy.spec.method_t
         """
         # signal to the heartbeat thread to stop sending heartbeats

@@ -2,9 +2,9 @@
 AMQP uses exceptions to handle errors:
 
 * Any operational error (message queue not found, insufficient access rights, etc.) results in a
-channel exception.
+  channel exception.
 * Any structural error (invalid argument, bad sequence of methods, etc.) results in a connection
-exception.
+  exception.
 
 According to the AMQP specification, an exception closes the associated channel or connection,  and
 returns a reply code and reply text to the client. However, amqpy will automatically re-open the

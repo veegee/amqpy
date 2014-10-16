@@ -33,7 +33,7 @@ class AbstractConsumer(metaclass=ABCMeta):
         :type channel: amqpy.channel.Channel
         :param str queue: queue
         :param str consumer_tag: consumer tag, local to the connection; leave blank to let server
-        auto-assign a tag
+            auto-assign a tag
         :param bool no_local: if True: do not deliver own messages
         :param bool no_ack: server will not expect an ack for each message
         :param bool exclusive: request exclusive access
