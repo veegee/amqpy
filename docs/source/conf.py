@@ -2,9 +2,10 @@ import sys
 import re
 import os
 
+from docutils import nodes
+
 import sphinx.ext.autodoc
 
-#on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 sys.path.insert(0, os.path.abspath('../..'))
 
 import amqpy
@@ -172,11 +173,39 @@ def process_sig(app, what, name, obj, options, signature, return_annotation):
 def process_doc(app, what, name, obj, options, lines):
     otype = str(type(obj))
     msg = '{what:11} {otype:23} {name:50}'
+
+    s = None
     if type(obj) == property:
-        s = '`(property)`'
-        lines.insert(0, s)
+        s = ':annotation:`@property`\n'
+    elif what == 'method' and hasattr(obj, '__isabstractmethod__') and obj.__isabstractmethod__:
+        s = ':annotation:`@abstractmethod`\n'
+
+    if s:
+        for line in reversed(s.split('\n')):
+            lines.insert(0, line)
+
+
+def generic_span_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    """
+    :param name: role name used in the document
+    :param rawtext: entire markup snippet, with role
+    :param text: text marked with the role
+    :param lineno: line number where rawtext appears in the input
+    :param inliner: inliner instance that called us
+    :param options: directive options for customization
+    :param content: directive content for customization
+    :return: list, list
+    :rtype: list, list
+    """
+    node = nodes.inline(rawtext, text)
+    node['classes'] = [name]
+    return [node], []
 
 
 def setup(app):
+    # register custom ReST roles
+    app.add_role('annotation', generic_span_role)
+
+    # connect methods to events
     app.connect('autodoc-process-signature', process_sig)
     app.connect('autodoc-process-docstring', process_doc)

@@ -224,3 +224,10 @@ cite {
 pre {
   color: #333;
 }
+
+/* styles for custom roles */
+.annotation {
+  border-radius: 4px;
+  padding: 4px;
+  background-color: #DED;
+}
