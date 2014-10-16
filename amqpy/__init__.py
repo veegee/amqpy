@@ -1,4 +1,4 @@
-VERSION = (0, 8, 1)
+VERSION = (0, 8, 2)
 __version__ = '.'.join(map(str, VERSION[0:3])) + ''.join(VERSION[3:])
 __author__ = 'veegee'
 __maintainer__ = 'veegee'
@@ -6,11 +6,11 @@ __contact__ = 'veegee@veegee.org'
 __homepage__ = 'http://github.com/veegee/amqpy'
 __docformat__ = 'restructuredtext'
 
-from .message import Message
-from .channel import Channel
 from .connection import Connection
+from .channel import Channel
+from .message import Message
 from .consumer import AbstractConsumer
-from .spec import basic_return_t, queue_declare_ok_t
+from .spec import basic_return_t, queue_declare_ok_t, method_t
 from .exceptions import (
     Timeout,
     AMQPError,
@@ -42,4 +42,5 @@ from .exceptions import (
     __all__ as _all_exceptions,
 )
 
-__all__ = ['Connection', 'Channel', 'Message'] + _all_exceptions
+__all__ = ['Connection', 'Channel', 'Message', 'AbstractConsumer',
+           'basic_return_t', 'queue_declare_ok_t', 'method_t'] + _all_exceptions
