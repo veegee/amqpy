@@ -65,11 +65,11 @@ class AbstractChannel(metaclass=ABCMeta):
         m = self._wait_method([method])
         return self.handle_method(m)
 
-    def wait_any(self, allowed_methods=None):
+    def wait_any(self, allowed_methods):
         """Wait for a method that matches any one of `allowed_methods`
 
-        :param allowed_methods: method to wait for, or `None` to wait for any method
-        :type allowed_methods: list[spec.method_t] or None
+        :param allowed_methods: list of methods to wait for
+        :type allowed_methods: list[spec.method_t]
         """
         m = self._wait_method(allowed_methods)
         return self.handle_method(m)
