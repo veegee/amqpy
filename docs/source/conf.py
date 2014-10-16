@@ -1,6 +1,7 @@
 import sys
 import re
 import os
+import inspect
 
 from docutils import nodes
 import sphinx.ext.autodoc
@@ -171,10 +172,22 @@ def process_sig(app, what, name, obj, options, signature, return_annotation):
 
             sig_items.append(name)
 
+        # check metaclass
+        try:
+            definition = inspect.getsourcelines(obj)[0][0].strip()
+            if 'metaclass' in definition:
+                cls = type(obj)
+                name = '{}.{}'.format(cls.__module__, cls.__name__)
+                sig_items.append('metaclass={}'.format(name))
+
+        except OSError:
+            pass
+
         sig_str = ', '.join(sig_items)
         sig = '({})'.format(sig_str) if sig_str else ''
 
         print(msg_class.format(**locals()))
+
         return sig, None
     else:
         rt = 'skip'
