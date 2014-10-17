@@ -1,6 +1,9 @@
 import gc
 
-from .. import Channel
+import pytest
+
+from .. import Channel, NotFound, FrameError, spec
+from ..proto import Method
 
 
 class TestConnection:
@@ -36,6 +39,35 @@ class TestConnection:
         conn.close()
         assert conn.connection is None
         assert conn.channels is None
+
+    def test_is_alive(self, conn):
+        assert conn.is_alive()
+
+    def test_is_alive_after_close(self, conn):
+        conn.close()
+        assert conn.is_alive() is False
+
+    def test_is_alive_chan_exception(self, conn, ch, rand_queue):
+        """Make sure connection is still alive after a channel exception
+        """
+        with pytest.raises(NotFound):
+            ch.queue_declare(rand_queue, passive=True)
+
+        assert conn.is_alive()
+
+    def test_is_alive_conn_exception(self, conn, rand_queue):
+        """Make sure is_alive() returns False after a connection exception
+        """
+        ch = Channel(conn, 10)
+
+        with pytest.raises(NotFound):
+            ch.queue_declare(rand_queue, passive=True)
+
+        with pytest.raises(FrameError):
+            conn.method_writer.write_method(Method(spec.Queue.Declare, channel_id=10))
+            conn.wait()
+
+        assert conn.is_alive() is False
 
     def test_gc_closed(self, conn):
         """Make sure we've broken various references when closing channels and connections, to help

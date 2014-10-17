@@ -86,8 +86,8 @@ class AbstractChannel(metaclass=ABCMeta):
         """
         # create a more convenient list of methods to check
         if isinstance(allowed_methods, list):
-            # we should always check of the incoming method is `Channel.Close`
-            allowed_methods = [spec.Channel.Close] + allowed_methods
+            # we should always check if the incoming method is a channel or connection close
+            allowed_methods = [spec.Channel.Close, spec.Connection.Close] + allowed_methods
 
         # check the channel's method queue
         method_queue = self.connection.channels[self.channel_id].method_queue

@@ -73,8 +73,6 @@ To do (goals for  v1.0.0)
 Tests
 -----
 
-- Test for ``Connection.is_alive()`` behaviour after various exceptions and
-  timeouts
 - Test with SSL (parametrize the connection fixture to use SSL)
 
 
