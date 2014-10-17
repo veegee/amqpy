@@ -3,8 +3,8 @@
 from abc import ABCMeta, abstractmethod
 from threading import Lock
 
+from .proto import Method
 from .exceptions import AMQPNotImplementedError, RecoverableConnectionError
-from .spec import Method
 from . import spec
 
 __all__ = ['AbstractChannel']
@@ -54,7 +54,9 @@ class AbstractChannel(metaclass=ABCMeta):
         if self.connection is None:
             raise RecoverableConnectionError('connection already closed')
 
-        self.connection.method_writer.write_method(self.channel_id, method)
+        if method.channel_id is None:
+            method.channel_id = self.channel_id
+        self.connection.method_writer.write_method(method)
 
     def wait(self, method=None):
         """Wait for the specified method from the server
@@ -132,7 +134,7 @@ class AbstractChannel(metaclass=ABCMeta):
 
         :param method: freshly received method from the server
         :param channel: channel object
-        :type method: amqpy.spec.Method
+        :type method: amqpy.proto.Method
         :type channel: amqpy.channel.Channel or None
         :return: the return value of the specific callback or method handler
         """

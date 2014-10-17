@@ -11,6 +11,7 @@ API documentation:
     amqpy.message
     amqpy.consumer
     amqpy.spec
+    amqpy.proto
     amqpy.exceptions
 
 

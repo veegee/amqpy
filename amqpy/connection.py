@@ -7,6 +7,7 @@ from array import array
 import pprint
 from threading import Event, Thread
 
+from .proto import Method, Frame
 from .method_framing import MethodReader, MethodWriter
 from .serialization import AMQPWriter
 from . import __version__
@@ -15,7 +16,7 @@ from .channel import Channel
 from .exceptions import ResourceError, AMQPConnectionError, error_for_code
 from .transport import create_transport
 from . import spec
-from .spec import Method, Frame, FrameType, method_t
+from .spec import FrameType, method_t
 from .concurrency import synchronized
 
 __all__ = ['Connection']
@@ -229,7 +230,7 @@ class Connection(AbstractChannel):
 
         :param float timeout: timeout
         :return: method
-        :rtype: amqpy.spec.Method
+        :rtype: amqpy.proto.Method
         """
         # check the method queue of each channel
         for ch_id, channel in self.channels.items():

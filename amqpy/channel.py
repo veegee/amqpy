@@ -3,10 +3,11 @@
 import logging
 from queue import Queue
 
+from .proto import Method
 from .concurrency import synchronized
 from .abstract_channel import AbstractChannel
 from .exceptions import ChannelError, ConsumerCancelled, error_for_code
-from .spec import basic_return_t, queue_declare_ok_t, method_t, Method
+from .spec import basic_return_t, queue_declare_ok_t, method_t
 from .serialization import AMQPWriter
 from . import spec
 

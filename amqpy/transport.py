@@ -6,10 +6,11 @@ import logging
 from threading import Lock
 from ssl import SSLError
 
+from .proto import Frame
 from .concurrency import synchronized
 from .exceptions import UnexpectedFrame
 from .utils import get_errno
-from .spec import FrameType, Frame
+from .spec import FrameType
 
 log = logging.getLogger('amqpy')
 
@@ -154,7 +155,7 @@ class AbstractTransport(metaclass=ABCMeta):
         from different channels.
 
         :return: frame
-        :rtype: amqpy.spec.Frame
+        :rtype: amqpy.proto.Frame
         """
         frame = Frame()
         try:
@@ -196,7 +197,7 @@ class AbstractTransport(metaclass=ABCMeta):
         from different channels.
 
         :param frame: frame
-        :type frame: amqpy.spec.Frame
+        :type frame: amqpy.proto.Frame
         """
         try:
             self.write(frame.data)

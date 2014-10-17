@@ -2,75 +2,24 @@ import socket
 from threading import Lock
 from collections import defaultdict, deque
 from queue import Queue
-import struct
 import logging
 
 from .concurrency import synchronized
-from .message import Message
 from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP
-from .serialization import AMQPReader
+from .proto import Method
 from . import spec
-from .spec import FrameType, Frame, Method, method_t
+from .spec import FrameType
 
 log = logging.getLogger('amqpy')
 
 __all__ = ['MethodReader']
 
-# these methods are followed by content headers and bodies
+# these received methods are followed by content headers and bodies
 _CONTENT_METHODS = [
     spec.Basic.Return,
     spec.Basic.Deliver,
     spec.Basic.GetOk,
 ]
-
-
-class PartialMessage:
-    """Helper class to build up a multi-frame `Method` with a complete `Message`
-    """
-
-    def __init__(self, method_type, args, channel):
-        """
-        :param method_type: method type
-        :param args: method args
-        :param channel: associated channel
-        :type method_type: method_t
-        :type args: AMQPReader, AMQPWriter
-        :type channel: int
-        """
-        self.method_type = method_type
-        self.args = args
-        self.channel = channel
-        self.msg = Message()
-        self.body_parts = bytearray()
-        self.expected_body_size = None
-
-    def add_header(self, payload):
-        """Add header to partial message
-
-        :param payload: frame payload of a `FrameType.HEADER` frame
-        :type payload: bytes
-        """
-        class_id, weight, self.expected_body_size = struct.unpack('>HHQ', payload[:12])
-        self.msg.load_properties(payload[12:])
-
-    def add_payload(self, payload):
-        """Add content to partial message
-
-        :param payload: frame payload of a `FrameType.BODY` frame
-        :type payload: bytes
-        """
-        self.body_parts.extend(payload)
-        if self.complete:
-            self.msg.body = bytes(self.body_parts)
-
-    @property
-    def complete(self):
-        """Check if message is complete
-
-        :return: message complete?
-        :rtype: bool
-        """
-        return self.expected_body_size == 0 or len(self.body_parts) == self.expected_body_size
 
 
 class MethodReader:
@@ -93,7 +42,7 @@ class MethodReader:
         # deque[Method or Exception]
         self.method_queue = deque()
         # dict[channel_id int: PartialMessage]
-        self.partial_messages = {}
+        self.partial_methods = {}
         # dict[channel_id int: frame_type int]
         self.expected_types = defaultdict(
             lambda: FrameType.METHOD)  # next expected frame type for each channel
@@ -139,32 +88,36 @@ class MethodReader:
 
     def _process_method_frame(self, frame):
         """Process method frame
-        """
-        channel = frame.channel
-        # noinspection PyTypeChecker
-        method_type = method_t(*struct.unpack('>HH', frame.payload[:4]))
-        args = AMQPReader(frame.payload[4:])
 
-        if method_type in _CONTENT_METHODS:
-            # save what we've got so far and wait for the content-header
-            self.partial_messages[channel] = PartialMessage(method_type, args, channel)
-            self.expected_types[channel] = spec.FrameType.HEADER
+        :param frame: incoming frame
+        :type frame: amqpy.proto.Frame
+        """
+        channel_id = frame.channel
+        method = Method()
+        method.load_method_frame(frame)
+
+        if method.method_type in _CONTENT_METHODS:
+            # save what we've got so far and wait for the content header frame
+            self.partial_methods[channel_id] = method
+            self.expected_types[channel_id] = spec.FrameType.HEADER
         else:
             # this is a complete method
-            method = Method(method_type, args, None, channel)
             self.method_queue.append(method)
 
     def _process_content_header(self, frame):
         """Process Content Header frames
-        """
-        partial = self.partial_messages[frame.channel]
-        partial.add_header(frame.payload)
 
-        if partial.complete:
+        :param frame: incoming frame
+        :type frame: amqpy.proto.Frame
+        """
+        #: :type: amqpy.proto.Method
+        method = self.partial_methods[frame.channel]
+        method.load_header_frame(frame)
+
+        if method.complete:
             # a bodyless message, we're done
-            method = Method(partial.method_type, partial.args, partial.msg, frame.channel)
             self.method_queue.append(method)
-            self.partial_messages.pop(frame.channel, None)
+            self.partial_methods.pop(frame.channel, None)
             del self.expected_types[frame.channel]  # reset expected frame type for this channel
         else:
             # next expected frame type is FrameType.BODY
@@ -172,15 +125,17 @@ class MethodReader:
 
     def _process_content_body(self, frame):
         """Process Content Body frames
-        """
-        partial = self.partial_messages[frame.channel]
-        partial.add_payload(frame.payload)
 
-        if partial.complete:
+        :param frame: incoming frame
+        :type frame: amqpy.proto.Frame
+        """
+        method = self.partial_methods[frame.channel]
+        method.load_body_frame(frame)
+
+        if method.complete:
             # message is complete, append it to the queue
-            method = Method(partial.method_type, partial.args, partial.msg, frame.channel)
             self.method_queue.append(method)
-            self.partial_messages.pop(frame.channel, None)
+            self.partial_methods.pop(frame.channel, None)
             del self.expected_types[frame.channel]  # reset expected frame type for this channel
 
     @synchronized('_method_read_lock')
@@ -188,7 +143,7 @@ class MethodReader:
         """Read a method from the peer
 
         :return: method
-        :rtype: amqpy.spec.Method
+        :rtype: amqpy.proto.Method
         """
         # fully read and process next method
         self._next_method()
@@ -208,7 +163,7 @@ class MethodReader:
         :param timeout: timeout
         :type timeout: float
         :return: method
-        :rtype: amqpy.spec.Method
+        :rtype: amqpy.proto.Method
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
         if timeout is None:
@@ -246,8 +201,8 @@ class MethodWriter:
         self.frame_max = frame_max
         self.methods_sent = 0  # total number of methods sent
 
-    def write_method(self, channel_id, method):
-        """Write method to connection, destined for the specified `channel_id`
+    def write_method(self, method):
+        """Write method to connection, destined for the channel as set in `method.channel_id`
 
         This implementation uses a queue internally to prepare all frames before writing in order
         to detect issues.
@@ -257,28 +212,23 @@ class MethodWriter:
         but not within the same channel. This means no more than one thread may safely operate on
         any given channel.
 
-        :param channel_id: channel
         :param method: method to write
-        :type channel_id: int
-        :type method: Method
+        :type method: amqpy.proto.Method
         """
         log.debug(
             '{:7} {} {}'.format('Write:', method.method_type, METHOD_NAME_MAP[method.method_type]))
         frames = Queue()
 
         # construct a method frame
-        frame = Frame(FrameType.METHOD, channel_id, method.pack_method())
-        frames.put(frame)
+        frames.put(method.dump_method_frame())
 
         if method.content:
             # construct a header frame
-            frame = Frame(FrameType.HEADER, channel_id, method.pack_header())
-            frames.put(frame)
+            frames.put(method.dump_header_frame())
 
             # construct one or more body frames, which contain the body of the `Message`
             chunk_size = self.frame_max - 8
-            for payload in method.pack_body(chunk_size):
-                frame = Frame(FrameType.BODY, channel_id, payload)
+            for frame in method.dump_body_frame(chunk_size):
                 frames.put(frame)
 
         while not frames.empty():
