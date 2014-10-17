@@ -1,4 +1,4 @@
-VERSION = (0, 8, 2)
+VERSION = (0, 8, 5)
 __version__ = '.'.join(map(str, VERSION[0:3])) + ''.join(VERSION[3:])
 __author__ = 'veegee'
 __maintainer__ = 'veegee'
