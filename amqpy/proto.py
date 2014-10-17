@@ -10,6 +10,10 @@ from .message import Message
 class Frame:
     """AMQP frame
 
+    A `Frame` represents the lowest-level packet of data specified by the AMQP 0.9.1
+    wire-level protocol. All methods and messages are packed into one or more frames before being
+    sent to the peer.
+
     The format of the AMQP frame is as follows::
 
         offset:         0      1         3         7                 size+7      size+8
@@ -33,6 +37,8 @@ class Frame:
         :type payload: bytes or bytearray
         """
         #: raw frame data; can be manually manipulated at any time
+        #:
+        #: :type: bytearray
         self.data = bytearray()
 
         self._frame_type = None
@@ -138,6 +144,7 @@ class Method:
         :type content: amqp.message.GenericContent or None
         :type channel_id: int or None
         """
+        #: :type: amqpy.spec.method_t
         self.method_type = method_type
 
         if isinstance(args, (AMQPReader, AMQPWriter)):
@@ -147,7 +154,9 @@ class Method:
         else:
             raise ValueError('args must be an instance of `AMQPReader` or `AMQPWriter`')
 
+        #: :type: amqpy.message.GenericContent or None
         self.content = content  # GenericContent if this method is carrying content
+        #: :type: int
         self.channel_id = channel_id
 
         self._body_bytes = bytearray()  # used internally to store encoded GenericContent body
@@ -198,11 +207,12 @@ class Method:
 
     @property
     def complete(self):
-        """Check if message is complete
+        """Check if the message that is carried by this method has been completely assembled,
+        i.e. the expected number of bytes have been loaded
 
         This method is intended to be called when constructing a `Method` from incoming data.
 
-        :return: True if message is complete, else False
+        :return: True if method is complete, else False
         :rtype: bool
         """
         return self._expected_body_size == 0 or len(self._body_bytes) == self._expected_body_size
@@ -264,7 +274,7 @@ class Method:
 
         This method is intended to be called when sending frames for an already-completed `Method`.
 
-        :return: 'FrameType.METHOD` frame
+        :return: `FrameType.METHOD` frame
         :rtype: amqpy.proto.Frame
         """
         frame = Frame(FrameType.METHOD, self.channel_id, self._pack_method())
@@ -275,7 +285,7 @@ class Method:
 
         This method is intended to be called when sending frames for an already-completed `Method`.
 
-        :return: 'FrameType.HEADER` frame
+        :return: `FrameType.HEADER` frame
         :rtype: amqpy.proto.Frame
         """
         frame = Frame(FrameType.HEADER, self.channel_id, self._pack_header())
@@ -288,7 +298,7 @@ class Method:
 
         :param chunk_size: body chunk size in bytes; this is typically the maximum frame size - 8
         :type chunk_size: int
-        :return: generator of 'FrameType.BODY` frames
+        :return: generator of `FrameType.BODY` frames
         :rtype: generator[amqpy.proto.Frame]
         """
         for payload in self._pack_body(chunk_size):
