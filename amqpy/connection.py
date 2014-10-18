@@ -8,7 +8,7 @@ import pprint
 from threading import Event, Thread
 
 from .proto import Method, Frame
-from .method_framing import MethodReader, MethodWriter
+from .method_io import MethodReader, MethodWriter
 from .serialization import AMQPWriter
 from . import __version__
 from .abstract_channel import AbstractChannel
