@@ -19,7 +19,7 @@ _UNAVAIL = errno.EAGAIN, errno.EINTR, errno.ENOENT
 AMQP_PROTOCOL_HEADER = b'AMQP\x00\x00\x09\x01'  # bytes([65, 77, 81, 80, 0, 0, 9, 1])
 
 
-class AbstractTransport(metaclass=ABCMeta):
+class Transport(metaclass=ABCMeta):
     """Common superclass for TCP and SSL transports"""
     connected = False
 
@@ -209,7 +209,7 @@ class AbstractTransport(metaclass=ABCMeta):
             raise
 
 
-class SSLTransport(AbstractTransport):
+class SSLTransport(Transport):
     """Transport that works over SSL
     """
 
@@ -250,7 +250,7 @@ class SSLTransport(AbstractTransport):
                 s = s[n:]
 
 
-class TCPTransport(AbstractTransport):
+class TCPTransport(Transport):
     """Transport that deals directly with TCP socket
     """
 
@@ -269,7 +269,7 @@ class TCPTransport(AbstractTransport):
 
 def create_transport(host, port, connect_timeout, frame_max, ssl_opts=None):
     """Given a few parameters from the Connection constructor, select and create a subclass of
-    AbstractTransport
+    Transport
 
     If `ssl_opts` is a dict, SSL will be used and `ssl_opts` will be passed to
     :func:`ssl.wrap_socket()`. In all other cases, SSL will not be used.

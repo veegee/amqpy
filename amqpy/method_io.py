@@ -31,21 +31,23 @@ class MethodReader:
     In the case of unexpected frames, an :exc:`ChannelError` is placed in the queue.
     """
 
-    def __init__(self, source):
+    def __init__(self, transport):
         """
-        :param source: connection source transport
-        :type source: amqpy.transport.TCPTransport or amqpy.transport.SSLTransport
+        :param transport: transport to read from
+        :type transport: amqpy.transport.Transport
         """
-        self.source = source
-        self.sock = source.sock
+        self.source = transport
+        self.sock = transport.sock
 
         # deque[Method or Exception]
         self.method_queue = deque()
+
         # dict[channel_id int: PartialMessage]
         self.partial_methods = {}
+
+        # next expected frame type for each channel
         # dict[channel_id int: frame_type int]
-        self.expected_types = defaultdict(
-            lambda: FrameType.METHOD)  # next expected frame type for each channel
+        self.expected_types = defaultdict(lambda: FrameType.METHOD)
 
         self.heartbeats = 0  # total number of heartbeats received
         self.frames_recv = 0  # total number of frames received
@@ -190,14 +192,14 @@ class MethodWriter:
     more than one thread is writing to any given `channel_id` at a time.
     """
 
-    def __init__(self, dest, frame_max):
+    def __init__(self, transport, frame_max):
         """
-        :param dest: destination transport
+        :param transport: transport to write to
         :param frame_max: maximum frame payload size in bytes
-        :type dest: amqpy.transport.AbstractTransport
+        :type transport: amqpy.transport.Transport
         :type frame_max: int
         """
-        self.dest = dest
+        self.dest = transport
         self.frame_max = frame_max
         self.methods_sent = 0  # total number of methods sent
 
