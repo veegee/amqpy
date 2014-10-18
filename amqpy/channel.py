@@ -537,6 +537,13 @@ class Channel(AbstractChannel):
           access a queue declared as exclusive by another open connection.
         * The server must ignore the `auto_delete` flag if the queue already exists.
 
+        RabbitMQ supports the following useful additional arguments:
+
+        * x-max-length (int): maximum queue size
+            * Queue length is a measure that takes into account ready messages, ignoring
+              unacknowledged messages and message size. Messages will be dropped or dead-lettered
+              from the front of the queue to make room for new messages once the limit is reached.
+
         :param str queue: queue name; leave blank to let the server generate a name automatically
         :param bool passive: do not create queue; client can use this to check whether a queue
             exists
@@ -554,7 +561,7 @@ class Channel(AbstractChannel):
         :return: queue_declare_ok_t(queue, message_count, consumer_count), or None if `nowait`
         :rtype: queue_declare_ok_t or None
         """
-        arguments = {} if arguments is None else arguments
+        arguments = arguments or {}
         args = AMQPWriter()
         args.write_short(0)
         args.write_shortstr(queue)
