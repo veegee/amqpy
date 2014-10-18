@@ -9,7 +9,7 @@ __all__ = ['Message']
 class GenericContent:
     """Base class for AMQP content
 
-    Subclasses should override the PROPERTIES attribute.
+    Subclasses should override :attr:`PROPERTIES`.
     """
     PROPERTIES = []
 
@@ -18,6 +18,9 @@ class GenericContent:
 
         :param dict properties: content properties
         """
+        #: Content properties
+        #:
+        #: :type: dict[str, str|dict]
         self.properties = properties
 
     def __eq__(self, other):
@@ -26,7 +29,7 @@ class GenericContent:
         return self.properties == other.properties
 
     def load_properties(self, raw_bytes):
-        """Load raw bytes into `self.properties`
+        """Load raw bytes into :attr:`self.properties`
 
         The `raw_bytes` are the payload of a `FrameType.HEADER` frame, starting at a byte-offset
         of 12.
@@ -57,7 +60,7 @@ class GenericContent:
         self.properties = d
 
     def serialize_properties(self):
-        """Serialize `self.properties` into raw bytes suitable to append to the payload of
+        """Serialize :attr:`self.properties` into raw bytes suitable to append to the payload of
         `FrameType.HEADER` frames
         """
         shift = 15
@@ -92,8 +95,8 @@ class Message(GenericContent):
     """
     CLASS_ID = spec.Basic.CLASS_ID
 
-    #: Instances of this class have these attributes, which are passed back and forth as message
-    #: properties between client and server
+    # instances of this class have these attributes, which are passed back and forth as message
+    # properties between client and server
     PROPERTIES = [
         ('content_type', 'shortstr'),
         ('content_encoding', 'shortstr'),
@@ -113,32 +116,33 @@ class Message(GenericContent):
 
     def __init__(self, body='', channel=None, **properties):
         """
-        :param body: message body
-        :param channel: associated channel
-        :type body: bytes or str
-        :type channel: amqpy.channel.Channel
+        If `body` is a `str`, then `content_encoding` will automatically be set to 'UTF-8', unless
+        explicitly specified.
 
-        `properties` can include:
-
-        * content_type (shortstr): MIME content type
-        * content_encoding (shortstr): MIME content encoding
-        * application_headers: (table): Message header field table:
-          dict[str, str|int|Decimal|datetime|dict]
-        * delivery_mode: (octet): Non-persistent (1) or persistent (2)
-        * priority (octet): The message priority, 0 to 9
-        * correlation_id (shortstr) The application correlation identifier
-        * reply_to (shortstr) The destination to reply to
-        * expiration (shortstr): Message expiration specification
-        * message_id (shortstr): The application message identifier
-        * timestamp (datetime.datetime): The message timestamp
-        * type (shortstr): The message type name
-        * user_id (shortstr): The creating user id
-        * app_id (shortstr): The creating application id
-        * cluster_id (shortstr): Intra-cluster routing identifier
-
-        example::
+        Example::
 
             msg = Message('hello world', content_type='text/plain', application_headers={'foo': 7})
+
+        :param body: message body
+        :param channel: associated channel
+        :param properties:
+            * content_type (shortstr): MIME content type
+            * content_encoding (shortstr): MIME content encoding
+            * application_headers: (table): Message header field table:
+              dict[str, str|int|Decimal|datetime|dict]
+            * delivery_mode: (octet): Non-persistent (1) or persistent (2)
+            * priority (octet): The message priority, 0 to 9
+            * correlation_id (shortstr) The application correlation identifier
+            * reply_to (shortstr) The destination to reply to
+            * expiration (shortstr): Message expiration specification
+            * message_id (shortstr): The application message identifier
+            * timestamp (datetime.datetime): The message timestamp
+            * type (shortstr): The message type name
+            * user_id (shortstr): The creating user id
+            * app_id (shortstr): The creating application id
+            * cluster_id (shortstr): Intra-cluster routing identifier
+        :type body: bytes or str
+        :type channel: amqpy.channel.Channel
         """
         super().__init__(properties)
 
@@ -150,6 +154,9 @@ class Message(GenericContent):
 
         #: Delivery info, set after receiving a message (dict)
         self.delivery_info = {}
+
+        if isinstance(body, str):
+            self.properties['content_encoding'] = properties.get('content_encoding', 'UTF-8')
 
     def __eq__(self, other):
         """Check if the properties and bodies of this Message and another Message are the same
@@ -180,8 +187,12 @@ class Message(GenericContent):
         return self.delivery_info.get('delivery_tag')
 
     def ack(self):
-        """`ack` message with basic_ack()
+        """Acknowledge message
 
         This is a convenience method which calls :meth:`self.channel.basic_ack()`
         """
-        self.channel.basic_ack(self.delivery_tag, False)
+        dt = self.delivery_tag
+        if dt is not None:
+            self.channel.basic_ack(self.delivery_tag)
+        else:
+            raise Exception('No delivery tag')
