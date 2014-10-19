@@ -1276,8 +1276,9 @@ class Channel(AbstractChannel):
         at least once on a channel before using the Commit or Rollback methods.
 
         The channel must not be in publish acknowledge mode. If it is, the server raises a
-        `PreconditionFailed` exception and closes the channel. Note that amqpy will automatically
-        reopen the channel, at which point this method can be called again successfully.
+        :exc:`PreconditionFailed` exception and closes the channel. Note that amqpy will
+        automatically reopen the channel, at which point this method can be called again
+        successfully.
 
         :raise PreconditionFailed: if the channel is in publish acknowledge mode
         """
@@ -1299,8 +1300,9 @@ class Channel(AbstractChannel):
         """Enable publisher confirms for this channel (RabbitMQ extension)
 
         The channel must not be in transactional mode. If it is, the server raises a
-        `PreconditionFailed` exception and closes the channel. Note that amqpy will automatically
-        reopen the channel, at which point this method can be called again successfully.
+        :exc:`PreconditionFailed` exception and closes the channel. Note that amqpy will
+        automatically reopen the channel, at which point this method can be called again
+        successfully.
 
         :param bool nowait: if set, the server will not respond to the method and the client
             should not wait for a reply
