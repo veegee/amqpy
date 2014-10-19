@@ -178,7 +178,7 @@ class FrameSyntaxError(IrrecoverableConnectionError):
 
 class InvalidCommand(IrrecoverableConnectionError):
     """The client sent an invalid sequence of frames, attempting to perform an operation that was
-    considered invalid by the server. This usually implies a programming error in the client. '
+    considered invalid by the server. This usually implies a programming error in the client.
     """
     code = 503
 
