@@ -8,30 +8,36 @@
 /*
 @import url(https://fonts.googleapis.com/css?family=Lato:400,700,700italic,900,900italic,400italic,300italic,300);
 */
+
+/* DejaVu Sans Mono 2.3.4, generated with FontSquirrel, with TTFAutohint option */
 @font-face {
   font-family: 'DejaVuSansMono';
-  src: url('fonts/DejaVuSansMono-webfont.woff') format('woff');
+  src: url('fonts/dejavusansmono-webfont.woff2') format('woff2'),
+       url('fonts/dejavusansmono-webfont.woff') format('woff');
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'DejaVuSansMono';
-  src: url('fonts/DejaVuSansMono-Oblique-webfont.woff') format('woff');
+  src: url('fonts/dejavusansmono-oblique-webfont.woff2') format('woff2'),
+       url('fonts/dejavusansmono-oblique-webfont.woff') format('woff');
   font-weight: normal;
   font-style: oblique;
 }
 
 @font-face {
   font-family: 'DejaVuSansMono';
-  src: url('fonts/DejaVuSansMono-Bold-webfont.woff') format('woff');
+  src: url('fonts/dejavusansmono-bold-webfont.woff2') format('woff2'),
+       url('fonts/dejavusansmono-bold-webfont.woff') format('woff');
   font-weight: bold;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'DejaVuSansMono';
-  src: url('fonts/DejaVuSansMono-BoldOblique-webfont.woff') format('woff');
+  src: url('fonts/dejavusansmono-boldoblique-webfont.woff2') format('woff2'),
+       url('fonts/dejavusansmono-boldoblique-webfont.woff') format('woff');
   font-weight: bold;
   font-style: oblique;
 }
@@ -256,6 +262,7 @@ table.field-list tbody th {
 /* code examples */
 pre {
   font-family: DejaVuSansMono, monospace;
+  font-size: 0.9em;
   color: #333;
 }
 
