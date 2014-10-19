@@ -372,8 +372,8 @@ class AMQPWriter:
             self.write(b'V')
         else:
             if k:
-                err = 'Table type {!r} for key {!r} not handled by amqpy. [value: {!r}]'.format(
-                    type(v), k, v)
+                err = 'Table type {!r} for key {!r} not handled by amqpy. [value: {!r}]' \
+                    .format(type(v), k, v)
             else:
                 err = 'Table type {!r} not handled by amqpy. [value: {!r}]'.format(type(v), v)
             raise FrameSyntaxError(err)

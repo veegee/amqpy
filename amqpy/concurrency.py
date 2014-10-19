@@ -34,7 +34,7 @@ def synchronized(lock_name):
                 tot_time = time.perf_counter() - start_time
                 if tot_time > 10:
                     # only log if waited for more than 10s to acquire lock
-                    log.debug('> Acquired lock for [{}] in: {:.3f}s'.format(f.__qualname__, tot_time))
+                    log.debug('Acquired lock for [{}] in: {:.3f}s'.format(f.__qualname__, tot_time))
             try:
                 retval = f(self, *args, **kwargs)
             finally:
