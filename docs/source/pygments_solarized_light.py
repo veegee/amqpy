@@ -60,7 +60,7 @@ class LightStyle(Style):
         Name:                   emph,               # class: 'n'
         Name.Attribute:         pri,                # class: 'na'
         Name.Builtin:           blue,               # class: 'nb'
-        Name.Builtin.Pseudo:    green,              # class: 'bp'
+        Name.Builtin.Pseudo:    blue,               # class: 'bp'
         Name.Class:             blue,               # class: 'nc'
         Name.Constant:          yellow,             # class: 'no'
         Name.Decorator:         orange,             # class: 'nd'
