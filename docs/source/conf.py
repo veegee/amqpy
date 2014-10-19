@@ -6,6 +6,7 @@ import inspect
 from docutils import nodes
 import sphinx.ext.autodoc
 
+sys.path.insert(0, os.path.abspath('.'))  # for Pygments Solarized style
 sys.path.insert(0, os.path.abspath('../..'))
 
 import amqpy
@@ -48,7 +49,7 @@ exclude_patterns = []
 
 # default_role = None
 
-pygments_style = 'sphinx'
+pygments_style = 'pygments_solarized_light.LightStyle'
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []

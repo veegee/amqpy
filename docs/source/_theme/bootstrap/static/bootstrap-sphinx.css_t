@@ -1,9 +1,13 @@
 /*
  * bootstrap-sphinx.css
- * ~~~~~~~~~~~~~~~~~~~~
+ * --------------------
  *
  * Sphinx stylesheet -- Bootstrap theme
  */
+
+/*
+@import url(https://fonts.googleapis.com/css?family=Lato:400,700,700italic,900,900italic,400italic,300italic,300);
+*/
 
 .navbar-inverse .brand {
   color: #FFF;
@@ -13,6 +17,7 @@
   top: 0px;
 }
 
+/* @formatter:off */
 {% if theme_navbar_fixed_top|tobool %}
   body {
     {% if theme_bootswatch_theme %}
@@ -35,22 +40,19 @@
     padding-right: 12px !important;
   }
 {% endif %}
+/* @formatter:on */
 
 table {
   border: 0;
 }
 
 .highlighttable .code pre {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 .highlighttable .linenos pre {
-    word-break: normal;
-    font-size: 12px;
-}
-
-div.highlight {
-  background: none;
+  word-break: normal;
+  font-size: 12px;
 }
 
 a.footnote-reference {
@@ -76,14 +78,13 @@ table.field-list {
 
 .footer {
   width: 100%;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid #CCC;
   padding-top: 10px;
 }
 
 .bs-sidenav form, .bs-sidenav #sourcelink {
   padding: 5px 20px;
 }
-
 
 /* The code below is based on the bootstrap website sidebar */
 
@@ -95,50 +96,52 @@ table.field-list {
 .bs-sidenav {
   margin-top: 30px;
   margin-bottom: 30px;
-  padding-top:    10px;
+  padding-top: 10px;
   padding-bottom: 10px;
-  text-shadow: 0 1px 0 #fff;
-  background-color: #f7f5fa;
+  text-shadow: 0 1px 0 #FFF;
+  background-color: #F7F5FA;
   border-radius: 5px;
 }
 
 /* All levels of nav */
 .bs-sidenav .nav > li > a {
   display: block;
-  color: #716b7a;
+  color: #716B7A;
   padding: 5px 20px;
 }
+
 .bs-sidenav .nav > li > a:hover,
 .bs-sidenav .nav > li > a:focus {
   text-decoration: none;
-  background-color: #e5e3e9;
-  border-right: 1px solid #dbd8e0;
+  background-color: #E5E3E9;
+  border-right: 1px solid #DBD8E0;
 }
+
 .bs-sidenav .nav > .active > a,
 .bs-sidenav .nav > .active:hover > a,
 .bs-sidenav .nav > .active:focus > a {
   font-weight: bold;
-  color: #563d7c;
+  color: #563D7C;
   background-color: transparent;
-  border-right: 1px solid #563d7c;
+  border-right: 1px solid #563D7C;
 }
 
 .bs-sidenav .nav .nav > li > a {
-  padding-top:    3px;
+  padding-top: 3px;
   padding-bottom: 3px;
   padding-left: 30px;
   font-size: 90%;
 }
 
 .bs-sidenav .nav .nav .nav > li > a {
-  padding-top:    3px;
+  padding-top: 3px;
   padding-bottom: 3px;
   padding-left: 40px;
   font-size: 90%;
 }
 
 .bs-sidenav .nav .nav .nav .nav > li > a {
-  padding-top:    3px;
+  padding-top: 3px;
   padding-bottom: 3px;
   padding-left: 50px;
   font-size: 90%;
@@ -149,24 +152,29 @@ table.field-list {
   .bs-sidenav .nav > .active > ul {
     display: block;
   }
+
   /* Widen the fixed sidenav */
   .bs-sidenav.affix,
   .bs-sidenav.affix-bottom {
     width: 213px;
   }
+
   .bs-sidenav.affix {
     position: fixed; /* Undo the static from mobile first approach */
     top: 80px;
   }
+
   .bs-sidenav.affix-bottom {
     position: absolute; /* Undo the static from mobile first approach */
   }
+
   .bs-sidenav.affix-bottom .bs-sidenav,
   .bs-sidenav.affix .bs-sidenav {
     margin-top: 0;
     margin-bottom: 0;
   }
 }
+
 @media screen and (min-width: 1200px) {
   /* Widen the fixed sidenav again */
   .bs-sidenav.affix-bottom,
@@ -175,10 +183,15 @@ table.field-list {
   }
 }
 
+/* custom styles
+ * ============= */
 
+tt {
+  font-family: "DejaVu Sans Mono", monospace;
+}
 
-/* format headings nicely */
 dt {
+  /*font-family: "DejaVu Sans Mono", monospace;*/
   font-weight: normal;
 }
 
@@ -191,6 +204,7 @@ dl.class > dd {
   padding-left: 40px;
 }
 
+/* indent methods, exceptions, and attributes */
 dl.method > dd {
   padding-left: 40px;
 }
@@ -203,6 +217,7 @@ dl.attribute > dd {
   padding-left: 40px;
 }
 
+/* adjust spacing for field lists */
 table.field-list tbody td, table.field-list tbody th {
   padding: 3px;
 }
@@ -211,21 +226,43 @@ table.field-list tbody th {
   padding-right: 10px;
 }
 
-/* single backtick-wrapped text */
-cite {
-    font-family: "Courier New", monospace;
-    padding: 0px 4px;
-    color: #c7254e;
-    background-color: #f9f2f4;
-    border-radius: 4px;
-}
-
-/* for code examples */
+/* code examples */
 pre {
+  font-family: "DejaVu Sans Mono", monospace;
   color: #333;
 }
 
-/* styles for custom roles */
+div.highlight pre {
+  /* inherit the background set by the Pygments style */
+  /*background: inherit; (disable for now, default looks better) */
+}
+
+/* inline literals
+ * --------------- */
+
+/* `some text`, ``code`` */
+cite, code {
+  font-family: "DejaVu Sans Mono", monospace;
+  font-size: 0.95em;
+  padding: 0px 4px;
+  color: #C7254E;
+  background-color: #F9F2F4;
+  border-radius: 4px;
+}
+
+/* :attr:`self.some_variable` */
+tt.xref span.pre {
+  font-weight: normal;
+  font-size: 0.95em;
+  padding: 0px 4px;
+  border-radius: 4px;
+  background-color: #ECF0F1;
+}
+
+/* styles for custom roles
+ * ----------------------- */
+
+/* :annotation:`@property` */
 .annotation {
   border-radius: 4px;
   padding: 4px;
