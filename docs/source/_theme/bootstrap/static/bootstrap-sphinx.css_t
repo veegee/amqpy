@@ -8,6 +8,33 @@
 /*
 @import url(https://fonts.googleapis.com/css?family=Lato:400,700,700italic,900,900italic,400italic,300italic,300);
 */
+@font-face {
+  font-family: 'DejaVuSansMono';
+  src: url('fonts/DejaVuSansMono-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'DejaVuSansMono';
+  src: url('fonts/DejaVuSansMono-Oblique-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: oblique;
+}
+
+@font-face {
+  font-family: 'DejaVuSansMono';
+  src: url('fonts/DejaVuSansMono-Bold-webfont.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'DejaVuSansMono';
+  src: url('fonts/DejaVuSansMono-BoldOblique-webfont.woff') format('woff');
+  font-weight: bold;
+  font-style: oblique;
+}
 
 .navbar-inverse .brand {
   color: #FFF;
@@ -187,11 +214,11 @@ table.field-list {
  * ============= */
 
 tt {
-  font-family: "DejaVu Sans Mono", monospace;
+  font-family: DejaVuSansMono, monospace;
 }
 
 dt {
-  /*font-family: "DejaVu Sans Mono", monospace;*/
+  /*font-family: DejaVuSansMono, monospace;*/
   font-weight: normal;
 }
 
@@ -228,7 +255,7 @@ table.field-list tbody th {
 
 /* code examples */
 pre {
-  font-family: "DejaVu Sans Mono", monospace;
+  font-family: DejaVuSansMono, monospace;
   color: #333;
 }
 
@@ -242,8 +269,8 @@ div.highlight pre {
 
 /* `some text`, ``code`` */
 cite, code {
-  font-family: "DejaVu Sans Mono", monospace;
-  font-size: 0.95em;
+  font-family: DejaVuSansMono, monospace;
+  font-size: 0.90em;
   padding: 0px 4px;
   color: #C7254E;
   background-color: #F9F2F4;
@@ -253,7 +280,7 @@ cite, code {
 /* :attr:`self.some_variable` */
 tt.xref span.pre {
   font-weight: normal;
-  font-size: 0.95em;
+  font-size: 0.90em;
   padding: 0px 4px;
   border-radius: 4px;
   background-color: #ECF0F1;
