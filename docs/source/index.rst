@@ -126,8 +126,8 @@ amqpy uses the excellent **tox** and **pytest** frameworks. To run all tests, si
 RabbitMQ server. No additional configuration is necessary for RabbitMQ. Then run in the project
 root::
 
-    pip install pytest
-    py.test
+    $ pip install pytest
+    $ py.test
 
 
 Indices and Tables
