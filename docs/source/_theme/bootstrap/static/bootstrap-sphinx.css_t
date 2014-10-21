@@ -275,7 +275,7 @@ div.highlight pre {
  * --------------- */
 
 /* `some text`, ``code`` */
-cite, code {
+cite {
   font-family: DejaVuSansMono, monospace;
   font-size: 0.90em;
   padding: 0px 4px;
