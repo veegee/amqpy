@@ -274,19 +274,31 @@ div.highlight pre {
 /* inline literals
  * --------------- */
 
-/* `some text`, ``code`` */
+/* `some text` */
 cite {
   font-family: DejaVuSansMono, monospace;
   font-size: 0.90em;
-  padding: 0px 4px;
   color: #C7254E;
+  padding: 0px 4px;
   background-color: #F9F2F4;
   border-radius: 4px;
 }
 
-/* :attr:`self.some_variable` */
-tt.xref span.pre {
+/* ``code`` */
+code {
+  font-family: DejaVuSansMono, monospace;
+  font-size: inherit;
+  color: inherit;
+  padding: 0;
+}
+
+span.pre {
+  font-family: DejaVuSansMono, monospace;
   font-weight: normal;
+}
+
+/* :attr:`self.some_variable` */
+tt.xref span.pre, code.xref span.pre {
   font-size: 0.90em;
   padding: 0px 4px;
   border-radius: 4px;
