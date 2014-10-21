@@ -1,7 +1,7 @@
 import sys
-import re
 import os
 import inspect
+import re
 
 from docutils import nodes
 import sphinx.ext.autodoc
@@ -128,7 +128,7 @@ def get_field(doc: str, name: str):
         return match.group(1).strip()
 
 
-def process_sig(app, what, name, obj, options, signature, return_annotation):
+def autodoc_process_signature(app, what, name, obj, options, signature, return_annotation):
     doc = str(obj.__doc__)
     otype = str(type(obj))
     msg_meth = '{what:11} {otype:23} {name:50} -> {rt}'
@@ -198,7 +198,7 @@ def process_sig(app, what, name, obj, options, signature, return_annotation):
         return signature, rt
 
 
-def process_doc(app, what, name, obj, options, lines):
+def autodoc_process_docstring(app, what, name, obj, options, lines):
     otype = str(type(obj))
     msg = '{what:11} {otype:23} {name:50}'
 
@@ -211,6 +211,17 @@ def process_doc(app, what, name, obj, options, lines):
     if s:
         for line in reversed(s.split('\n')):
             lines.insert(0, line)
+
+
+def autodoc_skip_member(app, what, name, obj, sphinx_skip, options):
+    skip = False
+    doc = obj.__doc__
+    if type(obj) is property:
+        if doc and re.match('Alias for field number \d+$', doc):
+            # this is a namedtuple property
+            skip = True
+
+    return sphinx_skip or skip
 
 
 def generic_span_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
@@ -235,5 +246,6 @@ def setup(app):
     app.add_role('annotation', generic_span_role)
 
     # connect methods to events
-    app.connect('autodoc-process-signature', process_sig)
-    app.connect('autodoc-process-docstring', process_doc)
+    app.connect('autodoc-process-signature', autodoc_process_signature)
+    app.connect('autodoc-process-docstring', autodoc_process_docstring)
+    app.connect('autodoc-skip-member', autodoc_skip_member)
