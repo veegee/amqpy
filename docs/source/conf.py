@@ -5,6 +5,7 @@ import re
 
 from docutils import nodes
 import sphinx.ext.autodoc
+import sphinx
 
 sys.path.insert(0, os.path.abspath('.'))  # for Pygments Solarized style
 sys.path.insert(0, os.path.abspath('../..'))
@@ -56,8 +57,7 @@ pygments_style = 'pygments_solarized_light.LightStyle'
 
 # -- Options for HTML output ----------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
+html_context = {'sphinx_versioninfo': sphinx.version_info}
 
 html_theme_path = ['_theme']
 html_theme = 'bootstrap'
@@ -106,7 +106,7 @@ html_theme_options = {
     'bootswatch_theme': 'flatly',
 }
 
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # Custom sidebar templates, maps document names to template names.
 # html_sidebars = {}
@@ -199,18 +199,24 @@ def autodoc_process_signature(app, what, name, obj, options, signature, return_a
 
 
 def autodoc_process_docstring(app, what, name, obj, options, lines):
-    otype = str(type(obj))
-    msg = '{what:11} {otype:23} {name:50}'
-
-    s = None
+    s_before = None
+    s_after = None
     if type(obj) == property:
-        s = ':annotation:`@property`\n'
+        s_before = ':annotation:`@property`\n'
+        # this as a @property
     elif what == 'method' and hasattr(obj, '__isabstractmethod__') and obj.__isabstractmethod__:
-        s = ':annotation:`@abstractmethod`\n'
+        # this is an @abstractmethod
+        s_before = ':annotation:`@abstractmethod`\n'
+    elif what == 'class' and tuple in obj.__bases__ and hasattr(obj, '_fields'):
+        # this is a namedtuple
+        lines[0] = '**namedtuple** :namedtuple:`{}`'.format(lines[0])
 
-    if s:
-        for line in reversed(s.split('\n')):
+    if s_before:
+        for line in reversed(s_before.split('\n')):
             lines.insert(0, line)
+    if s_after:
+        for line in s_after.split('\n'):
+            lines.append(line)
 
 
 def autodoc_skip_member(app, what, name, obj, sphinx_skip, options):
@@ -244,6 +250,7 @@ def generic_span_role(name, rawtext, text, lineno, inliner, options={}, content=
 def setup(app):
     # register custom ReST roles
     app.add_role('annotation', generic_span_role)
+    app.add_role('namedtuple', generic_span_role)
 
     # connect methods to events
     app.connect('autodoc-process-signature', autodoc_process_signature)

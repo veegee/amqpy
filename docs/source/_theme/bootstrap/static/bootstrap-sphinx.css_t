@@ -13,7 +13,7 @@
 @font-face {
   font-family: 'DejaVuSansMono';
   src: url('fonts/dejavusansmono-webfont.woff2') format('woff2'),
-       url('fonts/dejavusansmono-webfont.woff') format('woff');
+  url('fonts/dejavusansmono-webfont.woff') format('woff');
   font-weight: normal;
   font-style: normal;
 }
@@ -21,7 +21,7 @@
 @font-face {
   font-family: 'DejaVuSansMono';
   src: url('fonts/dejavusansmono-oblique-webfont.woff2') format('woff2'),
-       url('fonts/dejavusansmono-oblique-webfont.woff') format('woff');
+  url('fonts/dejavusansmono-oblique-webfont.woff') format('woff');
   font-weight: normal;
   font-style: oblique;
 }
@@ -29,7 +29,7 @@
 @font-face {
   font-family: 'DejaVuSansMono';
   src: url('fonts/dejavusansmono-bold-webfont.woff2') format('woff2'),
-       url('fonts/dejavusansmono-bold-webfont.woff') format('woff');
+  url('fonts/dejavusansmono-bold-webfont.woff') format('woff');
   font-weight: bold;
   font-style: normal;
 }
@@ -37,7 +37,7 @@
 @font-face {
   font-family: 'DejaVuSansMono';
   src: url('fonts/dejavusansmono-boldoblique-webfont.woff2') format('woff2'),
-       url('fonts/dejavusansmono-boldoblique-webfont.woff') format('woff');
+  url('fonts/dejavusansmono-boldoblique-webfont.woff') format('woff');
   font-weight: bold;
   font-style: oblique;
 }
@@ -219,12 +219,7 @@ table.field-list {
 /* custom styles
  * ============= */
 
-tt {
-  font-family: DejaVuSansMono, monospace;
-}
-
 dt {
-  /*font-family: DejaVuSansMono, monospace;*/
   font-weight: normal;
 }
 
@@ -259,6 +254,23 @@ table.field-list tbody th {
   padding-right: 10px;
 }
 
+div.highlight pre {
+  /* inherit the background set by the Pygments style */
+  /*background: inherit; (disable for now, default looks better) */
+}
+
+{% if sphinx_versioninfo < (1, 3) %}
+/* Sphinx 1.2
+ * ========== */
+tt {
+  font-family: DejaVuSansMono, monospace;
+}
+
+dt {
+  /*font-family: DejaVuSansMono, monospace;*/
+  font-weight: normal;
+}
+
 /* code examples */
 pre {
   font-family: DejaVuSansMono, monospace;
@@ -274,36 +286,67 @@ div.highlight pre {
 /* inline literals
  * --------------- */
 
-/* `some text` */
-cite {
+/* `some text`, ``code`` */
+cite, code {
   font-family: DejaVuSansMono, monospace;
   font-size: 0.90em;
-  color: #C7254E;
   padding: 0px 4px;
+  color: #C7254E;
   background-color: #F9F2F4;
   border-radius: 4px;
 }
 
-/* ``code`` */
-code {
-  font-family: DejaVuSansMono, monospace;
-  font-size: inherit;
-  color: inherit;
-  padding: 0;
-}
-
-span.pre {
-  font-family: DejaVuSansMono, monospace;
-  font-weight: normal;
-}
-
 /* :attr:`self.some_variable` */
-tt.xref span.pre, code.xref span.pre {
+tt.xref span.pre {
+  font-weight: normal;
   font-size: 0.90em;
   padding: 0px 4px;
   border-radius: 4px;
   background-color: #ECF0F1;
 }
+
+{% else %}
+/* Sphinx 1.3
+ * ========== */
+
+/* code and preformatted text */
+cite, code, pre {
+  font-family: DejaVuSansMono, monospace;
+  font-weight: normal;
+  font-size: 0.9em;
+  color: #2C3E50;
+}
+
+/* class/method definitions */
+code.descclassname, code.descname {
+  padding: 0;
+}
+
+/* module path (in class definition) */
+code.descclassname {
+  font-size: 1em;
+}
+
+/* definition name */
+code.descname {
+  font-size: 1.2em;
+}
+
+/* `cite`, ``inline literal`` (red text) */
+cite, code.docutils.literal {
+  background-color: #F9F2F4;
+  border-radius: 4px;
+  color: #C7254E;
+  font-weight: normal;
+  padding: 0 4px;
+}
+
+/* make links in literals the same color as links */
+a code.docutils.literal {
+  color: inherit;
+}
+
+{% endif %}
 
 /* styles for custom roles
  * ----------------------- */
@@ -313,4 +356,14 @@ tt.xref span.pre, code.xref span.pre {
   border-radius: 4px;
   padding: 4px;
   background-color: #DED;
+}
+
+.namedtuple {
+  background-color: #F9F2F4;
+  border-radius: 4px;
+  color: #2C3E50;
+  font-family: DejaVuSansMono, monospace;
+  font-size: 0.9em;
+  font-weight: normal;
+  padding: 0 4px;
 }
