@@ -26,8 +26,7 @@ class AbstractConsumer(metaclass=ABCMeta):
     """
 
     def __init__(self, channel, queue, consumer_tag='', no_local=False, no_ack=False,
-                 exclusive=False,
-                 use_thread=False):
+                 exclusive=False, use_thread=False):
         """
         :param channel: channel
         :type channel: amqpy.channel.Channel
