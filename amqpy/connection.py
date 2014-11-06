@@ -40,7 +40,7 @@ class Connection(AbstractChannel):
     def __init__(self, *, host='localhost', port=5672, ssl=None, connect_timeout=None,
                  userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/',
                  locale='en_US',
-                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False,
+                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False, ahbd=False,
                  client_properties=None,
                  on_blocked=None, on_unblocked=None):
         """Create a connection to the specified host
@@ -60,6 +60,7 @@ class Connection(AbstractChannel):
         :param int channel_max: maximum number of channels
         :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
+        :param bool ahbd: auto heartbeat thread daemon mode
         :param bool auto_heartbeat: enable automatic heartbeats thread
         :param client_properties: dict of client properties
         :param on_blocked: callback on connection blocked
@@ -133,7 +134,7 @@ class Connection(AbstractChannel):
         self.heartbeat_thread = None
         if auto_heartbeat:
             log.debug('Start automatic heartbeat thread')
-            t = Thread(target=self._heartbeat_thread, name='HeartbeatThread')
+            t = Thread(target=self._heartbeat_thread, name='HeartbeatThread', daemon=ahbd)
             t.start()
             self.heartbeat_thread = t
 
