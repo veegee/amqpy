@@ -1,7 +1,7 @@
 Python 3 AMQP 0.9.1 client library
 ==================================
 
-:Version: 0.8.9
+:Version: 0.8.10
 :Web: http://amqpy.readthedocs.org/
 :Download: http://pypi.python.org/pypi/amqpy/
 :Source: http://github.com/veegee/amqpy
