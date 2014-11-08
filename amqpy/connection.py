@@ -40,7 +40,7 @@ class Connection(AbstractChannel):
     def __init__(self, *, host='localhost', port=5672, ssl=None, connect_timeout=None,
                  userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/',
                  locale='en_US',
-                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False, ahbd=False,
+                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False, ahbd=True,
                  client_properties=None,
                  on_blocked=None, on_unblocked=None):
         """Create a connection to the specified host
