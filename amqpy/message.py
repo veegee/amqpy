@@ -193,6 +193,19 @@ class Message(GenericContent):
         """
         dt = self.delivery_tag
         if dt is not None:
-            self.channel.basic_ack(self.delivery_tag)
+            self.channel.basic_ack(dt)
+        else:
+            raise Exception('No delivery tag')
+
+    def reject(self, requeue):
+        """Reject message
+
+        This is a convenience method which calls :meth:`self.channel.basic_reject()`
+
+        :param bool requeue: requeue if True else discard the message
+        """
+        dt = self.delivery_tag
+        if dt is not None:
+            self.channel.basic_reject(dt, requeue)
         else:
             raise Exception('No delivery tag')
