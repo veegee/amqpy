@@ -80,11 +80,25 @@ class Connection(AbstractChannel):
         # the connection object itself is treated as channel 0
         super().__init__(self, 0)
 
-        # declare instance variables initialized in `self.connect()`
+        ## instance variables
         self.transport = None
         self.method_reader = None
         self.method_writer = None
         self._wait_tune_ok = None
+
+        # properties set in the start method, after a connection is established
+        self.version_major = 0
+        self.version_minor = 0
+        self.server_properties = {}
+        self.mechanisms = []
+        self.locales = []
+
+        # properties set in the Tune method
+        self.channel_max = channel_max
+        self.frame_max = frame_max
+        self._avail_channel_ids = array('H', range(self.channel_max, 0, -1))
+        self._heartbeat_final = 0  # final heartbeat interval after negotiation
+        self._heartbeat_server = None
 
         # save connection parameters
         self._host = host
@@ -96,37 +110,17 @@ class Connection(AbstractChannel):
         self._login_method = login_method
         self._virtual_host = virtual_host
         self._locale = locale
-        self._heartbeat = heartbeat
+        self._heartbeat_client = heartbeat  # original heartbeat interval value proposed by client
         self._auto_heartbeat = auto_heartbeat
         self._daemon = daemon
         self._client_properties = client_properties
 
-        # properties set in the Tune method
-        self.channel_max = channel_max
-        self.frame_max = frame_max
-        # final heartbeat interval value (in float seconds) after negotiation
-        self.heartbeat = 0
-        # original heartbeat interval value proposed by client
-        self.client_heartbeat = heartbeat
-        # original heartbeat interval proposed by server
-        self.server_heartbeat = None
-
-        # callbacks
+        ## callbacks
         self.on_blocked = on_blocked
         self.on_unblocked = on_unblocked
 
-        self._avail_channel_ids = array('H', range(self.channel_max, 0, -1))
-
-        # properties set in the start method, after a connection is established
-        self.version_major = 0
-        self.version_minor = 0
-        self.server_properties = {}
-        self.mechanisms = []
-        self.locales = []
-
-        # connection closed event used by the heartbeat thread
+        ## heartbeat
         self._close_event = Event()
-
         self.heartbeat_thread = None
 
         self.connect()
@@ -135,11 +129,10 @@ class Connection(AbstractChannel):
         """Connect using saved connection parameters
 
         This method does not need to be called explicitly; it is called by the constructor during
-        initialization and if necessary, if the connection terminates unexpectedly.
+        initialization.
 
-        Note::
-
-            Reconnecting invalidates delivery tags and consumer tags.
+        Note: reconnecting invalidates all declarations (channels, queues, consumers, delivery tags,
+        etc.).
         """
         # start the connection; this also sends the connection protocol header
         self.transport = create_transport(self._host, self._port, self._connect_timeout,
@@ -333,7 +326,7 @@ class Connection(AbstractChannel):
         # `is_alive()` sends heartbeats if the connection is alive
         while self.is_alive():
             # `close` is set to true if the `close_event` is signalled
-            close = self._close_event.wait(self.heartbeat / 1.5)
+            close = self._close_event.wait(self._heartbeat_final / 1.5)
             if close:
                 break
 
@@ -617,26 +610,26 @@ class Connection(AbstractChannel):
                 not want a heartbeat.
         """
         args = method.args
-        client_heartbeat = self.client_heartbeat or 0
+        client_heartbeat = self._heartbeat_client or 0
         # maximum number of channels that the server supports
         self.channel_max = min(args.read_short(), self.channel_max)
         # largest frame size the server proposes for the connection
         self.frame_max = min(args.read_long(), self.frame_max)
         self.method_writer.frame_max = self.frame_max
         # heartbeat interval proposed by server
-        self.server_heartbeat = args.read_short() or 0
+        self._heartbeat_server = args.read_short() or 0
 
         # negotiate the heartbeat interval to the smaller of the specified values
-        if self.server_heartbeat == 0 or client_heartbeat == 0:
-            self.heartbeat = max(self.server_heartbeat, client_heartbeat)
+        if self._heartbeat_server == 0 or client_heartbeat == 0:
+            self._heartbeat_final = max(self._heartbeat_server, client_heartbeat)
         else:
-            self.heartbeat = min(self.server_heartbeat, client_heartbeat)
+            self._heartbeat_final = min(self._heartbeat_server, client_heartbeat)
 
         # Ignore server heartbeat if client_heartbeat is disabled
-        if not self.client_heartbeat:
-            self.heartbeat = 0
+        if not self._heartbeat_client:
+            self._heartbeat_final = 0
 
-        self._send_tune_ok(self.channel_max, self.frame_max, self.heartbeat)
+        self._send_tune_ok(self.channel_max, self.frame_max, self._heartbeat_final)
 
     def _send_tune_ok(self, channel_max, frame_max, heartbeat):
         """Negotiate connection tuning parameters
