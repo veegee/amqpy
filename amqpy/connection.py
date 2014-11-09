@@ -6,6 +6,7 @@ import socket
 from array import array
 import pprint
 from threading import Event, Thread
+from datetime import datetime
 
 from .proto import Method, Frame
 from .method_io import MethodReader, MethodWriter
@@ -120,7 +121,8 @@ class Connection(AbstractChannel):
         self.on_unblocked = on_unblocked
 
         ## heartbeat
-        self._close_event = Event()
+        self.last_heartbeat_sent = None
+        self._close_event = None  # Event(): the heartbeat thread listens for this event to exit
         self.heartbeat_thread = None
 
         self.connect()
@@ -163,11 +165,16 @@ class Connection(AbstractChannel):
         self._send_open(self._virtual_host)
 
         # set up automatic heartbeats
+        self._close_event = Event()
         if self._auto_heartbeat:
             log.debug('Start automatic heartbeat thread')
             t = Thread(target=self._heartbeat_thread, name='HeartbeatThread', daemon=self._daemon)
             t.start()
             self.heartbeat_thread = t
+
+    @property
+    def last_heartbeat_recv(self):
+        return self.method_reader.last_heartbeat_recv
 
     @property
     def connected(self):
@@ -213,6 +220,7 @@ class Connection(AbstractChannel):
     def send_heartbeat(self):
         """Send a heartbeat to the server
         """
+        self.last_heartbeat_sent = datetime.now()
         self.transport.write_frame(Frame(FrameType.HEARTBEAT))
 
     def is_alive(self):
