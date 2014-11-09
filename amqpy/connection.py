@@ -40,7 +40,8 @@ class Connection(AbstractChannel):
     def __init__(self, *, host='localhost', port=5672, ssl=None, connect_timeout=None,
                  userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/',
                  locale='en_US',
-                 channel_max=65535, frame_max=131072, heartbeat=0, auto_heartbeat=False, ahbd=True,
+                 channel_max=65535, frame_max=131072,
+                 heartbeat=0, auto_heartbeat=False, daemon=True,
                  client_properties=None,
                  on_blocked=None, on_unblocked=None):
         """Create a connection to the specified host
@@ -60,7 +61,7 @@ class Connection(AbstractChannel):
         :param int channel_max: maximum number of channels
         :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
-        :param bool ahbd: auto heartbeat thread daemon mode
+        :param bool daemon: auto heartbeat thread daemon mode
         :param bool auto_heartbeat: enable automatic heartbeats thread
         :param client_properties: dict of client properties
         :param on_blocked: callback on connection blocked
@@ -78,6 +79,27 @@ class Connection(AbstractChannel):
 
         # the connection object itself is treated as channel 0
         super().__init__(self, 0)
+
+        # declare instance variables initialized in `self.connect()`
+        self.transport = None
+        self.method_reader = None
+        self.method_writer = None
+        self._wait_tune_ok = None
+
+        # save connection parameters
+        self._host = host
+        self._port = port
+        self._connect_timeout = connect_timeout
+        self._ssl = ssl
+        self._userid = userid
+        self._password = password
+        self._login_method = login_method
+        self._virtual_host = virtual_host
+        self._locale = locale
+        self._heartbeat = heartbeat
+        self._auto_heartbeat = auto_heartbeat
+        self._daemon = daemon
+        self._client_properties = client_properties
 
         # properties set in the Tune method
         self.channel_max = channel_max
@@ -102,8 +124,26 @@ class Connection(AbstractChannel):
         self.mechanisms = []
         self.locales = []
 
+        # connection closed event used by the heartbeat thread
+        self._close_event = Event()
+
+        self.heartbeat_thread = None
+
+        self.connect()
+
+    def connect(self):
+        """Connect using saved connection parameters
+
+        This method does not need to be called explicitly; it is called by the constructor during
+        initialization and if necessary, if the connection terminates unexpectedly.
+
+        Note::
+
+            Reconnecting invalidates delivery tags and consumer tags.
+        """
         # start the connection; this also sends the connection protocol header
-        self.transport = create_transport(host, port, connect_timeout, frame_max, ssl)
+        self.transport = create_transport(self._host, self._port, self._connect_timeout,
+                                          self.frame_max, self._ssl)
 
         # create global instances of `MethodReader` and `MethodWriter` which can be used by all
         # channels
@@ -115,26 +155,24 @@ class Connection(AbstractChannel):
 
         # create 'login response' to send to server
         login_response = AMQPWriter()
-        login_response.write_table({'LOGIN': userid, 'PASSWORD': password})
+        login_response.write_table({'LOGIN': self._userid, 'PASSWORD': self._password})
         login_response = login_response.getvalue()[4:]  # skip the length
 
         # reply with 'start-ok' and connection parameters
         # noinspection PyArgumentList
-        client_props = dict(LIBRARY_PROPERTIES, **client_properties or {})
-        self._send_start_ok(client_props, login_method, login_response, locale)
+        client_props = dict(LIBRARY_PROPERTIES, **self._client_properties or {})
+        self._send_start_ok(client_props, self._login_method, login_response, self._locale)
 
         self._wait_tune_ok = True
         while self._wait_tune_ok:
             self.wait_any([spec.Connection.Secure, spec.Connection.Tune])
 
-        self._send_open(virtual_host)
+        self._send_open(self._virtual_host)
 
         # set up automatic heartbeats
-        self._close_event = Event()
-        self.heartbeat_thread = None
-        if auto_heartbeat:
+        if self._auto_heartbeat:
             log.debug('Start automatic heartbeat thread')
-            t = Thread(target=self._heartbeat_thread, name='HeartbeatThread', daemon=ahbd)
+            t = Thread(target=self._heartbeat_thread, name='HeartbeatThread', daemon=self._daemon)
             t.start()
             self.heartbeat_thread = t
 
@@ -601,7 +639,7 @@ class Connection(AbstractChannel):
         self._send_tune_ok(self.channel_max, self.frame_max, self.heartbeat)
 
     def _send_tune_ok(self, channel_max, frame_max, heartbeat):
-        """Negotiate cnnection tuning parameters
+        """Negotiate connection tuning parameters
 
         This method sends the client's connection tuning parameters to the server. Certain fields
         are negotiated, others provide capability information.
