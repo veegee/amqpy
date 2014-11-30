@@ -59,7 +59,7 @@ pygments_style = 'pygments_solarized_light.LightStyle'
 
 html_context = {'sphinx_versioninfo': sphinx.version_info}
 
-html_theme_path = ['_theme']
+html_theme_path = ['../theme']
 html_theme = 'bootstrap'
 html_theme_options = {
     # Tab name for entire site. (Default: "Site")
