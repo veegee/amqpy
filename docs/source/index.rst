@@ -79,7 +79,7 @@ amqpy is easy to use::
 Let's create a consumer::
 
     class Consumer(AbstractConsumer):
-        def run(msg: Message):
+        def run(self, msg: Message):
             print('Received a message: {}'.format(msg.body))
             msg.ack()
 
