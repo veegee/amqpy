@@ -277,6 +277,8 @@ METHOD_NAME_MAP = {
     method_t(10, 41): 'connection.open-ok',
     method_t(10, 50): 'connection.close',
     method_t(10, 51): 'connection.close-ok',
+    method_t(10, 60): 'connection.blocked',
+    method_t(10, 61): 'connection.unblocked',
     method_t(20, 10): 'channel.open',
     method_t(20, 11): 'channel.open-ok',
     method_t(20, 20): 'channel.flow',
