@@ -94,7 +94,7 @@ class Basic:
     Deliver = method_t(60, 60)
     Get = method_t(60, 70)
     GetOk = method_t(60, 71)
-    GetEmpty = method_t(60, 80)
+    GetEmpty = method_t(60, 72)
     Ack = method_t(60, 80)
     Reject = method_t(60, 90)
     RecoverAsync = method_t(60, 100)
