@@ -1,9 +1,9 @@
 Python 3 AMQP 0.9.1 client library
 ==================================
 
-:Version: 0.9.5
+|Version| |PyPI|
+
 :Web: http://amqpy.readthedocs.org/
-:Download: http://pypi.python.org/pypi/amqpy/
 :Source: http://github.com/veegee/amqpy
 :Keywords: amqp, rabbitmq, qpid
 
@@ -86,3 +86,9 @@ Low priority (goals for v1.x)
 
 .. _Kombu: https://github.com/celery/kombu
 .. _Semantic versioning: http://semver.org
+
+.. |Version| image:: https://img.shields.io/github/tag/veegee/amqpy.svg
+
+.. |PyPI| image:: https://img.shields.io/pypi/v/amqpy.svg
+    :target: https://pypi.python.org/pypi/amqpy/
+    :alt: Latest Version
