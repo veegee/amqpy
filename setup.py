@@ -17,11 +17,17 @@ keywords = ['amqp', 'rabbitmq', 'qpid']
 classifiers = [
     'Development Status :: 4 - Beta',
     'Programming Language :: Python',
+    'Programming Language :: Python :: Implementation :: CPython',
+    'Programming Language :: Python :: Implementation :: PyPy',
+    'Programming Language :: Python :: 3 :: Only',
     'Programming Language :: Python :: 3.2',
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
-    'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
+    'License :: OSI Approved :: MIT License',
     'Intended Audience :: Developers',
+    'Topic :: Internet',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: System :: Networking'
 ]
 
 package_data = {
