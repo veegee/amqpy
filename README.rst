@@ -53,38 +53,13 @@ Features
 Supports RabbitMQ extensions:
 
 - Publisher confirms: enable with ``Channel.confirm_select()``, then use
-  ``Channel.basic_publish_confirm``
+  ``Channel.basic_publish_confirm()``
 - Exchange to exchange bindings: ``Channel.exchange_bind()`` and
   ``Channel.exchange_unbind()``
 - Consumer Cancel Notifications: by default a cancel results in ``ChannelError``
   being raised, but not if a ``on_cancel`` callback is passed to
   ``basic_consume``
 
-
-To do (goals for  v1.0.0)
-=========================
-
-- Add support for multiple authentication mechanisms such as CRAM-MD5 for Apache
-  Qpid
-- `Kombu`_ compatibility
-- Add examples directory and update Sphinx docs with improved examples
-
-
-Tests
------
-
-- Test with SSL (parametrize the connection fixture to use SSL)
-
-
-Low priority (goals for v1.x)
------------------------------
-
-- Asynchronous operation, Python 3.4 asyncio support
-- Add support for channel-level event draining, so that multiple threads can
-  block while waiting for events on their own channels.
-
-
-.. _Kombu: https://github.com/celery/kombu
 .. _Semantic versioning: http://semver.org
 
 .. |Version| image:: https://img.shields.io/github/tag/veegee/amqpy.svg
