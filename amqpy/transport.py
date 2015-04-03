@@ -36,7 +36,7 @@ class Transport(metaclass=ABCMeta):
 
         # the purpose of the frame lock is to allow no more than one thread to read/write a frame
         # to the connection at any time
-        self._frame_lock = Lock()
+        self.frame_lock = Lock()
 
         self.sock = None
 
@@ -147,7 +147,7 @@ class Transport(metaclass=ABCMeta):
             self.sock = None
         self.connected = False
 
-    @synchronized('_frame_lock')
+    @synchronized('frame_lock')
     def read_frame(self):
         """Read frame from connection
 
@@ -189,7 +189,7 @@ class Transport(metaclass=ABCMeta):
             raise UnexpectedFrame(
                 'Received {} while expecting 0xCE (FrameType.END)'.format(hex(i_last_byte)))
 
-    @synchronized('_frame_lock')
+    @synchronized('frame_lock')
     def write_frame(self, frame):
         """Write frame to connection
 

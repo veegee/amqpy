@@ -245,6 +245,10 @@ class Connection(AbstractChannel):
         # recv with MSG_PEEK to check if the connection is alive
         # note: if there is data still in the buffer, this will not tell us anything
         if hasattr(socket, 'MSG_PEEK') and not isinstance(self.sock, ssl.SSLSocket):
+            # Acquire a lock before changing the socket timeout, or this can
+            # cause timeout errors in the main thread.
+            self.transport.frame_lock.acquire()
+
             prev = self.sock.gettimeout()
             self.sock.settimeout(0.0001)
             try:
@@ -256,6 +260,7 @@ class Connection(AbstractChannel):
                 return False
             finally:
                 self.sock.settimeout(prev)
+                self.transport.frame_lock.release()
 
         # send a heartbeat to check if the connection is alive
         try:
