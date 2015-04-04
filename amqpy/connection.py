@@ -288,7 +288,7 @@ class Connection(AbstractChannel):
             except Timeout:
                 pass
 
-            if time.monotonic() - start_time >= timeout:
+            if timeout and time.monotonic() - start_time >= timeout:
                 raise Timeout()
 
     def drain_events(self, timeout=None):
