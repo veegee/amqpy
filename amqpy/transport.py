@@ -6,7 +6,9 @@ import logging
 from threading import RLock
 from ssl import SSLError
 import datetime
+import time
 
+from . import compat
 from .proto import Frame
 from .concurrency import synchronized
 from .exceptions import UnexpectedFrame
@@ -14,6 +16,7 @@ from .utils import get_errno
 from .spec import FrameType
 
 log = logging.getLogger('amqpy')
+compat.patch()
 
 _UNAVAIL = errno.EAGAIN, errno.EINTR, errno.ENOENT
 
@@ -39,6 +42,8 @@ class Transport(metaclass=ABCMeta):
         self.last_heartbeat_sent = None
         #: :type: datetime.datetime
         self.last_heartbeat_received = None
+
+        self.last_heartbeat_sent_monotonic = 0.0
 
         # the purpose of the frame lock is to allow no more than one thread to read/write a frame
         # to the connection at any time
@@ -219,8 +224,9 @@ class Transport(metaclass=ABCMeta):
     def send_heartbeat(self):
         """Send a heartbeat to the server
         """
-        self.last_heartbeat_sent = datetime.now()
-        self.transport.write_frame(Frame(FrameType.HEARTBEAT))
+        self.last_heartbeat_sent = datetime.datetime.now()
+        self.last_heartbeat_sent_monotonic = time.monotonic()
+        self.write_frame(Frame(FrameType.HEARTBEAT))
 
     @synchronized('frame_lock')
     def is_alive(self):

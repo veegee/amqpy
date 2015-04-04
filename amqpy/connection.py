@@ -1,16 +1,15 @@
 """AMQP Connections
 """
-import ssl
 import logging
 import socket
 from array import array
 import pprint
-from threading import Event, Thread
+from threading import Event
 from datetime import datetime
 import time
 
 from . import __version__, compat
-from .proto import Method, Frame
+from .proto import Method
 from .method_io import MethodReader, MethodWriter
 from .serialization import AMQPWriter
 from .abstract_channel import AbstractChannel
@@ -18,7 +17,7 @@ from .channel import Channel
 from .exceptions import ResourceError, AMQPConnectionError, Timeout, error_for_code
 from .transport import create_transport
 from . import spec
-from .spec import FrameType, method_t
+from .spec import method_t
 from .concurrency import synchronized
 
 __all__ = ['Connection']
@@ -240,41 +239,7 @@ class Connection(AbstractChannel):
         :return: True if connection is alive, else False
         :rtype: bool
         """
-        if not self.sock:
-            # we don't have a valid socket, this connection is definitely not alive
-            return False
-
-        if not self.connected:
-            # the `transport` is not connected
-            return False
-
-        # recv with MSG_PEEK to check if the connection is alive
-        # note: if there is data still in the buffer, this will not tell us anything
-        if hasattr(socket, 'MSG_PEEK') and not isinstance(self.sock, ssl.SSLSocket):
-            # Acquire a lock before changing the socket timeout, or this can
-            # cause timeout errors in the main thread.
-            self.transport.frame_lock.acquire()
-
-            prev = self.sock.gettimeout()
-            self.sock.settimeout(0.0001)
-            try:
-                self.sock.recv(1, socket.MSG_PEEK)
-            except socket.timeout:
-                pass
-            except socket.error:
-                # the exception is usually (always?) a ConnectionResetError in Python 3.3+
-                return False
-            finally:
-                self.sock.settimeout(prev)
-                self.transport.frame_lock.release()
-
-        # send a heartbeat to check if the connection is alive
-        try:
-            self.send_heartbeat()
-        except socket.error:
-            return False
-
-        return True
+        return self.transport.is_alive()
 
     def _wait_any(self, timeout=None):
         """Wait for any event on the connection (for any channel)
@@ -314,7 +279,7 @@ class Connection(AbstractChannel):
 
         while True:
             # send heartbeat if necessary
-            hd = (datetime.now() - self.transport.last_heartbeat_sent).total_seconds()
+            hd = time.monotonic() - self.transport.last_heartbeat_sent_monotonic
             if hd >= self._heartbeat_final * 0.85:
                 self.send_heartbeat()
 
@@ -336,7 +301,11 @@ class Connection(AbstractChannel):
         :type timeout: float or None
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
-        method = self._wait_any(timeout)
+        if self._heartbeat_final:
+            method = self._wait_any_hb(timeout)
+        else:
+            method = self._wait_any(timeout)
+
         assert isinstance(method, Method)
         channel = self.channels[method.channel_id]
         return self.handle_method(method, channel)
