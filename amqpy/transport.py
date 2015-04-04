@@ -3,8 +3,9 @@ import socket
 import ssl
 from abc import ABCMeta, abstractmethod
 import logging
-from threading import Lock
+from threading import RLock
 from ssl import SSLError
+import datetime
 
 from .proto import Frame
 from .concurrency import synchronized
@@ -34,9 +35,14 @@ class Transport(metaclass=ABCMeta):
         """
         self._rbuf = bytearray(buf_size)
 
+        #: :type: datetime.datetime
+        self.last_heartbeat_sent = None
+        #: :type: datetime.datetime
+        self.last_heartbeat_received = None
+
         # the purpose of the frame lock is to allow no more than one thread to read/write a frame
         # to the connection at any time
-        self.frame_lock = Lock()
+        self.frame_lock = RLock()
 
         self.sock = None
 
@@ -184,6 +190,8 @@ class Transport(metaclass=ABCMeta):
                 self.connected = False
             raise
         if i_last_byte == FrameType.END:
+            if frame.frame_type == FrameType.HEARTBEAT:
+                self.last_heartbeat_received = datetime.datetime.now()
             return frame
         else:
             raise UnexpectedFrame(
@@ -207,6 +215,56 @@ class Transport(metaclass=ABCMeta):
             if get_errno(exc) not in _UNAVAIL:
                 self.connected = False
             raise
+
+    def send_heartbeat(self):
+        """Send a heartbeat to the server
+        """
+        self.last_heartbeat_sent = datetime.now()
+        self.transport.write_frame(Frame(FrameType.HEARTBEAT))
+
+    @synchronized('frame_lock')
+    def is_alive(self):
+        """Check if connection is alive
+
+        This method is the primary way to check if the connection is alive.
+
+        Side effects: This method may send a heartbeat as a last resort to check if the connection
+        is alive.
+
+        :return: True if connection is alive, else False
+        :rtype: bool
+        """
+        if not self.sock:
+            # we don't have a valid socket, this connection is definitely not alive
+            return False
+
+        if not self.connected:
+            # the `transport` is not connected
+            return False
+
+        # recv with MSG_PEEK to check if the connection is alive
+        # note: if there is data still in the buffer, this will not tell us anything
+        if hasattr(socket, 'MSG_PEEK') and not isinstance(self.sock, ssl.SSLSocket):
+            prev = self.sock.gettimeout()
+            self.sock.settimeout(0.0001)
+            try:
+                self.sock.recv(1, socket.MSG_PEEK)
+            except socket.timeout:
+                pass
+            except socket.error:
+                # the exception is usually (always?) a ConnectionResetError in Python 3.3+
+                log.debug('socket.error, connection is closed')
+                return False
+            finally:
+                self.sock.settimeout(prev)
+
+        # send a heartbeat to check if the connection is alive
+        try:
+            self.send_heartbeat()
+        except socket.error:
+            return False
+
+        return True
 
 
 class SSLTransport(Transport):

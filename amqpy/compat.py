@@ -21,5 +21,8 @@ def patch():
     if sys.version_info >= (3, 3):
         return
 
+    if not hasattr(time, 'monotonic'):
+        time.monotonic = time.time
+
     time.perf_counter = time.clock
     builtins.TimeoutError = TimeoutError

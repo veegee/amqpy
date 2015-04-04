@@ -3,7 +3,6 @@ from threading import Lock
 from collections import defaultdict, deque
 from queue import Queue
 import logging
-from datetime import datetime
 
 from .concurrency import synchronized
 from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP
@@ -50,9 +49,7 @@ class MethodReader:
         # dict[channel_id int: frame_type int]
         self.expected_types = defaultdict(lambda: FrameType.METHOD)
 
-        self.heartbeats = 0  # total number of heartbeats received
         self.frames_recv = 0  # total number of frames received
-        self.last_heartbeat_recv = None
 
         self._method_read_lock = Lock()
 
@@ -84,12 +81,6 @@ class MethodReader:
                 self._process_content_header(frame)
             elif frame.frame_type == FrameType.BODY:
                 self._process_content_body(frame)
-            elif frame.frame_type == FrameType.HEARTBEAT:
-                self._process_heartbeat()
-
-    def _process_heartbeat(self):
-        self.heartbeats += 1
-        self.last_heartbeat_recv = datetime.now()
 
     def _process_method_frame(self, frame):
         """Process method frame

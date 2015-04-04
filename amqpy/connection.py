@@ -7,14 +7,15 @@ from array import array
 import pprint
 from threading import Event, Thread
 from datetime import datetime
+import time
 
+from . import __version__, compat
 from .proto import Method, Frame
 from .method_io import MethodReader, MethodWriter
 from .serialization import AMQPWriter
-from . import __version__
 from .abstract_channel import AbstractChannel
 from .channel import Channel
-from .exceptions import ResourceError, AMQPConnectionError, error_for_code
+from .exceptions import ResourceError, AMQPConnectionError, Timeout, error_for_code
 from .transport import create_transport
 from . import spec
 from .spec import FrameType, method_t
@@ -31,6 +32,8 @@ LIBRARY_PROPERTIES = {
 }
 
 log = logging.getLogger('amqpy')
+
+compat.patch()
 
 
 class Connection(AbstractChannel):
@@ -81,7 +84,8 @@ class Connection(AbstractChannel):
         # the connection object itself is treated as channel 0
         super().__init__(self, 0)
 
-        ## instance variables
+        # instance variables
+        #: :type: amqpy.transport.Transport
         self.transport = None
         self.method_reader = None
         self.method_writer = None
@@ -116,12 +120,11 @@ class Connection(AbstractChannel):
         self._daemon = daemon
         self._client_properties = client_properties
 
-        ## callbacks
+        # callbacks
         self.on_blocked = on_blocked
         self.on_unblocked = on_unblocked
 
-        ## heartbeat
-        self.last_heartbeat_sent = None
+        # heartbeat
         self._close_event = None  # Event(): the heartbeat thread listens for this event to exit
         self.heartbeat_thread = None
 
@@ -174,7 +177,11 @@ class Connection(AbstractChannel):
 
     @property
     def last_heartbeat_recv(self):
-        return self.method_reader.last_heartbeat_recv
+        return self.transport.last_heartbeat_received
+
+    @property
+    def last_heartbeat_sent(self):
+        return self.transport.last_heartbeat_sent
 
     @property
     def connected(self):
@@ -220,8 +227,7 @@ class Connection(AbstractChannel):
     def send_heartbeat(self):
         """Send a heartbeat to the server
         """
-        self.last_heartbeat_sent = datetime.now()
-        self.transport.write_frame(Frame(FrameType.HEARTBEAT))
+        self.transport.send_heartbeat()
 
     def is_alive(self):
         """Check if connection is alive
@@ -287,6 +293,38 @@ class Connection(AbstractChannel):
         # do a blocking read for any incoming method
         method = self.method_reader.read_method(timeout)
         return method
+
+    def _wait_any_hb(self, timeout=None):
+        """Wait for any event on the connection (for any channel), while
+        sending heartbeats
+
+        This method serves the same purpose as :meth:`self._wait_any`,
+        but sends regular heartbeats as configured for the connection.
+
+        Note::
+
+            The ``timeout`` parameter only has a +/- 1s accuracy.
+
+        :param float timeout: timeout
+        :return: method
+        :rtype: amqpy.proto.Method
+        :raise amqpy.exceptions.Timeout: if the operation times out
+        """
+        start_time = time.monotonic()
+
+        while True:
+            # send heartbeat if necessary
+            hd = (datetime.now() - self.transport.last_heartbeat_sent).total_seconds()
+            if hd >= self._heartbeat_final * 0.85:
+                self.send_heartbeat()
+
+            try:
+                self._wait_any(1)
+            except Timeout:
+                pass
+
+            if time.monotonic() - start_time >= timeout:
+                raise Timeout()
 
     def drain_events(self, timeout=None):
         """Wait for an event on all channels
