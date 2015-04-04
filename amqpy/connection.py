@@ -169,11 +169,11 @@ class Connection(AbstractChannel):
 
         # set up automatic heartbeats
         self._close_event = Event()
-        if self._auto_heartbeat:
-            log.debug('Start automatic heartbeat thread')
-            t = Thread(target=self._heartbeat_thread, name='HeartbeatThread', daemon=self._daemon)
-            t.start()
-            self.heartbeat_thread = t
+        # if self._auto_heartbeat:
+        #     log.debug('Start automatic heartbeat thread')
+        #     t = Thread(target=self._heartbeat_thread, name='HeartbeatThread', daemon=self._daemon)
+        #     t.start()
+        #     self.heartbeat_thread = t
 
     @property
     def last_heartbeat_recv(self):
