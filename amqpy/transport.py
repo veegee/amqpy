@@ -47,7 +47,7 @@ class Transport(metaclass=ABCMeta):
 
         # the purpose of the frame lock is to allow no more than one thread to read/write a frame
         # to the connection at any time
-        self.frame_lock = RLock()
+        self._frame_lock = RLock()
 
         self.sock = None
 
@@ -158,7 +158,7 @@ class Transport(metaclass=ABCMeta):
             self.sock = None
         self.connected = False
 
-    @synchronized('frame_lock')
+    @synchronized('_frame_lock')
     def read_frame(self):
         """Read frame from connection
 
@@ -202,7 +202,7 @@ class Transport(metaclass=ABCMeta):
             raise UnexpectedFrame(
                 'Received {} while expecting 0xCE (FrameType.END)'.format(hex(i_last_byte)))
 
-    @synchronized('frame_lock')
+    @synchronized('_frame_lock')
     def write_frame(self, frame):
         """Write frame to connection
 
@@ -228,7 +228,7 @@ class Transport(metaclass=ABCMeta):
         self.last_heartbeat_sent_monotonic = time.monotonic()
         self.write_frame(Frame(FrameType.HEARTBEAT))
 
-    @synchronized('frame_lock')
+    @synchronized('_frame_lock')
     def is_alive(self):
         """Check if connection is alive
 
