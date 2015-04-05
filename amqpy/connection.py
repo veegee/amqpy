@@ -239,7 +239,10 @@ class Connection(AbstractChannel):
         :return: True if connection is alive, else False
         :rtype: bool
         """
-        return self.transport.is_alive()
+        if self.transport:
+            return self.transport.is_alive()
+        else:
+            return False
 
     def _wait_any(self, timeout=None):
         """Wait for any event on the connection (for any channel)
@@ -284,7 +287,7 @@ class Connection(AbstractChannel):
                 self.send_heartbeat()
 
             try:
-                self._wait_any(1)
+                return self._wait_any(1)
             except Timeout:
                 pass
 
@@ -304,6 +307,7 @@ class Connection(AbstractChannel):
         if self._heartbeat_final:
             method = self._wait_any_hb(timeout)
         else:
+            log.debug('Using self._wait_any()')
             method = self._wait_any(timeout)
 
         assert isinstance(method, Method)
