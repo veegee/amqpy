@@ -32,7 +32,7 @@ def synchronized(lock_name):
                 start_time = time.perf_counter()
                 lock.acquire()
                 tot_time = time.perf_counter() - start_time
-                if tot_time > 10:
+                if tot_time > 5:
                     # only log if waited for more than 10s to acquire lock
                     log.warn('Acquired lock for [{}] in: {:.3f}s'.format(f.__qualname__, tot_time))
             try:
