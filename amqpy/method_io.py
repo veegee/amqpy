@@ -36,7 +36,7 @@ class MethodReader:
         :param transport: transport to read from
         :type transport: amqpy.transport.Transport
         """
-        self.source = transport
+        self.transport = transport
         self.sock = transport.sock
 
         # deque[Method or Exception]
@@ -63,7 +63,7 @@ class MethodReader:
         while not self.method_queue:
             # keep reading frames until we have at least one complete method in the queue
             try:
-                frame = self.source.read_frame()
+                frame = self.transport.read_frame()
             except Exception as exc:
                 # connection was closed? framing error?
                 self.method_queue.append(exc)
@@ -193,7 +193,7 @@ class MethodWriter:
         :type transport: amqpy.transport.Transport
         :type frame_max: int
         """
-        self.dest = transport
+        self.transport = transport
         self.frame_max = frame_max
         self.methods_sent = 0  # total number of methods sent
 
@@ -211,6 +211,7 @@ class MethodWriter:
         :param method: method to write
         :type method: amqpy.proto.Method
         """
+        transport = self.transport
         log.debug('{:7} {} {}'
                   .format('Write:', method.method_type, METHOD_NAME_MAP[method.method_type]))
         frames = Queue()
@@ -228,6 +229,6 @@ class MethodWriter:
                 frames.put(frame)
 
         while not frames.empty():
-            self.dest.write_frame(frames.get())
+            transport.write_frame(frames.get())
 
         self.methods_sent += 1
