@@ -47,7 +47,8 @@ class Transport(metaclass=ABCMeta):
 
         # the purpose of the frame lock is to allow no more than one thread to read/write a frame
         # to the connection at any time
-        self._frame_lock = RLock()
+        self._frame_write_lock = RLock()
+        self._frame_read_lock = RLock()
 
         self.sock = None
 
@@ -158,7 +159,7 @@ class Transport(metaclass=ABCMeta):
             self.sock = None
         self.connected = False
 
-    @synchronized('_frame_lock')
+    @synchronized('_frame_read_lock')
     def read_frame(self):
         """Read frame from connection
 
@@ -202,7 +203,7 @@ class Transport(metaclass=ABCMeta):
             raise UnexpectedFrame(
                 'Received {} while expecting 0xCE (FrameType.END)'.format(hex(i_last_byte)))
 
-    @synchronized('_frame_lock')
+    @synchronized('_frame_write_lock')
     def write_frame(self, frame):
         """Write frame to connection
 
@@ -228,7 +229,6 @@ class Transport(metaclass=ABCMeta):
         self.last_heartbeat_sent_monotonic = time.monotonic()
         self.write_frame(Frame(FrameType.HEARTBEAT))
 
-    @synchronized('_frame_lock')
     def is_alive(self):
         """Check if connection is alive
 
@@ -250,19 +250,19 @@ class Transport(metaclass=ABCMeta):
 
         # recv with MSG_PEEK to check if the connection is alive
         # note: if there is data still in the buffer, this will not tell us anything
-        if hasattr(socket, 'MSG_PEEK') and not isinstance(self.sock, ssl.SSLSocket):
-            prev = self.sock.gettimeout()
-            self.sock.settimeout(0.0001)
-            try:
-                self.sock.recv(1, socket.MSG_PEEK)
-            except socket.timeout:
-                pass
-            except socket.error:
-                # the exception is usually (always?) a ConnectionResetError in Python 3.3+
-                log.debug('socket.error, connection is closed')
-                return False
-            finally:
-                self.sock.settimeout(prev)
+        # if hasattr(socket, 'MSG_PEEK') and not isinstance(self.sock, ssl.SSLSocket):
+        #     prev = self.sock.gettimeout()
+        #     self.sock.settimeout(0.0001)
+        #     try:
+        #         self.sock.recv(1, socket.MSG_PEEK)
+        #     except socket.timeout:
+        #         pass
+        #     except socket.error:
+        #         # the exception is usually (always?) a ConnectionResetError in Python 3.3+
+        #         log.debug('socket.error, connection is closed')
+        #         return False
+        #     finally:
+        #         self.sock.settimeout(prev)
 
         # send a heartbeat to check if the connection is alive
         try:
