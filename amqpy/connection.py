@@ -75,6 +75,7 @@ class Connection(AbstractChannel):
         :type on_blocked: Callable or None
         :type on_unblocked: Callable or None
         """
+        log.debug('amqpy {} Connection.__init__()'.format(__version__))
         #: Map of `{channel_id: Channel}` for all active channels
         #:
         #: :type: dict[int, Channel]

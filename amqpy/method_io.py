@@ -149,8 +149,9 @@ class MethodReader:
         if isinstance(method, Exception):
             raise method
 
-        log.debug('{:7} {} {}'
-                  .format('Read:', method.method_type, METHOD_NAME_MAP[method.method_type]))
+        log.debug('{:7} channel: {} {} {}'
+                  .format('Read:', method.channel_id,
+                          method.method_type, METHOD_NAME_MAP[method.method_type]))
         return method
 
     def read_method(self, timeout=None):
@@ -212,8 +213,9 @@ class MethodWriter:
         :type method: amqpy.proto.Method
         """
         transport = self.transport
-        log.debug('{:7} {} {}'
-                  .format('Write:', method.method_type, METHOD_NAME_MAP[method.method_type]))
+        log.debug('{:7} channel: {} {} {}'
+                  .format('Write:', method.channel_id,
+                          method.method_type, METHOD_NAME_MAP[method.method_type]))
         frames = Queue()
 
         # construct a method frame
