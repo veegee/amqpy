@@ -33,7 +33,7 @@ class AbstractChannel(metaclass=ABCMeta):
         self.channel_id = channel_id
         connection.channels[channel_id] = self
         # queue of incoming methods for this channel
-        self.method_queue = []  # list[Method]
+        self.incoming_methods = []  # list[Method]
         self.auto_decode = False
         self.lock = Lock()
 
@@ -90,13 +90,13 @@ class AbstractChannel(metaclass=ABCMeta):
             allowed_methods = [spec.Channel.Close, spec.Connection.Close] + allowed_methods
 
         # check the channel's method queue
-        method_queue = self.connection.channels[self.channel_id].method_queue
+        incoming_methods = self.incoming_methods
 
-        for qm in method_queue:
+        for qm in incoming_methods:
             assert isinstance(qm, Method)
             if allowed_methods is None or qm.method_type in allowed_methods:
                 # found the method we're looking for in the queue
-                method_queue.remove(qm)
+                incoming_methods.remove(qm)
                 return qm
 
         # nothing queued, need to wait for a method from the server
@@ -119,7 +119,7 @@ class AbstractChannel(metaclass=ABCMeta):
                 continue
 
             # not the channel and/or method we were looking for; queue this method for later
-            self.connection.channels[ch_id].method_queue.append(method)
+            self.incoming_methods.append(method)
 
             # if the method is destined for channel 0 (the connection itself), it's probably an
             # exception, so handle it immediately

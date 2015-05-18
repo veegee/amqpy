@@ -82,7 +82,7 @@ class Connection(AbstractChannel):
         self.channels = {}  # dict of {channel_id int: Channel}
 
         # the connection object itself is treated as channel 0
-        super().__init__(self, 0)
+        super().__init__(self, 0)  # also sets channels[0] = self
 
         # instance variables
         #: :type: amqpy.transport.Transport
@@ -248,7 +248,8 @@ class Connection(AbstractChannel):
     def _wait_any(self, timeout=None):
         """Wait for any event on the connection (for any channel)
 
-        This method is called by :meth:`Connection.drain_events()`.
+        When a method is received on the channel, it is delivered to the
+        appropriate channel incoming method queue
 
         :param float timeout: timeout
         :return: method
@@ -256,8 +257,8 @@ class Connection(AbstractChannel):
         """
         # check the method queue of each channel
         for ch_id, channel in self.channels.items():
-            if channel.method_queue:
-                return channel.method_queue.pop(0)
+            if channel.incoming_methods:
+                return channel.incoming_methods.pop(0)
 
         # do a blocking read for any incoming method
         method = self.method_reader.read_method(timeout)
@@ -308,12 +309,12 @@ class Connection(AbstractChannel):
         if self._heartbeat_final:
             method = self._wait_any_hb(timeout)
         else:
-            log.debug('Using self._wait_any()')
             method = self._wait_any(timeout)
 
         assert isinstance(method, Method)
+        #: :type: amqpy.Channel
         channel = self.channels[method.channel_id]
-        return self.handle_method(method, channel)
+        return channel.handle_method(method)
 
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Close connection to the server
