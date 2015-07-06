@@ -209,7 +209,13 @@ def autodoc_process_docstring(app, what, name, obj, options, lines):
         s_before = ':annotation:`@abstractmethod`\n'
     elif what == 'class' and tuple in obj.__bases__ and hasattr(obj, '_fields'):
         # this is a namedtuple
-        lines[0] = '**namedtuple** :namedtuple:`{}`'.format(lines[0])
+        fields = ', '.join(obj._fields)
+        representation = '{}({})'.format(obj.__name__, fields)
+        text = '**namedtuple** :namedtuple:`{}`'.format(representation)
+        if len(lines) > 0:
+            lines[0] = text
+        else:
+            lines.append(text)
 
     if s_before:
         for line in reversed(s_before.split('\n')):
