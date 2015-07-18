@@ -5,7 +5,7 @@ import sys
 import pytest
 
 from .. import Connection, Channel, Message, FrameSyntaxError, queue_declare_ok_t
-from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused
+from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused, Timeout
 from .conftest import get_server_props
 from select import select
 
@@ -328,7 +328,9 @@ class TestPublish:
         ok = ch_b.queue_declare(rand_queue, passive=True)
         assert ok.message_count == 2
 
-    def test_basic_return(self, ch, rand_exch):
+    def test_basic_return(self, conn, rand_exch):
+        assert isinstance(conn, Connection)
+        ch = conn.channel()
         assert isinstance(ch, Channel)
         ch.exchange_declare(rand_exch, 'fanout')
 
@@ -339,12 +341,7 @@ class TestPublish:
         ch.basic_publish(msg, rand_exch, mandatory=True)
         ch.basic_publish(msg, rand_exch, mandatory=True)
 
-        # call a method which reads data back from the server in order to
-        # also receive returned messages
-        try:
-            ch.queue_declare('_', passive=True)
-        except NotFound:
-            pass
+        conn.loop(0)
 
         # 3 of the 4 messages we sent should have been returned
         assert ch.returned_messages.qsize() == 3

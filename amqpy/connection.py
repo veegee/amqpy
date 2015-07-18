@@ -5,7 +5,6 @@ import socket
 from array import array
 import pprint
 from threading import Event
-from datetime import datetime
 import time
 
 from . import __version__, compat
@@ -271,29 +270,40 @@ class Connection(AbstractChannel):
         This method serves the same purpose as :meth:`self._wait_any`,
         but sends regular heartbeats as configured for the connection.
 
-        Note::
-
-            The ``timeout`` parameter only has a +/- 1s accuracy.
-
         :param float timeout: timeout
         :return: method
         :rtype: amqpy.proto.Method
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
+        # check the method queue of each channel
+        for ch_id, channel in self.channels.items():
+            if channel.incoming_methods:
+                return channel.incoming_methods.pop(0)
+
+        max_wait_time = self._heartbeat_final * 0.45
+        remaining = timeout
         start_time = time.monotonic()
 
         while True:
             # send heartbeat if necessary
-            hd = time.monotonic() - self.transport.last_heartbeat_sent_monotonic
-            if hd >= self._heartbeat_final * 0.85:
+            last_hb_age = time.monotonic() - self.transport.last_heartbeat_sent_monotonic
+            if last_hb_age >= max_wait_time:
                 self.send_heartbeat()
 
+            if timeout is None:
+                wait_time = max_wait_time
+            else:
+                wait_time = min(timeout, max_wait_time, remaining)
+
             try:
-                return self._wait_any(1)
+                return self._wait_any(wait_time)
             except Timeout:
                 pass
+            finally:
+                if remaining:
+                    remaining -= wait_time
 
-            if timeout and time.monotonic() - start_time >= timeout:
+            if timeout is not None and time.monotonic() - start_time >= timeout:
                 raise Timeout()
 
     def drain_events(self, timeout=None):
@@ -302,7 +312,7 @@ class Connection(AbstractChannel):
         This method should be called after creating consumers in order to receive delivered messages
         and execute consumer callbacks.
 
-        :param timeout: maximum allowed time wait for an event
+        :param timeout: maximum allowed time to wait for an event
         :type timeout: float or None
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
@@ -315,6 +325,20 @@ class Connection(AbstractChannel):
         #: :type: amqpy.Channel
         channel = self.channels[method.channel_id]
         return channel.handle_method(method)
+
+    def loop(self, timeout=None):
+        """Call :meth:`drain_events` continuously
+
+        - Does not raise Timeout exceptions if a timeout occurs
+
+        :param timeout: maximum allowed time to wait for an event
+        :type timeout: float or None
+        """
+        while True:
+            try:
+                self.drain_events(0)
+            except Timeout:
+                break
 
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Close connection to the server

@@ -108,7 +108,7 @@ Features
   Internet.
 * Support for timeouts
 * Support for manual and automatic heartbeats
-* Fully thread-safe
+* Fully thread-safe. Use one global connection and open one channel per thread.
 
 Supports RabbitMQ extensions:
 
