@@ -3,6 +3,8 @@ from collections import defaultdict, deque
 from queue import Queue
 import logging
 import socket
+import errno
+from .utils import get_errno
 
 from .concurrency import synchronized
 from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP
@@ -174,6 +176,9 @@ class MethodReader:
             return self._read_method()
         except socket.timeout:
             raise Timeout()
+        except socket.error as e:
+            if get_errno(e) == errno.EAGAIN:
+                raise Timeout()
         finally:
             if orig_timeout != timeout:
                 self.sock.settimeout(orig_timeout)
