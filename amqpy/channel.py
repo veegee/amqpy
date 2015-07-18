@@ -1052,7 +1052,7 @@ class Channel(AbstractChannel):
         If publisher confirms are enabled, this method will automatically wait to receive an "ack"
         from the server.
 
-        Note::
+        .. note::
 
             Returned messages are sent back from the server and loaded into
             the `returned_messages` queue of the channel that sent them. In
