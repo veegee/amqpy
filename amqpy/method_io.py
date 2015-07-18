@@ -1,8 +1,9 @@
-import socket
 from threading import Lock
 from collections import defaultdict, deque
 from queue import Queue
 import logging
+
+from select import select
 
 from .concurrency import synchronized
 from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP
@@ -163,20 +164,12 @@ class MethodReader:
         :rtype: amqpy.proto.Method
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
-        if timeout is None:
-            return self._read_method()
+        rlist, _, _ = select([self.sock], [], [], timeout)
 
-        orig_timeout = self.sock.gettimeout()
-        if orig_timeout != timeout:
-            self.sock.settimeout(timeout)
-
-        try:
-            return self._read_method()
-        except socket.timeout:
+        if not rlist:
             raise Timeout()
-        finally:
-            if orig_timeout != timeout:
-                self.sock.settimeout(orig_timeout)
+
+        return self._read_method()
 
 
 class MethodWriter:

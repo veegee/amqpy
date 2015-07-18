@@ -22,7 +22,8 @@ def patch():
         return
 
     if not hasattr(time, 'monotonic'):
-        time.monotonic = time.time
+        from .support import monotonic
+        time.monotonic = monotonic.monotonic
 
     time.perf_counter = time.clock
     builtins.TimeoutError = TimeoutError
