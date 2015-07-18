@@ -4,9 +4,10 @@ import sys
 
 import pytest
 
-from .. import Channel, Message, FrameSyntaxError, queue_declare_ok_t
+from .. import Connection, Channel, Message, FrameSyntaxError, queue_declare_ok_t
 from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused
 from .conftest import get_server_props
+from select import select
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, style='{', format='{asctime} {levelname:8} {message}',
                     datefmt='%Y/%m/%d %H:%M:%S')
@@ -328,6 +329,7 @@ class TestPublish:
         assert ok.message_count == 2
 
     def test_basic_return(self, ch, rand_exch):
+        assert isinstance(ch, Channel)
         ch.exchange_declare(rand_exch, 'fanout')
 
         msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
@@ -336,11 +338,42 @@ class TestPublish:
         ch.basic_publish(msg, rand_exch, mandatory=True)
         ch.basic_publish(msg, rand_exch, mandatory=True)
         ch.basic_publish(msg, rand_exch, mandatory=True)
-        # calling `close()` will cause all returned messages to be stored in the local queue before closing the channel
-        ch.close()
+
+        # call a method which reads data back from the server in order to
+        # also receive returned messages
+        try:
+            ch.queue_declare('_', passive=True)
+        except NotFound:
+            pass
 
         # 3 of the 4 messages we sent should have been returned
         assert ch.returned_messages.qsize() == 3
+        log.debug('returned messages assertion ok')
+
+    def test_basic_return_2(self, conn, rand_exch):
+        assert isinstance(conn, Connection)
+        ch = conn.channel()
+        assert isinstance(ch, Channel)
+        ch.exchange_declare(rand_exch, 'fanout')
+
+        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+
+        ch.basic_publish(msg, rand_exch)
+        ch.basic_publish(msg, rand_exch, mandatory=True)
+        ch.basic_publish(msg, rand_exch, mandatory=True)
+        ch.basic_publish(msg, rand_exch, mandatory=True)
+
+        log.debug('read data from server')
+        while True:
+            rlist, _, _ = select([conn.sock], [], [], 0)
+            if not rlist:
+                break
+            conn.drain_events()
+        log.debug('done reading')
+
+        # 3 of the 4 messages we sent should have been returned
+        assert ch.returned_messages.qsize() == 3
+        log.debug('returned messages assertion ok')
 
     def test_defaults(self, ch):
         """Test how a queue defaults to being bound to an AMQP default exchange, and how publishing defaults to the
