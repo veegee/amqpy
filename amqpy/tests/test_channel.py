@@ -1,15 +1,16 @@
 import uuid
 import logging
 import sys
+from select import select
 
 import pytest
 
 from .. import Connection, Channel, Message, FrameSyntaxError, queue_declare_ok_t
-from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused, Timeout
+from ..exceptions import AMQPError, ChannelError, PreconditionFailed, NotFound, AccessRefused
 from .conftest import get_server_props
-from select import select
 
-logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, style='{', format='{asctime} {levelname:8} {message}',
+logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, style='{',
+                    format='{asctime} {levelname:8} {message}',
                     datefmt='%Y/%m/%d %H:%M:%S')
 log = logging.getLogger('amqpy')
 
@@ -145,14 +146,15 @@ class TestExchange:
     def test_exchange_delete_nonexistent_raises(self, ch, rand_exch):
         """Test to ensure that deleting a nonexistent exchange raises `NotFound`
 
-        Note: starting with RabbitMQ 3.2 (?), exchange.delete is an idempotent assertion that the exchange must not
-        exist.
+        Note: starting with RabbitMQ 3.2 (?), exchange.delete is an idempotent
+        assertion that the exchange must not exist.
 
-             We have made queue.delete into an idempotent assertion that the queue must not exist, in the same way that
-             queue.declare asserts that it must. See https://www.rabbitmq.com/specification.html
+             We have made queue.delete into an idempotent assertion that the
+             queue must not exist, in the same way that queue.declare asserts
+             that it must. See https://www.rabbitmq.com/specification.html
 
-        This means that the RabbitMQ server will not raise a 404 NOT FOUND channel exception when attempting to
-        delete a nonexistent exchange.
+        This means that the RabbitMQ server will not raise a 404 NOT FOUND
+        channel exception when attempting to delete a nonexistent exchange.
         """
         server_props = get_server_props(ch.connection)
 
@@ -177,9 +179,11 @@ class TestExchange:
     def test_exchange_bind(self, ch):
         """Test exchange binding
 
-        Network configuration is as follows (-> is forwards to : source_exchange -> dest_exchange -> queue The test
-        checks that once the message is publish to the destination exchange(funtest.topic_dest) it is delivered to the
-        queue.
+        Network configuration is as follows (-> is forwards to):
+        source_exchange -> dest_exchange -> queue.
+
+        The test checks that once the message is published to the destination
+        exchange(funtest.topic_dest) it is delivered to the queue.
         """
         test_routing_key = 'unit_test__key'
         dest_exchange = 'funtest.topic_dest_bind'
@@ -189,10 +193,12 @@ class TestExchange:
         ch.exchange_declare(source_exchange, 'topic', auto_delete=True)
 
         qname, _, _ = ch.queue_declare()
-        ch.exchange_bind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
+        ch.exchange_bind(dest_exch=dest_exchange, source_exch=source_exchange,
+                         routing_key=test_routing_key)
         ch.queue_bind(qname, dest_exchange, routing_key=test_routing_key)
 
-        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+        msg = Message('funtest message', content_type='text/plain',
+                      application_headers={'foo': 7, 'bar': 'baz'})
 
         ch.basic_publish(msg, source_exchange, routing_key=test_routing_key)
 
@@ -207,9 +213,11 @@ class TestExchange:
         ch.exchange_declare(dest_exchange, 'topic', auto_delete=True)
         ch.exchange_declare(source_exchange, 'topic', auto_delete=True)
 
-        ch.exchange_bind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
+        ch.exchange_bind(dest_exch=dest_exchange, source_exch=source_exchange,
+                         routing_key=test_routing_key)
 
-        ch.exchange_unbind(dest_exch=dest_exchange, source_exch=source_exchange, routing_key=test_routing_key)
+        ch.exchange_unbind(dest_exch=dest_exchange, source_exch=source_exchange,
+                           routing_key=test_routing_key)
 
 
 class TestQueue:
@@ -224,7 +232,8 @@ class TestQueue:
         qname, _, _ = ch.queue_declare()
         ch.queue_bind(qname, 'amq.direct', routing_key=rand_rk)
 
-        msg = Message('Hello, world!', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+        msg = Message('Hello, world!', content_type='text/plain',
+                      application_headers={'foo': 7, 'bar': 'baz'})
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
 
         msg2 = ch.basic_get(qname, no_ack=True)
@@ -233,13 +242,15 @@ class TestQueue:
     def test_queue_delete_nonexistent(self, ch):
         """Test to ensure that deleting a nonexistent queue raises `NotFound`
 
-        Note: starting with RabbitMQ 3.2 (?), queue.delete is an idempotent assertion that the queue must not exist.
+        Note: starting with RabbitMQ 3.2 (?), queue.delete is an idempotent
+        assertion that the queue must not exist.
 
-            We have made exchange.delete into an idempotent assertion that the exchange must not exist, in the same way
-            that exchange.declare asserts that it must. See https://www.rabbitmq.com/specification.html
+            We have made queue.delete into an idempotent assertion that the
+            queue must not exist, in the same way that queue.declare asserts
+            that it must. See https://www.rabbitmq.com/specification.html
 
-        This means that the RabbitMQ server will not raise a 404 NOT FOUND channel exception when attempting to
-        delete a nonexistent queue.
+        This means that the RabbitMQ server will not raise a 404 NOT FOUND
+        channel exception when attempting to delete a nonexistent queue.
         """
         server_props = get_server_props(ch.connection)
         if server_props[0] == 'RabbitMQ' and server_props[1] >= (3, 2, 0):
@@ -258,13 +269,16 @@ class TestQueue:
     def test_unbind_nonexistent(self, ch, rand_exch, rand_queue, rand_rk):
         """Test to ensure that unbinding a nonexistent binding raises `NotFound`
 
-        Note: starting with RabbitMQ 3.2 (?), queue.delete is an idempotent assertion that the queue must not exist.
+        Note: starting with RabbitMQ 3.2 (?), queue.delete is an idempotent
+        assertion that the queue must not exist.
 
-            We have made exchange.delete into an idempotent assertion that the exchange must not exist, in the same way
-            that exchange.declare asserts that it must. See https://www.rabbitmq.com/specification.html
+            We have made exchange.delete into an idempotent assertion that
+            the exchange must not exist, in the same way that exchange.declare
+            asserts that it must. See
+            https://www.rabbitmq.com/specification.html
 
-        This means that the RabbitMQ server will not raise a 404 NOT FOUND channel exception when attempting to
-        delete a nonexistent queue.
+        This means that the RabbitMQ server will not raise a 404 NOT FOUND
+        channel exception when attempting to delete a nonexistent queue.
         """
         server_props = get_server_props(ch.connection)
 
@@ -278,7 +292,8 @@ class TestQueue:
 class TestPublish:
     def test_publish(self, ch):
         ch.exchange_declare('funtest.fanout', 'fanout', auto_delete=True)
-        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+        msg = Message('funtest message', content_type='text/plain',
+                      application_headers={'foo': 7, 'bar': 'baz'})
         ch.basic_publish(msg, 'funtest.fanout')
 
     def test_publish_large(self, ch):
@@ -301,7 +316,8 @@ class TestPublish:
         ch.exchange_declare(rand_exch, 'direct', auto_delete=True)
         ch.queue_declare(queue_name)
         ch.queue_bind(queue_name, rand_exch, rk)
-        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+        msg = Message('funtest message', content_type='text/plain',
+                      application_headers={'foo': 7, 'bar': 'baz'})
         ch.confirm_select()
         ch.basic_publish_confirm(msg, rand_exch, rk)
 
@@ -317,13 +333,15 @@ class TestPublish:
         ch_a.basic_publish(Message('Hello, world!'), 'amq.direct', rand_rk)
         ch_a.basic_publish(Message('Hello, world!'), 'amq.direct', rand_rk)
 
-        # create a new channel, and check that there are no messages on the queue
+        # create a new channel, and check that there are no messages on the
+        # queue
         #: :type: amqpy.channel.Channel
         ch_b = conn.channel()
         ok = ch_b.queue_declare(rand_queue, passive=True)
         assert ok.message_count == 0
 
-        # now commit the transaction, then make sure there are two messages on the queue
+        # now commit the transaction, then make sure there are two messages on
+        # the queue
         ch_a.tx_commit()
         ok = ch_b.queue_declare(rand_queue, passive=True)
         assert ok.message_count == 2
@@ -334,7 +352,8 @@ class TestPublish:
         assert isinstance(ch, Channel)
         ch.exchange_declare(rand_exch, 'fanout')
 
-        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+        msg = Message('funtest message', content_type='text/plain',
+                      application_headers={'foo': 7, 'bar': 'baz'})
 
         ch.basic_publish(msg, rand_exch)
         ch.basic_publish(msg, rand_exch, mandatory=True)
@@ -353,7 +372,8 @@ class TestPublish:
         assert isinstance(ch, Channel)
         ch.exchange_declare(rand_exch, 'fanout')
 
-        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+        msg = Message('funtest message', content_type='text/plain',
+                      application_headers={'foo': 7, 'bar': 'baz'})
 
         ch.basic_publish(msg, rand_exch)
         ch.basic_publish(msg, rand_exch, mandatory=True)
@@ -373,11 +393,13 @@ class TestPublish:
         log.debug('returned messages assertion ok')
 
     def test_defaults(self, ch):
-        """Test how a queue defaults to being bound to an AMQP default exchange, and how publishing defaults to the
-        default exchange, and basic_get defaults to getting from the most recently declared queue, and queue_delete
-        defaults to deleting the most recently declared queue
+        """Test how a queue defaults to being bound to an AMQP default
+        exchange, and how publishing defaults to the default exchange, and
+        basic_get defaults to getting from the most recently declared queue,
+        and queue_delete defaults to deleting the most recently declared queue
         """
-        msg = Message('funtest message', content_type='text/plain', application_headers={'foo': 7, 'bar': 'baz'})
+        msg = Message('funtest message', content_type='text/plain',
+                      application_headers={'foo': 7, 'bar': 'baz'})
 
         qname, _, _ = ch.queue_declare()
         ch.basic_publish(msg, routing_key=qname)
