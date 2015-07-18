@@ -18,7 +18,7 @@ from .spec import FrameType
 log = logging.getLogger('amqpy')
 compat.patch()
 
-_UNAVAIL = errno.EAGAIN, errno.EINTR, errno.ENOENT
+_UNAVAIL = {errno.EAGAIN, errno.EINTR, errno.ENOENT}
 
 AMQP_PROTOCOL_HEADER = b'AMQP\x00\x00\x09\x01'  # bytes([65, 77, 81, 80, 0, 0, 9, 1])
 
@@ -71,6 +71,7 @@ class Transport(metaclass=ABCMeta):
             raise socket.error(last_err)
 
         try:
+            assert isinstance(self.sock, socket.socket)
             self.sock.settimeout(None)
             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)

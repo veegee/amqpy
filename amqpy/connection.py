@@ -336,7 +336,7 @@ class Connection(AbstractChannel):
         """
         while True:
             try:
-                self.drain_events(0)
+                self.drain_events(timeout)
             except Timeout:
                 break
 
