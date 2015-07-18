@@ -1052,6 +1052,14 @@ class Channel(AbstractChannel):
         If publisher confirms are enabled, this method will automatically wait to receive an "ack"
         from the server.
 
+        Note::
+
+            Returned messages are sent back from the server and loaded into
+            the `returned_messages` queue of the channel that sent them. In
+            order to receive all returned messages, call `loop(0)` on the
+            connection object before checking the channel's
+            `returned_messages` queue.
+
         :param msg: message
         :param str exchange: exchange name, empty string means default exchange
         :param str routing_key: routing key
