@@ -221,7 +221,10 @@ class Connection(AbstractChannel):
         :return: Channel
         :rtype: amqpy.channel.Channel
         """
-        return self.channels.get(channel_id, Channel(self, channel_id))
+        try:
+            return self.channels[channel_id]
+        except KeyError:
+            return Channel(self, channel_id)
 
     def send_heartbeat(self):
         """Send a heartbeat to the server
