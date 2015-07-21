@@ -179,6 +179,7 @@ class MethodReader:
         except socket.error as e:
             if get_errno(e) == errno.EAGAIN:
                 raise Timeout()
+            raise
         finally:
             if orig_timeout != timeout:
                 self.sock.settimeout(orig_timeout)
