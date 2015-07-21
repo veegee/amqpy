@@ -4,7 +4,7 @@ import logging
 import socket
 from array import array
 import pprint
-from threading import Event
+from threading import Event, Thread
 import time
 
 from . import __version__, compat
@@ -43,7 +43,7 @@ class Connection(AbstractChannel):
                  userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/',
                  locale='en_US',
                  channel_max=65535, frame_max=131072,
-                 heartbeat=0, auto_heartbeat=False, daemon=True,
+                 heartbeat=0,
                  client_properties=None,
                  on_blocked=None, on_unblocked=None):
         """Create a connection to the specified host
@@ -63,8 +63,6 @@ class Connection(AbstractChannel):
         :param int channel_max: maximum number of channels
         :param int frame_max: maximum frame payload size in bytes
         :param float heartbeat: heartbeat interval in seconds, 0 disables heartbeat
-        :param bool daemon: auto heartbeat thread daemon mode
-        :param bool auto_heartbeat: enable automatic heartbeats thread
         :param client_properties: dict of client properties
         :param on_blocked: callback on connection blocked
         :param on_unblocked: callback on connection unblocked
@@ -115,8 +113,6 @@ class Connection(AbstractChannel):
         self._virtual_host = virtual_host
         self._locale = locale
         self._heartbeat_client = heartbeat  # original heartbeat interval value proposed by client
-        self._auto_heartbeat = auto_heartbeat
-        self._daemon = daemon
         self._client_properties = client_properties
 
         # callbacks
@@ -124,8 +120,8 @@ class Connection(AbstractChannel):
         self.on_unblocked = on_unblocked
 
         # heartbeat
-        self._close_event = None  # Event(): the heartbeat thread listens for this event to exit
-        self.heartbeat_thread = None
+        self._close_event = Event()
+        self._heartbeat_thread = None
 
         self.connect()
 
@@ -166,13 +162,15 @@ class Connection(AbstractChannel):
 
         self._send_open(self._virtual_host)
 
-        # set up automatic heartbeats
-        self._close_event = Event()
-        # if self._auto_heartbeat:
-        #     log.debug('Start automatic heartbeat thread')
-        #     t = Thread(target=self._heartbeat_thread, name='HeartbeatThread', daemon=self._daemon)
-        #     t.start()
-        #     self.heartbeat_thread = t
+        # set up automatic heartbeats, if requested for:
+        if self._heartbeat_final:
+            self._close_event.clear()
+            log.debug('Start automatic heartbeat thread')
+            thr = Thread(target=self._heartbeat_run,
+                         name='amqp-HeartBeatThread-%s' % id(self),
+                         daemon=True)
+            thr.start()
+            self._heartbeat_thread = thr
 
     @property
     def last_heartbeat_recv(self):
@@ -266,63 +264,17 @@ class Connection(AbstractChannel):
         method = self.method_reader.read_method(timeout)
         return method
 
-    def _wait_any_hb(self, timeout=None):
-        """Wait for any event on the connection (for any channel), while
-        sending heartbeats
-
-        This method serves the same purpose as :meth:`self._wait_any`,
-        but sends regular heartbeats as configured for the connection.
-
-        :param float timeout: timeout
-        :return: method
-        :rtype: amqpy.proto.Method
-        :raise amqpy.exceptions.Timeout: if the operation times out
-        """
-        # check the method queue of each channel
-        for ch_id, channel in self.channels.items():
-            if channel.incoming_methods:
-                return channel.incoming_methods.pop(0)
-
-        max_wait_time = self._heartbeat_final * 0.45
-        remaining = timeout
-        start_time = time.monotonic()
-
-        while True:
-            # send heartbeat if necessary
-            last_hb_age = time.monotonic() - self.transport.last_heartbeat_sent_monotonic
-            if last_hb_age >= max_wait_time:
-                self.send_heartbeat()
-
-            if timeout is None:
-                wait_time = max_wait_time
-            else:
-                wait_time = min(timeout, max_wait_time, remaining)
-
-            try:
-                return self._wait_any(wait_time)
-            except Timeout:
-                pass
-            finally:
-                if remaining:
-                    remaining -= wait_time
-
-            if timeout is not None and time.monotonic() - start_time >= timeout:
-                raise Timeout()
-
     def drain_events(self, timeout=None):
         """Wait for an event on all channels
 
-        This method should be called after creating consumers in order to receive delivered messages
-        and execute consumer callbacks.
+        This method should be called after creating consumers in order to
+        receive delivered messages and execute consumer callbacks.
 
         :param timeout: maximum allowed time to wait for an event
         :type timeout: float or None
         :raise amqpy.exceptions.Timeout: if the operation times out
         """
-        if self._heartbeat_final:
-            method = self._wait_any_hb(timeout)
-        else:
-            method = self._wait_any(timeout)
+        method = self._wait_any(timeout)
 
         assert isinstance(method, Method)
         #: :type: amqpy.Channel
@@ -359,13 +311,16 @@ class Connection(AbstractChannel):
             caused it
         :type method_type: amqpy.spec.method_t
         """
-        # signal to the heartbeat thread to stop sending heartbeats
-        self._close_event.set()
-
         if not self.is_alive():
             # already closed
             log.debug('Already closed')
             return
+
+        # signal to the heartbeat thread to stop sending heartbeats
+        if self._heartbeat_final:
+            self._close_event.set()
+            self._heartbeat_thread.join()
+            self._heartbeat_thread = None
 
         args = AMQPWriter()
         args.write_short(reply_code)
@@ -375,7 +330,7 @@ class Connection(AbstractChannel):
         self._send_method(Method(spec.Connection.Close, args))
         return self.wait_any([spec.Connection.Close, spec.Connection.CloseOk])
 
-    def _heartbeat_thread(self):
+    def _heartbeat_run(self):
         # `is_alive()` sends heartbeats if the connection is alive
         while self.is_alive():
             # `close` is set to true if the `close_event` is signalled
