@@ -1073,35 +1073,6 @@ class Channel(AbstractChannel):
             self.wait(spec.Basic.Ack)
 
     @synchronized('lock')
-    def basic_publish_confirm(self, msg, exchange='', routing_key='', mandatory=False,
-                              immediate=False):
-        """Publish a message and wait for a confirmation from the server
-
-        This method publishes a message to a specific exchange. The message will be routed to
-        queues as defined by the exchange configuration and distributed to any active consumers when
-        the transaction, if any, is committed.
-
-        **This method requires the RabbitMQ publisher acknowledgements extension, and enabled on
-        the channel.**
-
-        :param msg: message
-        :param exchange: exchange name, empty string means default exchange
-        :param routing_key: routing key
-        :param mandatory: True: deliver to at least one queue or return the message; False: drop
-            the unroutable message
-        :param immediate: request immediate delivery
-        :type msg: amqpy.Message
-        :type exchange: str
-        :type mandatory: bool
-        :type immediate: bool
-        :raise Exception: if publisher confirms are not enabled on the channel
-        """
-        if self.mode != self.CH_MODE_CONFIRM:
-            raise Exception('Publisher confirms are NOT enabled')
-        self._basic_publish(msg, exchange, routing_key, mandatory, immediate)
-        self.wait(spec.Basic.Ack)
-
-    @synchronized('lock')
     def basic_qos(self, prefetch_size=0, prefetch_count=0, a_global=False):
         """Specify quality of service
 

@@ -319,7 +319,7 @@ class TestPublish:
         msg = Message('funtest message', content_type='text/plain',
                       application_headers={'foo': 7, 'bar': 'baz'})
         ch.confirm_select()
-        ch.basic_publish_confirm(msg, rand_exch, rk)
+        ch.basic_publish(msg, rand_exch, rk)
 
     def test_publish_tx(self, conn, rand_queue, rand_rk):
         """Transactions must work as expected
@@ -352,42 +352,18 @@ class TestPublish:
         assert isinstance(ch, Channel)
         ch.exchange_declare(rand_exch, 'fanout')
 
-        msg = Message('funtest message', content_type='text/plain',
-                      application_headers={'foo': 7, 'bar': 'baz'})
-
-        ch.basic_publish(msg, rand_exch)
-        ch.basic_publish(msg, rand_exch, mandatory=True)
-        ch.basic_publish(msg, rand_exch, mandatory=True)
-        ch.basic_publish(msg, rand_exch, mandatory=True)
-
-        conn.loop(0)
-
-        # 3 of the 4 messages we sent should have been returned
-        assert ch.returned_messages.qsize() == 3
-        log.debug('returned messages assertion ok')
-
-    def test_basic_return_2(self, conn, rand_exch):
-        assert isinstance(conn, Connection)
-        ch = conn.channel()
-        assert isinstance(ch, Channel)
-        ch.exchange_declare(rand_exch, 'fanout')
+        ch.confirm_select()
 
         msg = Message('funtest message', content_type='text/plain',
                       application_headers={'foo': 7, 'bar': 'baz'})
 
         ch.basic_publish(msg, rand_exch)
+        assert ch.returned_messages.qsize() == 0
         ch.basic_publish(msg, rand_exch, mandatory=True)
+        assert ch.returned_messages.qsize() == 1
         ch.basic_publish(msg, rand_exch, mandatory=True)
+        assert ch.returned_messages.qsize() == 2
         ch.basic_publish(msg, rand_exch, mandatory=True)
-
-        log.debug('read data from server')
-        while True:
-            rlist, _, _ = select([conn.sock], [], [], 0)
-            if not rlist:
-                break
-            conn.drain_events()
-        log.debug('done reading')
-
         # 3 of the 4 messages we sent should have been returned
         assert ch.returned_messages.qsize() == 3
         log.debug('returned messages assertion ok')
