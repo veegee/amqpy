@@ -54,12 +54,15 @@ def get_os_release():
 
 
 def compare_versions(v1, v2):
-    """Compare two version strings."""
+    """Compare two version strings.
+    Returns True if the former is (strictly) greater than the later,
+            False otherwise.
+    """
 
     def normalize(v):
-        return map(int, re.sub(r'(\.0+)*$', '', v).split('.'))
+        return tuple(map(int, re.sub(r'(\.0+)*$', '', v).split('.')))
 
-    return cmp(normalize(v1), normalize(v2))
+    return normalize(v1) > normalize(v2)
 
 
 try:
@@ -139,5 +142,6 @@ except AttributeError:
         if monotonic() - monotonic() > 0:
             raise ValueError('monotonic() is not monotonic!')
 
-    except Exception:
-        raise RuntimeError('no suitable implementation for this system')
+    except Exception as err:
+        raise RuntimeError('no suitable implementation for this system: %s'
+                           % err)
