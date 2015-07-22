@@ -42,15 +42,15 @@ class TestConsumer:
         ch.confirm_select()
 
         log.info('Publish messages')
-        ch.basic_publish_confirm(Message('Hello, world!', content_type='text/plain'), exch, rk)
-        ch.basic_publish_confirm(Message('Hello, world!', content_type='text/plain'), exch, rk)
+        ch.basic_publish(Message('Hello, world!', content_type='text/plain'), exch, rk)
+        ch.basic_publish(Message('Hello, world!', content_type='text/plain'), exch, rk)
 
         log.info('Declare consumer')
         ch.basic_consume(q, callback=consumer)
 
         log.info('Publish messages')
-        ch.basic_publish_confirm(Message('Hello, world!', content_type='text/plain'), exch, rk)
-        ch.basic_publish_confirm(Message('Hello, world!', content_type='text/plain'), exch, rk)
+        ch.basic_publish(Message('Hello, world!', content_type='text/plain'), exch, rk)
+        ch.basic_publish(Message('Hello, world!', content_type='text/plain'), exch, rk)
 
         log.info('Begin draining events')
         while True:
@@ -83,7 +83,7 @@ class TestConsumer:
 
         log.info('Publish messages')
         for i in range(10):
-            ch.basic_publish_confirm(Message('{}: Hello, world!'.format(i)), exch, rk)
+            ch.basic_publish(Message('{}: Hello, world!'.format(i)), exch, rk)
 
         log.info('Declare consumer')
         c1 = Consumer(ch, q)
