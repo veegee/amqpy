@@ -128,13 +128,14 @@ class Connection(AbstractChannel):
     def connect(self):
         """Connect using saved connection parameters
 
-        This method does not need to be called explicitly; it is called by the constructor during
-        initialization.
+        This method does not need to be called explicitly; it is called by
+        the constructor during initialization.
 
-        Note: reconnecting invalidates all declarations (channels, queues, consumers, delivery tags,
-        etc.).
+        Note: reconnecting invalidates all declarations (channels, queues,
+        consumers, delivery tags, etc.).
         """
         # start the connection; this also sends the connection protocol header
+        self.connection = self  # AbstractChannel.connection
         self.transport = create_transport(self._host, self._port, self._connect_timeout,
                                           self.frame_max, self._ssl)
 

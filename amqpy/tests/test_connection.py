@@ -5,7 +5,7 @@ import threading
 
 import pytest
 
-from .. import Channel, NotFound, FrameError, spec
+from .. import Channel, NotFound, FrameError, spec, Connection
 import time
 import signal
 from ..proto import Method
@@ -44,6 +44,16 @@ class TestConnection:
         conn.close()
         assert conn.connection is None
         assert conn.channels is None
+
+    def test_open_close_open(self):
+        # create a new connection
+        conn = Connection()
+
+        # close the connection
+        conn.close()
+
+        # reopen the connection
+        conn.connect()
 
     def test_is_alive(self, conn):
         assert conn.is_alive()
