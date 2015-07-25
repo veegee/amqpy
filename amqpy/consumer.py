@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from threading import Thread
 
 
 class AbstractConsumer(metaclass=ABCMeta):
@@ -19,14 +18,10 @@ class AbstractConsumer(metaclass=ABCMeta):
         c1.declare()
 
         conn.drain_events()
-
-    To take full advantage of the work queue and consumer architecture, specify `use_thread=True`
-    and make sure that QOS settings are enabled for the channel or connection. This way, multiple
-    consumers may be declared on the same channel, and messages will be load-balanced among them.
     """
 
-    def __init__(self, channel, queue, consumer_tag='', no_local=False, no_ack=False,
-                 exclusive=False, use_thread=False):
+    def __init__(self, channel, queue, consumer_tag='', no_local=False,
+                 no_ack=False, exclusive=False):
         """
         :param channel: channel
         :type channel: amqpy.channel.Channel
@@ -36,7 +31,6 @@ class AbstractConsumer(metaclass=ABCMeta):
         :param bool no_local: if True: do not deliver own messages
         :param bool no_ack: server will not expect an ack for each message
         :param bool exclusive: request exclusive access
-        :param bool use_thread: when the consumer run() method is called, start it in a new thread
         """
         self.channel = channel
         self.queue = queue
@@ -44,7 +38,6 @@ class AbstractConsumer(metaclass=ABCMeta):
         self.no_local = no_local
         self.no_ack = no_ack
         self.exclusive = exclusive
-        self.use_thread = use_thread
 
         #: Number of messages consumed (incremented automatically)
         self.consume_count = 0
@@ -89,13 +82,6 @@ class AbstractConsumer(metaclass=ABCMeta):
         """
         pass
 
-    def _run(self, msg):
+    def start(self, msg):
         self.run(msg)
         self.consume_count += 1
-
-    def start(self, msg):
-        if self.use_thread:
-            t = Thread(target=self._run, args=(msg,), name='consumer-{}'.format(self.consumer_tag))
-            t.start()
-        else:
-            self._run(msg)
