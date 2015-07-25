@@ -50,10 +50,9 @@ class AbstractConsumer(metaclass=ABCMeta):
         After the queue consumer is created, :attr:`self.consumer_tag` is set to the
         server-assigned consumer tag if a tag was not specified initially.
         """
-        self.consumer_tag = self.channel.basic_consume(self.queue, self.consumer_tag, self.no_local,
-                                                       self.no_ack, self.exclusive,
-                                                       callback=self.start,
-                                                       on_cancel=self.cancel_cb)
+        self.consumer_tag = self.channel.basic_consume(
+            self.queue, self.consumer_tag, self.no_local, self.no_ack, self.exclusive,
+            callback=self.start, on_cancel=self.cancel_cb)
 
     def cancel(self):
         """Cancel the consumer
