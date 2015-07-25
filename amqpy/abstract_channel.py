@@ -29,7 +29,7 @@ class AbstractChannel(metaclass=ABCMeta):
         :type connection: amqpy.connection.Connection
         :type channel_id: int
         """
-        self.connection = connection
+        self.connection = connection  # connection object
         self.channel_id = channel_id
         connection.channels[channel_id] = self
         # queue of incoming methods for this channel
