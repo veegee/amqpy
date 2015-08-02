@@ -64,7 +64,10 @@ class AbstractChannel(metaclass=ABCMeta):
         :param method: method to wait for, or `None` to wait for any method
         :type method: spec.method_t or None
         """
-        m = self._wait_method([method])
+        if method is None:
+            m = self._wait_method(None)
+        else:
+            m = self._wait_method([method])
         return self.handle_method(m)
 
     def wait_any(self, allowed_methods):
@@ -81,6 +84,7 @@ class AbstractChannel(metaclass=ABCMeta):
 
         This method is designed to be called from a channel instance.
 
+        :type allowed_methods: list or None
         :return: method
         :rtype: Method
         """

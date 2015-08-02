@@ -5,7 +5,6 @@ import socket
 from array import array
 import pprint
 from threading import Event, Thread
-import time
 
 from . import __version__, compat
 from .proto import Method
