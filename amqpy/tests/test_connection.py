@@ -2,12 +2,12 @@ import gc
 import os
 from signal import SIGHUP
 import threading
+import time
+import signal
 
 import pytest
 
 from .. import Channel, NotFound, FrameError, spec, Connection
-import time
-import signal
 from ..proto import Method
 
 
@@ -116,6 +116,7 @@ class TestConnection:
         gc.collect()
         assert unreachable_before == len(gc.garbage)
 
+    @pytest.mark.skipif('sys.version_info >= (3, 5)')
     def test_interrupted(self, conn):
         """Make sure to get InterruptedError if a read was interrupted
         """
@@ -131,5 +132,6 @@ class TestConnection:
 
         th = threading.Thread(target=interrupt_it)
         th.start()
+
         with pytest.raises(InterruptedError):
             conn.drain_events(2)
