@@ -107,6 +107,7 @@ class AbstractChannel(metaclass=ABCMeta):
         while True:
             method = self.connection.method_reader.read_method()
             ch_id = method.channel_id
+            print(self.connection, self.connection.channels)
             ch = self.connection.channels[ch_id]
             m_type = method.method_type
 
@@ -123,7 +124,8 @@ class AbstractChannel(metaclass=ABCMeta):
                 ch.handle_method(method)
                 continue
 
-            # not the channel and/or method we were looking for; queue this method for later
+            # not the channel and/or method we were looking for
+            # enqueue this method for later in the target channel's queue
             ch.incoming_methods.append(method)
 
             # if the method is destined for channel 0 (the connection itself), it's probably an

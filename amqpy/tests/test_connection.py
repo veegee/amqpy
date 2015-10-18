@@ -43,7 +43,7 @@ class TestConnection:
         # close the connection and make sure the references we expect are gone
         conn.close()
         assert conn.connection is None
-        assert conn.channels is None
+        assert conn.channels is not None
 
     def test_open_close_open(self):
         # create a new connection
