@@ -107,7 +107,6 @@ class AbstractChannel(metaclass=ABCMeta):
         while True:
             method = self.connection.method_reader.read_method()
             ch_id = method.channel_id
-            print(self.connection, self.connection.channels)
             ch = self.connection.channels[ch_id]
             m_type = method.method_type
 
