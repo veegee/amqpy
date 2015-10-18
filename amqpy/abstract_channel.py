@@ -107,6 +107,7 @@ class AbstractChannel(metaclass=ABCMeta):
         while True:
             method = self.connection.method_reader.read_method()
             ch_id = method.channel_id
+            ch = self.connection.channels[ch_id]
             m_type = method.method_type
 
             # check if the received method is the one we're waiting for
@@ -119,11 +120,11 @@ class AbstractChannel(metaclass=ABCMeta):
             if ch_id != 0 and m_type in self.IMMEDIATE_METHODS:
                 # certain methods like basic_return should be dispatched immediately rather than
                 # being queued, even if they're not one of the `allowed_methods` we're looking for
-                self.connection.channels[ch_id].handle_method(method)
+                ch.handle_method(method)
                 continue
 
             # not the channel and/or method we were looking for; queue this method for later
-            self.incoming_methods.append(method)
+            ch.incoming_methods.append(method)
 
             # if the method is destined for channel 0 (the connection itself), it's probably an
             # exception, so handle it immediately
