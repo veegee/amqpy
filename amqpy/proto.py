@@ -23,6 +23,8 @@ class Frame:
         size (bytes)        1       2         4             size             1
     """
 
+    __slots__ = ['data', '_frame_type', '_channel', '_payload_size']
+
     def __init__(self, frame_type=None, channel=0, payload=bytes()):
         """Create new Frame
 
@@ -132,6 +134,7 @@ class Method:
     The format of the `FrameType.BODY` frame's payload is simply raw binary data of the message
     body.
     """
+    __slots__ = ['method_type', 'args', 'content', 'channel_id', '_body_bytes', '_expected_body_size']
 
     def __init__(self, method_type=None, args=None, content=None, channel_id=None):
         """
@@ -141,7 +144,7 @@ class Method:
         :param channel_id: the associated channel ID, if any
         :type method_type: method_t
         :type args: AMQPReader or AMQPWriter or None
-        :type content: amqp.message.GenericContent or None
+        :type content: Message or None
         :type channel_id: int or None
         """
         #: :type: amqpy.spec.method_t
@@ -154,8 +157,8 @@ class Method:
         else:
             raise ValueError('args must be an instance of `AMQPReader` or `AMQPWriter`')
 
-        #: :type: amqpy.message.GenericContent or None
-        self.content = content  # GenericContent if this method is carrying content
+        #: :type: Message or None
+        self.content = content  # Message if this method is carrying content
         #: :type: int
         self.channel_id = channel_id
 

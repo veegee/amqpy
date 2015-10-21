@@ -11,6 +11,7 @@ class GenericContent:
 
     Subclasses should override :attr:`PROPERTIES`.
     """
+    __slots__ = ['properties']
     PROPERTIES = []
 
     def __init__(self, properties):
@@ -93,6 +94,8 @@ class GenericContent:
 class Message(GenericContent):
     """A Message for use with the `Channel.basic_*` methods
     """
+    __slots__ = ['body', 'channel', 'delivery_info']
+
     CLASS_ID = spec.Basic.CLASS_ID
 
     # instances of this class have these attributes, which are passed back and forth as message

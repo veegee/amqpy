@@ -16,6 +16,7 @@ def byte(n):
 class AMQPReader:
     """Read higher-level AMQP types from a bytestream
     """
+    __slots__ = ['input', 'bit_count', 'bits']
 
     def __init__(self, source):
         """
@@ -198,6 +199,7 @@ class AMQPReader:
 class AMQPWriter:
     """Convert higher-level AMQP types to bytestreams
     """
+    __slots__ = ['out', 'bits', 'bit_count']
 
     def __init__(self, dest=None):
         """
@@ -214,15 +216,15 @@ class AMQPWriter:
             raise TypeError('AMQPWriter needs an `io.BytesIO` or `None`')
 
         self.bits = []
-        self.bitcount = 0
+        self.bit_count = 0
 
-    def _flushbits(self):
+    def _flush_bits(self):
         if self.bits:
             out = self.out
             for b in self.bits:
                 out.write(pack('B', b))
             self.bits = []
-            self.bitcount = 0
+            self.bit_count = 0
 
     def close(self):
         """Pass through if possible to any file-like destinations
@@ -240,7 +242,7 @@ class AMQPWriter:
         :return: bytes
         :rtype: bytes
         """
-        self._flushbits()
+        self._flush_bits()
         return self.out.getvalue()
 
     def write(self, b):
@@ -249,18 +251,18 @@ class AMQPWriter:
         :param b: bytes to write
         :type b: bytes
         """
-        self._flushbits()
+        self._flush_bits()
         self.out.write(b)
 
     def write_bit(self, b):
         """Write a boolean value
         """
         b = 1 if b else 0
-        shift = self.bitcount % 8
+        shift = self.bit_count % 8
         if shift == 0:
             self.bits.append(0)
         self.bits[-1] |= (b << shift)
-        self.bitcount += 1
+        self.bit_count += 1
 
     def write_octet(self, n):
         """Write an integer as an unsigned 8-bit value
@@ -268,7 +270,7 @@ class AMQPWriter:
         if n < 0 or n > 255:
             raise FrameSyntaxError(
                 'Octet {0!r} out of range 0..255'.format(n))
-        self._flushbits()
+        self._flush_bits()
         self.out.write(pack('B', n))
 
     def write_short(self, n):
@@ -277,7 +279,7 @@ class AMQPWriter:
         if n < 0 or n > 65535:
             raise FrameSyntaxError(
                 'Octet {0!r} out of range 0..65535'.format(n))
-        self._flushbits()
+        self._flush_bits()
         self.out.write(pack('>H', int(n)))
 
     def write_long(self, n):
@@ -286,7 +288,7 @@ class AMQPWriter:
         if n < 0 or n >= 4294967296:
             raise FrameSyntaxError(
                 'Octet {0!r} out of range 0..2**31-1'.format(n))
-        self._flushbits()
+        self._flush_bits()
         self.out.write(pack('>I', n))
 
     def write_longlong(self, n):
@@ -295,7 +297,7 @@ class AMQPWriter:
         if n < 0 or n >= 18446744073709551616:
             raise FrameSyntaxError(
                 'Octet {0!r} out of range 0..2**64-1'.format(n))
-        self._flushbits()
+        self._flush_bits()
         self.out.write(pack('>Q', n))
 
     def write_shortstr(self, s):
@@ -303,7 +305,7 @@ class AMQPWriter:
 
         If passed a unicode string, encode with UTF-8.
         """
-        self._flushbits()
+        self._flush_bits()
         if isinstance(s, str):
             s = s.encode('utf-8')
         if len(s) > 255:
@@ -317,7 +319,7 @@ class AMQPWriter:
 
         If passed a unicode string, encode as UTF-8.
         """
-        self._flushbits()
+        self._flush_bits()
         if isinstance(s, str):
             s = s.encode('utf-8')
         self.write_long(len(s))
@@ -328,7 +330,7 @@ class AMQPWriter:
         signed integers, Decimal, datetime.datetime, or sub-dictionaries following the same
         constraints
         """
-        self._flushbits()
+        self._flush_bits()
         table_data = AMQPWriter()
         for k, v in d.items():
             table_data.write_shortstr(k)
