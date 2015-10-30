@@ -150,7 +150,7 @@ class Message(GenericContent):
         :type body: bytes or str
         :type channel: amqpy.channel.Channel
         """
-        super().__init__(properties)
+        super(Message, self).__init__(properties)
 
         #: Message body (bytes or str)
         self.body = body
@@ -170,7 +170,7 @@ class Message(GenericContent):
         Received messages may contain a 'delivery_info' attribute, which isn't compared.
         """
         try:
-            return super().__eq__(other) and self.body == other.body
+            return super(Message, self).__eq__(other) and self.body == other.body
         except AttributeError:
             return False
 

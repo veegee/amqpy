@@ -13,7 +13,8 @@ from . import spec
 __all__ = ['AbstractChannel']
 
 
-class AbstractChannel(metaclass=ABCMeta):
+class AbstractChannel:
+    __metaclass__ = ABCMeta
     """Superclass for both the Connection, which is treated as channel 0, and other user-created
     Channel objects
 

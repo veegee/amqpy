@@ -3,11 +3,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 __metaclass__ = type
 from threading import Lock
 from collections import defaultdict, deque
-from queue import Queue
+import six
 import logging
 import socket
 import errno
 from .utils import get_errno
+
+if six.PY2:
+    from Queue import Queue
+else:
+    from queue import Queue
 
 from .concurrency import synchronized
 from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP

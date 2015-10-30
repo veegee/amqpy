@@ -12,7 +12,12 @@ __metaclass__ = type
 
 import sys
 import time
-import builtins
+import six
+
+if six.PY2:
+    import __builtin__
+elif six.PY3:
+    import builtins
 
 if sys.version_info < (3, 3):
     # add TimeoutError exception class
@@ -29,4 +34,7 @@ def patch():
         time.monotonic = monotonic.monotonic
 
     time.perf_counter = time.clock
-    builtins.TimeoutError = TimeoutError
+    if six.PY2:
+        __builtin__.TimeoutError = TimeoutError
+    elif six.PY3:
+        builtins.TimeoutError = TimeoutError

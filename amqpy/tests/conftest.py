@@ -4,6 +4,7 @@ __metaclass__ = type
 import uuid
 import logging
 import sys
+import six
 
 import pytest
 
@@ -17,7 +18,7 @@ class ColouredFormatter(logging.Formatter):
     BRGREEN = '\x1B[01;32m'  # grey in solarized for terminals
 
     def format(self, record, colour=False):
-        message = super().format(record)
+        message = super(ColouredFormatter, self).format(record)
 
         if not colour:
             return message
@@ -43,7 +44,9 @@ class ColouredFormatter(logging.Formatter):
 
 class ColouredHandler(logging.StreamHandler):
     def __init__(self, stream=sys.stdout):
-        super().__init__(stream)
+        super(ColouredHandler, self).__init__(stream)
+        if six.PY2:
+            self.terminator = '\n'
 
     def format(self, record, colour=False):
         if not isinstance(self.formatter, ColouredFormatter):
@@ -65,13 +68,19 @@ class ColouredHandler(logging.StreamHandler):
 
 
 h = ColouredHandler()
-h.formatter = ColouredFormatter('{asctime} {levelname:8} {message}', '%Y-%m-%d %H:%M:%S', '{')
-if sys.version_info >= (3, 3):
-    logging.basicConfig(level=logging.DEBUG, handlers=[h])
-else:
-    # Python 3.2 doesn't support the `handlers` parameter for `logging.basicConfig()`
+
+if six.PY2:
+    h.formatter = ColouredFormatter('%(asctime)s %(levelname)s %(message)s', '%Y-%m-%d %H:%M:%S')
     logging.basicConfig(level=logging.DEBUG)
     logging.root.handlers[0] = h
+else:
+    h.formatter = ColouredFormatter('{asctime} {levelname:8} {message}', '%Y-%m-%d %H:%M:%S', '{')
+    if sys.version_info <= (3, 2):
+        # Python 3.2 doesn't support the `handlers` parameter for `logging.basicConfig()`
+        logging.basicConfig(level=logging.DEBUG)
+        logging.root.handlers[0] = h
+    else:
+        logging.basicConfig(level=logging.DEBUG, handlers=[h])
 
 
 def get_server_props(cxn):

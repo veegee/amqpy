@@ -41,7 +41,7 @@ class Connection(AbstractChannel):
     server, and for both peers to operate the connection thereafter
     """
 
-    def __init__(self, *, host='localhost', port=5672, ssl=None, connect_timeout=None,
+    def __init__(self, host='localhost', port=5672, ssl=None, connect_timeout=None,
                  userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/',
                  locale='en_US',
                  channel_max=65535, frame_max=131072,

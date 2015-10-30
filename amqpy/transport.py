@@ -26,7 +26,8 @@ _UNAVAIL = {errno.EAGAIN, errno.EINTR, errno.ENOENT}
 AMQP_PROTOCOL_HEADER = b'AMQP\x00\x00\x09\x01'  # bytes([65, 77, 81, 80, 0, 0, 9, 1])
 
 
-class Transport(metaclass=ABCMeta):
+class Transport:
+    __metaclass__ = ABCMeta
     """Common superclass for TCP and SSL transports"""
     connected = False
 
@@ -283,7 +284,7 @@ class SSLTransport(Transport):
 
     def __init__(self, host, port, connect_timeout, frame_max, ssl_opts):
         self.ssl_opts = ssl_opts
-        super().__init__(host, port, connect_timeout, frame_max)
+        super(SSLTransport, self).__init__(host, port, connect_timeout, frame_max)
 
     def _setup_transport(self):
         """Wrap the socket in an SSL object

@@ -4,7 +4,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 __metaclass__ = type
 import logging
-from queue import Queue
+import six
+
+if six.PY2:
+    from Queue import Queue
+else:
+    from queue import Queue
 
 from .proto import Method
 from .concurrency import synchronized
@@ -53,7 +58,7 @@ class Channel(AbstractChannel):
             # noinspection PyProtectedMember
             channel_id = connection._get_free_channel_id()
 
-        super().__init__(connection, channel_id)
+        super(Channel, self).__init__(connection, channel_id)
 
         # auto decode received messages
         self.auto_decode = auto_decode

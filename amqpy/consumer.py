@@ -4,7 +4,8 @@ __metaclass__ = type
 from abc import ABCMeta, abstractmethod
 
 
-class AbstractConsumer(metaclass=ABCMeta):
+class AbstractConsumer:
+    __metaclass__ = ABCMeta
     """
     This class provides facilities to create and manage queue consumers. To
     create a consumer, subclass this class and override the :meth:`run`
