@@ -44,7 +44,7 @@ class TestBasicMessage:
             priority=7,
         )
 
-        msg2 = pickle.loads(pickle.dumps(msg))
+        msg2 = pickle.loads(pickle.dumps(msg, -1))
         assert msg == msg2
 
     def test_roundtrip(self):
