@@ -1,5 +1,8 @@
 """High-level representations of AMQP protocol objects
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 import struct
 
 from .serialization import AMQPReader, AMQPWriter

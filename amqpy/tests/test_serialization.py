@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 from datetime import datetime
 from decimal import Decimal
 from random import randint
