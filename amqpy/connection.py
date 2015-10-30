@@ -7,6 +7,7 @@ import logging
 import socket
 from array import array
 import pprint
+import six
 from threading import Event, Thread
 
 from . import __version__, compat
@@ -81,7 +82,7 @@ class Connection(AbstractChannel):
         self.channels = {}  # dict of {channel_id int: Channel}
 
         # the connection object itself is treated as channel 0
-        super().__init__(self, 0)  # also sets channels[0] = self
+        super(Connection, self).__init__(self, 0)  # also sets channels[0] = self
 
         # instance variables
         #: :type: amqpy.transport.Transport
@@ -100,7 +101,10 @@ class Connection(AbstractChannel):
         # properties set in the Tune method
         self.channel_max = channel_max
         self.frame_max = frame_max
-        self._avail_channel_ids = array('H', range(self.channel_max, 0, -1))
+        if six.PY2:
+            self._avail_channel_ids = array(b'H', range(self.channel_max, 0, -1))
+        else:
+            self._avail_channel_ids = array('H', range(self.channel_max, 0, -1))
         self._heartbeat_final = 0  # final heartbeat interval after negotiation
         self._heartbeat_server = None
 

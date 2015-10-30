@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 __metaclass__ = type
+import six
 import io
 from datetime import datetime
 from decimal import Decimal
@@ -254,6 +255,8 @@ class AMQPWriter:
         :param b: bytes to write
         :type b: bytes
         """
+        if six.PY2:
+            b = bytes(b)
         self._flush_bits()
         self.out.write(b)
 
@@ -309,7 +312,7 @@ class AMQPWriter:
         If passed a unicode string, encode with UTF-8.
         """
         self._flush_bits()
-        if isinstance(s, str):
+        if isinstance(s, six.string_types):
             s = s.encode('utf-8')
         if len(s) > 255:
             raise FrameSyntaxError(
@@ -323,7 +326,7 @@ class AMQPWriter:
         If passed a unicode string, encode as UTF-8.
         """
         self._flush_bits()
-        if isinstance(s, str):
+        if isinstance(s, six.string_types):
             s = s.encode('utf-8')
         self.write_long(len(s))
         self.out.write(s)
@@ -343,9 +346,12 @@ class AMQPWriter:
         self.out.write(table_data)
 
     def write_item(self, v, k=None):
-        if isinstance(v, (str, bytes)):
-            if isinstance(v, str):
-                v = v.encode('utf-8')
+        if isinstance(v, (six.string_types, bytes)):
+            if six.PY2:
+                print(v, type(v))
+            else:
+                if isinstance(v, str):
+                    v = v.encode('utf-8')
             self.write(b'S')
             self.write_longstr(v)
         elif isinstance(v, bool):
