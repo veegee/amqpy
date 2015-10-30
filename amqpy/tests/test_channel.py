@@ -131,14 +131,14 @@ class TestExchange:
             exch_name = 'test_exchange_{}'.format(uuid.uuid4())
             ch.exchange_declare(exch_name, 'direct', passive=True)
 
-    def test_exchange_redeclare_different_type_raises(self, ch: Channel, rand_exch):
+    def test_exchange_redeclare_different_type_raises(self, ch, rand_exch):
         """Redeclaring an exchange with a different type should raise
         """
         ch.exchange_declare(rand_exch, 'direct')
         with pytest.raises(AMQPError):
             ch.exchange_declare(rand_exch, 'fanout')
 
-    def test_exchange_redeclare_auto_delete_raises(self, ch: Channel, rand_exch):
+    def test_exchange_redeclare_auto_delete_raises(self, ch, rand_exch):
         """Redeclaring an exchange with a different `auto_delete` should raise
         """
         ch.exchange_declare(rand_exch, 'direct', auto_delete=False)
@@ -312,7 +312,7 @@ class TestPublish:
             msg2 = ch.basic_get(no_ack=True)
             assert msg == msg2
 
-    def test_publish_confirm(self, ch: Channel, rand_exch):
+    def test_publish_confirm(self, ch, rand_exch):
         queue_name = 'test.queue.publish'
         rk = queue_name
         ch.exchange_declare(rand_exch, 'direct', auto_delete=True)

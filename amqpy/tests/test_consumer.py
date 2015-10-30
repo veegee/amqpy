@@ -11,7 +11,7 @@ log = logging.getLogger('amqpy')
 
 
 class Consumer(AbstractConsumer):
-    def run(self, msg: Message):
+    def run(self, msg):
         log.info('{.consumer_tag} received message: {} {}'.format(self, msg.properties, msg.body))
         msg.ack()
 
@@ -20,7 +20,7 @@ class TestConsumer:
     def test_basic_consume(self, conn, ch, rand_exch, rand_queue):
         self.consume_count = 0
 
-        def consumer(msg: Message):
+        def consumer(msg):
             """Consume message
             """
             global consume_count
