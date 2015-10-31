@@ -174,8 +174,8 @@ class Connection(AbstractChannel):
             self._close_event.clear()
             log.debug('Start automatic heartbeat thread')
             thr = Thread(target=self._heartbeat_run,
-                         name='amqp-HeartBeatThread-%s' % id(self),
-                         daemon=True)
+                         name='amqp-HeartBeatThread-%s' % id(self))
+            thr.daemon=True
             thr.start()
             self._heartbeat_thread = thr
 
