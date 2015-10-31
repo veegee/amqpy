@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 __metaclass__ = type
 from threading import Lock
+import sys
 from collections import defaultdict, deque
 import six
 import logging
@@ -76,6 +77,9 @@ class MethodReader:
                 frame = self.transport.read_frame()
             except Exception as exc:
                 # connection was closed? framing error?
+                if six.PY2:
+                    _, _, tb = sys.exc_info()
+                    exc.tb = tb
                 self.method_queue.append(exc)
                 break
 

@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 __metaclass__ = type
 import errno
+import six
 import socket
 import ssl
 from abc import ABCMeta, abstractmethod
@@ -190,8 +191,12 @@ class Transport:
 
             # this fixes the change in memoryview in Python 3.3 (accessing an element returns the
             #  correct type)
-            i_last_byte = bytes(frame_terminator)[0]
-
+            if six.PY2:
+                #: :type: int
+                i_last_byte = ord(frame_terminator[0])
+            else:
+                #: :type: int
+                i_last_byte = bytes(frame_terminator)[0]
         except (OSError, IOError, socket.error) as exc:
             # don't disconnect for ssl read time outs (Python 3.2):
             # http://bugs.python.org/issue10272
@@ -200,13 +205,15 @@ class Transport:
             if get_errno(exc) not in _UNAVAIL and not isinstance(exc, socket.timeout):
                 self.connected = False
             raise
+
         if i_last_byte == FrameType.END:
             if frame.frame_type == FrameType.HEARTBEAT:
                 self.last_heartbeat_received = datetime.datetime.now()
             return frame
         else:
-            raise UnexpectedFrame(
-                'Received {} while expecting 0xCE (FrameType.END)'.format(hex(i_last_byte)))
+            hex_val = hex(i_last_byte)
+            raise UnexpectedFrame('Received {} while expecting 0xce (FrameType.END)'.format(hex_val))
+
 
     @synchronized('_frame_write_lock')
     def write_frame(self, frame):
