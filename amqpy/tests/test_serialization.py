@@ -88,18 +88,19 @@ class TestSerialization:
             assert r.read_bit() is True
             assert r.read_bit() is False
 
-    #
+    # -------------
     # Octets
-    #
-    def test_octet(self):
-        for val in range(256):
-            w = AMQPWriter()
-            w.write_octet(val)
-            s = w.getvalue()
-            assert_equal_binary(s, chr(val))
 
-            r = AMQPReader(s)
-            assert r.read_octet() == val
+    def test_octet(self):
+        for i in range(256):
+            w = AMQPWriter()
+            w.write_octet(i)
+            b = w.getvalue()
+            # assert_equal_binary(b, chr(i))
+            assert b == chr(i)
+
+            r = AMQPReader(b)
+            assert r.read_octet() == i
 
     def test_octet_invalid(self):
         w = AMQPWriter()
@@ -111,9 +112,9 @@ class TestSerialization:
         with pytest.raises(FrameSyntaxError):
             w.write_octet(256)
 
-    #
+    # -------------
     # Shorts
-    #
+
     def test_short(self):
         for i in range(256):
             val = randint(0, 65535)
@@ -134,9 +135,9 @@ class TestSerialization:
         with pytest.raises(FrameSyntaxError):
             w.write_short(65536)
 
-    #
+    # -------------
     # Longs
-    #
+
     def test_long(self):
         for i in range(256):
             val = randint(0, 4294967295)
@@ -157,9 +158,9 @@ class TestSerialization:
         with pytest.raises(FrameSyntaxError):
             w.write_long(4294967296)
 
-    #
+    # -------------
     # LongLongs
-    #
+
     def test_longlong(self):
         for i in range(256):
             val = randint(0, (2 ** 64) - 1)
@@ -180,9 +181,9 @@ class TestSerialization:
         with pytest.raises(FrameSyntaxError):
             w.write_longlong(2 ** 64)
 
-    #
+    # -------------
     # Shortstr
-    #
+
     def test_empty_shortstr(self):
         w = AMQPWriter()
         w.write_shortstr('')
@@ -221,9 +222,8 @@ class TestSerialization:
         with pytest.raises(FrameSyntaxError):
             w.write_shortstr('\u0100' * 128)
 
-    #
+    # -------------
     # Longstr
-    #
 
     def test_empty_longstr(self):
         w = AMQPWriter()
@@ -257,9 +257,9 @@ class TestSerialization:
         r = AMQPReader(s)
         assert r.read_longstr() == val
 
-    #
+    # -------------
     # Table
-    #
+
     def test_table_empty(self):
         val = {}
         w = AMQPWriter()
@@ -320,9 +320,9 @@ class TestSerialization:
         r = AMQPReader(s)
         assert r.read_table() == val
 
-    #
+    # -------------
     # Array
-    #
+
     def test_array_from_list(self):
         val = [1, 'foo', None]
         w = AMQPWriter()

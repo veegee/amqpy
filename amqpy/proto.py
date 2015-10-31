@@ -13,6 +13,7 @@ from .message import Message
 
 log = logging.getLogger('amqpy')
 
+
 class Frame:
     """AMQP frame
 
@@ -256,7 +257,10 @@ class Method:
         if isinstance(self._body_bytes, six.string_types):
             # encode body to bytes
             coding = self.content.properties.setdefault('content_encoding', 'UTF-8')
-            self._body_bytes = self.content.body.encode(coding)
+            try:
+                self._body_bytes = self.content.body.encode(coding)
+            except LookupError:
+                self._body_bytes = self.content.body
 
         properties = self.content.serialize_properties()
         return struct.pack('>HHQ', self.method_type.class_id, 0, len(self._body_bytes)) + properties
