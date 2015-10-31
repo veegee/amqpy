@@ -5,11 +5,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 __metaclass__ = type
 import six
 import struct
+import logging
 
 from .serialization import AMQPReader, AMQPWriter
 from .spec import FrameType, method_t
 from .message import Message
 
+log = logging.getLogger('amqpy')
 
 class Frame:
     """AMQP frame
@@ -251,10 +253,11 @@ class Method:
             raise ValueError('`_pack_header()` is only meaningful if there is content to pack')
 
         self._body_bytes = self.content.body
-        if isinstance(self._body_bytes, str):
+        if isinstance(self._body_bytes, six.string_types):
             # encode body to bytes
             coding = self.content.properties.setdefault('content_encoding', 'UTF-8')
             self._body_bytes = self.content.body.encode(coding)
+
         properties = self.content.serialize_properties()
         return struct.pack('>HHQ', self.method_type.class_id, 0, len(self._body_bytes)) + properties
 
@@ -309,7 +312,5 @@ class Method:
         :rtype: generator[amqpy.proto.Frame]
         """
         for payload in self._pack_body(chunk_size):
-            if six.PY2:
-                payload = payload.encode('utf-8')
             frame = Frame(FrameType.BODY, self.channel_id, payload)
             yield frame

@@ -27,7 +27,7 @@ class AMQPReader:
         :param source: source bytes or file-like object
         :type source: io.BytesIO or bytes or bytearray
         """
-        if isinstance(source, bytes) or isinstance(source, bytearray):
+        if isinstance(source, (bytes, bytearray)):
             self.input = io.BytesIO(source)
         elif isinstance(source, io.BytesIO):
             self.input = source

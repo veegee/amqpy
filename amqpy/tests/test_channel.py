@@ -37,7 +37,7 @@ class TestChannel:
         assert msg2.properties['content_encoding'] == 'UTF-8'
         assert msg2.body == 'hello world'
 
-        # Explicit latin_1 encoding, still comes back as unicode
+        # explicit latin_1 encoding, still comes back as unicode
         msg = Message('hello world', content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
@@ -48,7 +48,6 @@ class TestChannel:
         msg = Message('hello w\xf6rld', content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
-
         assert msg2.properties['content_encoding'] == 'latin_1'
         assert msg2.body == 'hello w\u00f6rld'
 

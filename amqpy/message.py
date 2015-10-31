@@ -6,6 +6,8 @@ __metaclass__ = type
 import six
 from . import spec
 from amqpy.serialization import AMQPReader, AMQPWriter
+import logging
+log = logging.getLogger('amqpy')
 
 __all__ = ['Message']
 
@@ -92,6 +94,7 @@ class GenericContent:
             result.write_short(flag_bits)
         result.write(raw_bytes.getvalue())
 
+        log.info(self.properties)
         return result.getvalue()
 
 
