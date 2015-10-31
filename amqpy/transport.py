@@ -189,14 +189,14 @@ class Transport:
             frame_terminator = self.read(1)
             frame.data.extend(frame_terminator)
 
-            # this fixes the change in memoryview in Python 3.3 (accessing an element returns the
-            #  correct type)
             if six.PY2:
                 #: :type: int
-                i_last_byte = ord(frame_terminator[0])
+                i_last_byte = six.byte2int(frame_terminator)
             else:
+                # this fixes the change in memoryview in Python 3.3 (accessing an element returns the
+                #  correct type)
                 #: :type: int
-                i_last_byte = bytes(frame_terminator)[0]
+                i_last_byte = six.byte2int(bytes(frame_terminator))
         except (OSError, IOError, socket.error) as exc:
             # don't disconnect for ssl read time outs (Python 3.2):
             # http://bugs.python.org/issue10272
@@ -211,8 +211,7 @@ class Transport:
                 self.last_heartbeat_received = datetime.datetime.now()
             return frame
         else:
-            hex_val = hex(i_last_byte)
-            raise UnexpectedFrame('Received {} while expecting 0xce (FrameType.END)'.format(hex_val))
+            raise UnexpectedFrame('Received {} while expecting 0xce (FrameType.END)'.format(hex(i_last_byte)))
 
 
     @synchronized('_frame_write_lock')

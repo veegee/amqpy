@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 __metaclass__ = type
+import six
 import struct
 
 from .serialization import AMQPReader, AMQPWriter
@@ -308,5 +309,7 @@ class Method:
         :rtype: generator[amqpy.proto.Frame]
         """
         for payload in self._pack_body(chunk_size):
+            if six.PY2:
+                payload = payload.encode('utf-8')
             frame = Frame(FrameType.BODY, self.channel_id, payload)
             yield frame

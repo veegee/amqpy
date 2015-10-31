@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 __metaclass__ = type
+import six
 from . import spec
 from amqpy.serialization import AMQPReader, AMQPWriter
 
@@ -161,7 +162,7 @@ class Message(GenericContent):
         #: Delivery info, set after receiving a message (dict)
         self.delivery_info = {}
 
-        if isinstance(body, str):
+        if isinstance(body, six.string_types):
             self.properties['content_encoding'] = properties.get('content_encoding', 'UTF-8')
 
     def __eq__(self, other):

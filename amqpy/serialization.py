@@ -347,9 +347,7 @@ class AMQPWriter:
 
     def write_item(self, v, k=None):
         if isinstance(v, (six.string_types, bytes)):
-            if six.PY2:
-                print(v, type(v))
-            else:
+            if six.PY3:
                 if isinstance(v, str):
                     v = v.encode('utf-8')
             self.write(b'S')

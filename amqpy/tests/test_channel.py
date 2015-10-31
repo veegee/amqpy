@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 __metaclass__ = type
+import six
 import uuid
 import logging
 import sys
@@ -26,7 +27,7 @@ class TestChannel:
         msg = Message('hello world')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
-        assert isinstance(msg2.body, str)
+        assert isinstance(msg2.body, six.string_types)
         assert msg2.body == 'hello world'
 
         # default UTF-8 encoding of unicode body, returned as unicode
