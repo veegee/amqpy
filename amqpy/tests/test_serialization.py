@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 __metaclass__ = type
+import six
 from datetime import datetime
 from decimal import Decimal
 from random import randint
@@ -12,7 +13,7 @@ from ..serialization import AMQPReader, AMQPWriter, FrameSyntaxError
 
 
 def assert_equal_binary(b, s):
-    assert b == s.encode('latin_1')
+    assert b == six.b(s)
 
 
 class TestSerialization:
@@ -96,8 +97,7 @@ class TestSerialization:
             w = AMQPWriter()
             w.write_octet(i)
             b = w.getvalue()
-            # assert_equal_binary(b, chr(i))
-            assert b == chr(i)
+            assert_equal_binary(b, chr(i))
 
             r = AMQPReader(b)
             assert r.read_octet() == i
