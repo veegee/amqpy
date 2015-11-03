@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 from datetime import datetime
 from decimal import Decimal
 import pickle
@@ -41,7 +44,7 @@ class TestBasicMessage:
             priority=7,
         )
 
-        msg2 = pickle.loads(pickle.dumps(msg))
+        msg2 = pickle.loads(pickle.dumps(msg, -1))
         assert msg == msg2
 
     def test_roundtrip(self):

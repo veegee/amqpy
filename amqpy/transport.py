@@ -1,4 +1,8 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 import errno
+import six
 import socket
 import ssl
 from abc import ABCMeta, abstractmethod
@@ -23,7 +27,8 @@ _UNAVAIL = {errno.EAGAIN, errno.EINTR, errno.ENOENT}
 AMQP_PROTOCOL_HEADER = b'AMQP\x00\x00\x09\x01'  # bytes([65, 77, 81, 80, 0, 0, 9, 1])
 
 
-class Transport(metaclass=ABCMeta):
+class Transport:
+    __metaclass__ = ABCMeta
     """Common superclass for TCP and SSL transports"""
     connected = False
 
@@ -184,10 +189,14 @@ class Transport(metaclass=ABCMeta):
             frame_terminator = self.read(1)
             frame.data.extend(frame_terminator)
 
-            # this fixes the change in memoryview in Python 3.3 (accessing an element returns the
-            #  correct type)
-            i_last_byte = bytes(frame_terminator)[0]
-
+            if six.PY2:
+                #: :type: int
+                i_last_byte = six.byte2int(frame_terminator)
+            else:
+                # this fixes the change in memoryview in Python 3.3 (accessing an element returns the
+                #  correct type)
+                #: :type: int
+                i_last_byte = six.byte2int(bytes(frame_terminator))
         except (OSError, IOError, socket.error) as exc:
             # don't disconnect for ssl read time outs (Python 3.2):
             # http://bugs.python.org/issue10272
@@ -196,13 +205,14 @@ class Transport(metaclass=ABCMeta):
             if get_errno(exc) not in _UNAVAIL and not isinstance(exc, socket.timeout):
                 self.connected = False
             raise
+
         if i_last_byte == FrameType.END:
             if frame.frame_type == FrameType.HEARTBEAT:
                 self.last_heartbeat_received = datetime.datetime.now()
             return frame
         else:
-            raise UnexpectedFrame(
-                'Received {} while expecting 0xCE (FrameType.END)'.format(hex(i_last_byte)))
+            raise UnexpectedFrame('Received {} while expecting 0xce (FrameType.END)'.format(hex(i_last_byte)))
+
 
     @synchronized('_frame_write_lock')
     def write_frame(self, frame):
@@ -280,7 +290,7 @@ class SSLTransport(Transport):
 
     def __init__(self, host, port, connect_timeout, frame_max, ssl_opts):
         self.ssl_opts = ssl_opts
-        super().__init__(host, port, connect_timeout, frame_max)
+        super(SSLTransport, self).__init__(host, port, connect_timeout, frame_max)
 
     def _setup_transport(self):
         """Wrap the socket in an SSL object

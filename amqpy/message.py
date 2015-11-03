@@ -1,7 +1,14 @@
 """Messages for AMQP
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
+import six
 from . import spec
 from amqpy.serialization import AMQPReader, AMQPWriter
+import logging
+
+log = logging.getLogger('amqpy')
 
 __all__ = ['Message']
 
@@ -21,7 +28,7 @@ class GenericContent:
         """
         #: Content properties
         #:
-        #: :type: dict[str, str|dict]
+        #: :type: dict[str|unicode, str|dict]
         self.properties = properties
 
     def __eq__(self, other):
@@ -35,12 +42,12 @@ class GenericContent:
         The `raw_bytes` are the payload of a `FrameType.HEADER` frame, starting at a byte-offset
         of 12.
         """
-        r = AMQPReader(raw_bytes)
+        reader = AMQPReader(raw_bytes)
 
         # read 16-bit shorts until we get one with a low bit set to zero
         flags = []
         while True:
-            flag_bits = r.read_short()
+            flag_bits = reader.read_short()
             flags.append(flag_bits)
             if flag_bits & 1 == 0:
                 break
@@ -48,28 +55,29 @@ class GenericContent:
         shift = 0
         d = {}
         flag_bits = None
-        for key, proptype in self.PROPERTIES:
+        for prop_name, data_type in self.PROPERTIES:
             if shift == 0:
                 if not flags:
                     break
                 flag_bits, flags = flags[0], flags[1:]
                 shift = 15
             if flag_bits & (1 << shift):
-                d[key] = getattr(r, 'read_' + proptype)()
+                d[prop_name] = getattr(reader, 'read_' + data_type)()
             shift -= 1
 
         self.properties = d
 
     def serialize_properties(self):
-        """Serialize :attr:`self.properties` into raw bytes suitable to append to the payload of
-        `FrameType.HEADER` frames
+        """Serialize :attr:`self.properties` into raw bytes suitable to append
+        to the payload of `FrameType.HEADER` frames
         """
+        # write
         shift = 15
         flag_bits = 0
         flags = []
-        raw_bytes = AMQPWriter()
-        for key, proptype in self.PROPERTIES:
-            val = self.properties.get(key, None)
+        prop_writer = AMQPWriter()
+        for prop_name, data_type in self.PROPERTIES:
+            val = self.properties.get(prop_name)
             if val is not None:
                 if shift == 0:
                     flags.append(flag_bits)
@@ -77,18 +85,18 @@ class GenericContent:
                     shift = 15
 
                 flag_bits |= (1 << shift)
-                if proptype != 'bit':
-                    getattr(raw_bytes, 'write_' + proptype)(val)
-
+                if data_type != 'bit':
+                    getattr(prop_writer, 'write_' + data_type)(val)
             shift -= 1
-
         flags.append(flag_bits)
-        result = AMQPWriter()
-        for flag_bits in flags:
-            result.write_short(flag_bits)
-        result.write(raw_bytes.getvalue())
 
-        return result.getvalue()
+        # write final data
+        writer = AMQPWriter()
+        for flag_bits in flags:
+            writer.write_short(flag_bits)
+        writer.write(prop_writer.getvalue())
+
+        return writer.getvalue()
 
 
 class Message(GenericContent):
@@ -98,8 +106,8 @@ class Message(GenericContent):
 
     CLASS_ID = spec.Basic.CLASS_ID
 
-    # instances of this class have these attributes, which are passed back and forth as message
-    # properties between client and server
+    # instances of this class have these attributes, which are passed back and
+    # forth as message properties between client and server
     PROPERTIES = [
         ('content_type', 'shortstr'),
         ('content_encoding', 'shortstr'),
@@ -127,7 +135,9 @@ class Message(GenericContent):
             msg = Message('hello world', content_type='text/plain', application_headers={'foo': 7})
 
         :param body: message body
+        :type body: bytes or str or unicode
         :param channel: associated channel
+        :type channel: amqpy.channel.Channel
         :param properties:
             * content_type (shortstr): MIME content type
             * content_encoding (shortstr): MIME content encoding
@@ -144,12 +154,10 @@ class Message(GenericContent):
             * user_id (shortstr): The creating user id
             * app_id (shortstr): The creating application id
             * cluster_id (shortstr): Intra-cluster routing identifier
-        :type body: bytes or str
-        :type channel: amqpy.channel.Channel
         """
-        super().__init__(properties)
+        super(Message, self).__init__(properties)
 
-        #: Message body (bytes or str)
+        #: Message body (bytes or str or unicode)
         self.body = body
 
         #: Associated channel, set after receiving a message (amqpy.channel.Channel)
@@ -158,7 +166,9 @@ class Message(GenericContent):
         #: Delivery info, set after receiving a message (dict)
         self.delivery_info = {}
 
-        if isinstance(body, str):
+        if isinstance(body, six.string_types):
+            # if the `body` is a string, automatically set the content_encoding
+            # to UTF-8 if it hasn't already been set
             self.properties['content_encoding'] = properties.get('content_encoding', 'UTF-8')
 
     def __eq__(self, other):
@@ -167,7 +177,7 @@ class Message(GenericContent):
         Received messages may contain a 'delivery_info' attribute, which isn't compared.
         """
         try:
-            return super().__eq__(other) and self.body == other.body
+            return super(Message, self).__eq__(other) and self.body == other.body
         except AttributeError:
             return False
 

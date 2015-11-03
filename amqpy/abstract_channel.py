@@ -1,5 +1,8 @@
 """Code common to Connection and Channel objects
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 from abc import ABCMeta, abstractmethod
 from threading import Lock
 
@@ -10,7 +13,8 @@ from . import spec
 __all__ = ['AbstractChannel']
 
 
-class AbstractChannel(metaclass=ABCMeta):
+class AbstractChannel:
+    __metaclass__ = ABCMeta
     """Superclass for both the Connection, which is treated as channel 0, and other user-created
     Channel objects
 

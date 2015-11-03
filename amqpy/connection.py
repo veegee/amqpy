@@ -1,9 +1,13 @@
 """AMQP Connections
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 import logging
 import socket
 from array import array
 import pprint
+import six
 from threading import Event, Thread
 
 from . import __version__, compat
@@ -38,7 +42,7 @@ class Connection(AbstractChannel):
     server, and for both peers to operate the connection thereafter
     """
 
-    def __init__(self, *, host='localhost', port=5672, ssl=None, connect_timeout=None,
+    def __init__(self, host='localhost', port=5672, ssl=None, connect_timeout=None,
                  userid='guest', password='guest', login_method='AMQPLAIN', virtual_host='/',
                  locale='en_US',
                  channel_max=65535, frame_max=131072,
@@ -78,7 +82,7 @@ class Connection(AbstractChannel):
         self.channels = {}  # dict of {channel_id int: Channel}
 
         # the connection object itself is treated as channel 0
-        super().__init__(self, 0)  # also sets channels[0] = self
+        super(Connection, self).__init__(self, 0)  # also sets channels[0] = self
 
         # instance variables
         #: :type: amqpy.transport.Transport
@@ -97,7 +101,10 @@ class Connection(AbstractChannel):
         # properties set in the Tune method
         self.channel_max = channel_max
         self.frame_max = frame_max
-        self._avail_channel_ids = array('H', range(self.channel_max, 0, -1))
+        if six.PY2:
+            self._avail_channel_ids = array(b'H', range(self.channel_max, 0, -1))
+        else:
+            self._avail_channel_ids = array('H', range(self.channel_max, 0, -1))
         self._heartbeat_final = 0  # final heartbeat interval after negotiation
         self._heartbeat_server = None
 
@@ -167,8 +174,8 @@ class Connection(AbstractChannel):
             self._close_event.clear()
             log.debug('Start automatic heartbeat thread')
             thr = Thread(target=self._heartbeat_run,
-                         name='amqp-HeartBeatThread-%s' % id(self),
-                         daemon=True)
+                         name='amqp-HeartBeatThread-%s' % id(self))
+            thr.daemon=True
             thr.start()
             self._heartbeat_thread = thr
 

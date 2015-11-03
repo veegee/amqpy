@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 import gc
 import os
 from signal import SIGHUP
@@ -116,7 +119,7 @@ class TestConnection:
         gc.collect()
         assert unreachable_before == len(gc.garbage)
 
-    @pytest.mark.skipif('sys.version_info >= (3, 5)')
+    @pytest.mark.skipif('sys.version_info >= (3, 5) or sys.version_info[0] == 2')
     def test_interrupted(self, conn):
         """Make sure to get InterruptedError if a read was interrupted
         """

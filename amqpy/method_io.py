@@ -1,10 +1,19 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 from threading import Lock
+import sys
 from collections import defaultdict, deque
-from queue import Queue
+import six
 import logging
 import socket
 import errno
 from .utils import get_errno
+
+if six.PY2:
+    from Queue import Queue
+else:
+    from queue import Queue
 
 from .concurrency import synchronized
 from .exceptions import UnexpectedFrame, Timeout, METHOD_NAME_MAP
@@ -68,6 +77,9 @@ class MethodReader:
                 frame = self.transport.read_frame()
             except Exception as exc:
                 # connection was closed? framing error?
+                if six.PY2:
+                    _, _, tb = sys.exc_info()
+                    exc.tb = tb
                 self.method_queue.append(exc)
                 break
 

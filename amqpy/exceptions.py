@@ -10,6 +10,9 @@ According to the AMQP specification, an exception closes the associated channel 
 returns a reply code and reply text to the client. However, amqpy will automatically re-open the
 channel after a channel error.
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
 import struct
 from collections import namedtuple
 
@@ -64,7 +67,7 @@ class AMQPError(Exception):
         if method_type and not self.method_name:
             self.method_name = METHOD_NAME_MAP.get(method_type, '')
         self.channel_id = channel_id
-        super().__init__(self, reply_code, reply_text, method_type, self.method_name, channel_id)
+        super(AMQPError, self).__init__(self, reply_code, reply_text, method_type, self.method_name, channel_id)
 
     def __str__(self):
         if self.method:

@@ -1,7 +1,10 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+__metaclass__ = type
+import six
 import uuid
 import logging
 import sys
-from select import select
 
 import pytest
 
@@ -24,7 +27,7 @@ class TestChannel:
         msg = Message('hello world')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
-        assert isinstance(msg2.body, str)
+        assert isinstance(msg2.body, six.string_types)
         assert msg2.body == 'hello world'
 
         # default UTF-8 encoding of unicode body, returned as unicode
@@ -34,7 +37,7 @@ class TestChannel:
         assert msg2.properties['content_encoding'] == 'UTF-8'
         assert msg2.body == 'hello world'
 
-        # Explicit latin_1 encoding, still comes back as unicode
+        # explicit latin_1 encoding, still comes back as unicode
         msg = Message('hello world', content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
@@ -45,7 +48,6 @@ class TestChannel:
         msg = Message('hello w\xf6rld', content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
-
         assert msg2.properties['content_encoding'] == 'latin_1'
         assert msg2.body == 'hello w\u00f6rld'
 
@@ -129,14 +131,14 @@ class TestExchange:
             exch_name = 'test_exchange_{}'.format(uuid.uuid4())
             ch.exchange_declare(exch_name, 'direct', passive=True)
 
-    def test_exchange_redeclare_different_type_raises(self, ch: Channel, rand_exch):
+    def test_exchange_redeclare_different_type_raises(self, ch, rand_exch):
         """Redeclaring an exchange with a different type should raise
         """
         ch.exchange_declare(rand_exch, 'direct')
         with pytest.raises(AMQPError):
             ch.exchange_declare(rand_exch, 'fanout')
 
-    def test_exchange_redeclare_auto_delete_raises(self, ch: Channel, rand_exch):
+    def test_exchange_redeclare_auto_delete_raises(self, ch, rand_exch):
         """Redeclaring an exchange with a different `auto_delete` should raise
         """
         ch.exchange_declare(rand_exch, 'direct', auto_delete=False)
@@ -310,7 +312,7 @@ class TestPublish:
             msg2 = ch.basic_get(no_ack=True)
             assert msg == msg2
 
-    def test_publish_confirm(self, ch: Channel, rand_exch):
+    def test_publish_confirm(self, ch, rand_exch):
         queue_name = 'test.queue.publish'
         rk = queue_name
         ch.exchange_declare(rand_exch, 'direct', auto_delete=True)
