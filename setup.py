@@ -1,11 +1,14 @@
-#!/usr/bin/env python3
-
-import sys
 import os
 
 from setuptools import setup, find_packages
 
-import amqpy
+VERSION = (0, 12, 3)
+__version__ = '.'.join(map(str, VERSION[0:3])) + ''.join(VERSION[3:])
+__author__ = 'veegee'
+__maintainer__ = 'veegee'
+__contact__ = 'veegee@veegee.org'
+__homepage__ = 'http://github.com/veegee/amqpy'
+__docformat__ = 'restructuredtext'
 
 name = 'amqpy'
 description = 'an AMQP 0.9.1 client library for Python 2.7 & Python >= 3.2.0'
@@ -44,15 +47,16 @@ setup(
     name=name,
     description=description,
     long_description=long_description(),
-    version=amqpy.__version__,
-    author=amqpy.__author__,
-    author_email=amqpy.__contact__,
-    maintainer=amqpy.__maintainer__,
-    url=amqpy.__homepage__,
+    version=__version__,
+    author=__author__,
+    author_email=__contact__,
+    maintainer=__maintainer__,
+    url=__homepage__,
     platforms=['any'],
     license='LGPL',
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     package_data=package_data,
+    setup_requires=['six>=1.0'],
     install_requires=['six>=1.0'],
     tests_require=['pytest>=2.6'],
     classifiers=classifiers,
