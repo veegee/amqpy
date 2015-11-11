@@ -7,11 +7,8 @@ from setuptools import setup, find_packages
 
 import amqpy
 
-if sys.version_info < (3, 2):
-    raise Exception('amqpy requires Python 3.2 or higher')
-
 name = 'amqpy'
-description = 'an AMQP 0.9.1 client library for Python >= 3.2.0'
+description = 'an AMQP 0.9.1 client library for Python 2.7 & Python >= 3.2.0'
 keywords = ['amqp', 'rabbitmq', 'qpid']
 
 classifiers = [
@@ -19,7 +16,7 @@ classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: Implementation :: CPython',
     'Programming Language :: Python :: Implementation :: PyPy',
-    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3.2',
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
