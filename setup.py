@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_packages
 
-VERSION = (0, 12, 3)
+VERSION = (0, 12, 4)
 __version__ = '.'.join(map(str, VERSION[0:3])) + ''.join(VERSION[3:])
 __author__ = 'veegee'
 __maintainer__ = 'veegee'
