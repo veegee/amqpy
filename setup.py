@@ -53,6 +53,7 @@ setup(
     license='LGPL',
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     package_data=package_data,
+    install_requires=['six>=1.0'],
     tests_require=['pytest>=2.6'],
     classifiers=classifiers,
     keywords=keywords
