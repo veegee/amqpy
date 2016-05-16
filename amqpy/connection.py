@@ -21,6 +21,7 @@ from .transport import create_transport
 from . import spec
 from .spec import method_t
 from .concurrency import synchronized
+from .login import login_responses
 
 __all__ = ['Connection']
 
@@ -154,9 +155,7 @@ class Connection(AbstractChannel):
         self.wait(spec.Connection.Start)
 
         # create 'login response' to send to server
-        login_response = AMQPWriter()
-        login_response.write_table({'LOGIN': self._userid, 'PASSWORD': self._password})
-        login_response = login_response.getvalue()[4:]  # skip the length
+        login_response = login_responses[self._login_method](self._userid, self._password)
 
         # reply with 'start-ok' and connection parameters
         # noinspection PyArgumentList
