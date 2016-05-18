@@ -10,6 +10,9 @@ venv
 # generated documentation
 docs/build
 
+# vim
+*.swp
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
