@@ -1,6 +1,6 @@
 """AMQP Connections
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 import logging
