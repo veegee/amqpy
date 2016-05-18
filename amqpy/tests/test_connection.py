@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 import gc
@@ -7,6 +7,7 @@ from signal import SIGHUP
 import threading
 import time
 import signal
+from amqpy.login import login_response_plain
 
 import pytest
 
@@ -138,3 +139,9 @@ class TestConnection:
 
         with pytest.raises(InterruptedError):
             conn.drain_events(2)
+
+
+class TestLogin:
+    def test_login_response_plain(self):
+        b = login_response_plain('blah', 'blah')
+        assert isinstance(b, bytes)

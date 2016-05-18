@@ -2,7 +2,7 @@ import os
 
 from setuptools import setup, find_packages
 
-VERSION = (0, 12, 4)
+VERSION = (0, 13, 0)
 __version__ = '.'.join(map(str, VERSION[0:3])) + ''.join(VERSION[3:])
 __author__ = 'veegee'
 __maintainer__ = 'veegee'
@@ -23,6 +23,7 @@ classifiers = [
     'Programming Language :: Python :: 3.2',
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
     'License :: OSI Approved :: MIT License',
     'Intended Audience :: Developers',
     'Topic :: Internet',
