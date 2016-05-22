@@ -1,6 +1,6 @@
 """AMQP Channels
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 import logging
@@ -12,7 +12,7 @@ else:
     from queue import Queue
 
 from .proto import Method
-from .concurrency import synchronized
+from .concurrency import synchronized_connection
 from .abstract_channel import AbstractChannel
 from .exceptions import ChannelError, ConsumerCancelled, error_for_code
 from .spec import basic_return_t, queue_declare_ok_t, method_t
@@ -126,7 +126,7 @@ class Channel(AbstractChannel):
         self.mode = self.CH_MODE_NONE
         self._send_open()
 
-    @synchronized('lock')
+    @synchronized_connection()
     def close(self, reply_code=0, reply_text='', method_type=method_t(0, 0)):
         """Request a channel close
 
@@ -192,7 +192,7 @@ class Channel(AbstractChannel):
         assert method
         self._close()
 
-    @synchronized('lock')
+    @synchronized_connection()
     def flow(self, active):
         """Enable/disable flow from peer
 
@@ -266,7 +266,7 @@ class Channel(AbstractChannel):
         self.is_open = True
         log.debug('Channel open')
 
-    @synchronized('lock')
+    @synchronized_connection()
     def exchange_declare(self, exchange, exch_type, passive=False, durable=False, auto_delete=True,
                          nowait=False, arguments=None):
         """Declare exchange, create if needed
@@ -319,7 +319,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def exchange_delete(self, exchange, if_unused=False, nowait=False):
         """Delete an exchange
 
@@ -356,7 +356,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def exchange_bind(self, dest_exch, source_exch='', routing_key='', nowait=False,
                       arguments=None):
         """Bind an exchange to an exchange
@@ -392,7 +392,7 @@ class Channel(AbstractChannel):
         if not nowait:
             return self.wait(spec.Exchange.BindOk)
 
-    @synchronized('lock')
+    @synchronized_connection()
     def exchange_unbind(self, dest_exch, source_exch='', routing_key='', nowait=False,
                         arguments=None):
         """Unbind an exchange from an exchange
@@ -435,7 +435,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def queue_bind(self, queue, exchange='', routing_key='', nowait=False, arguments=None):
         """Bind queue to an exchange
 
@@ -485,7 +485,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def queue_unbind(self, queue, exchange, routing_key='', nowait=False, arguments=None):
         """Unbind a queue from an exchange
 
@@ -521,7 +521,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def queue_declare(self, queue='', passive=False, durable=False, exclusive=False,
                       auto_delete=True, nowait=False,
                       arguments=None):
@@ -595,7 +595,7 @@ class Channel(AbstractChannel):
         args = method.args
         return queue_declare_ok_t(args.read_shortstr(), args.read_long(), args.read_long())
 
-    @synchronized('lock')
+    @synchronized_connection()
     def queue_delete(self, queue='', if_unused=False, if_empty=False, nowait=False):
         """Delete a queue
 
@@ -641,7 +641,7 @@ class Channel(AbstractChannel):
         args = method.args
         return args.read_long()
 
-    @synchronized('lock')
+    @synchronized_connection()
     def queue_purge(self, queue='', nowait=False):
         """Purge a queue
 
@@ -683,7 +683,7 @@ class Channel(AbstractChannel):
         args = method.args
         return args.read_long()
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_ack(self, delivery_tag, multiple=False):
         """Acknowledge one or more messages
 
@@ -706,7 +706,7 @@ class Channel(AbstractChannel):
         args.write_bit(multiple)
         self._send_method(Method(spec.Basic.Ack, args))
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_cancel(self, consumer_tag, nowait=False):
         """End a queue consumer
 
@@ -773,7 +773,7 @@ class Channel(AbstractChannel):
         self.callbacks.pop(consumer_tag, None)
         return self.cancel_callbacks.pop(consumer_tag, None)
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_consume(self, queue='', consumer_tag='', no_local=False, no_ack=False,
                       exclusive=False, nowait=False, callback=None, arguments=None, on_cancel=None):
         """Start a queue consumer
@@ -937,7 +937,7 @@ class Channel(AbstractChannel):
         else:
             raise Exception('No callback available for consumer tag: {}'.format(consumer_tag))
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_get(self, queue='', no_ack=False):
         """Directly get a message from the `queue`
 
@@ -1049,7 +1049,7 @@ class Channel(AbstractChannel):
 
         self._send_method(Method(spec.Basic.Publish, args, msg))
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_publish(self, msg, exchange='', routing_key='', mandatory=False, immediate=False):
         """Publish a message
 
@@ -1080,7 +1080,7 @@ class Channel(AbstractChannel):
         if self.mode == self.CH_MODE_CONFIRM:
             self.wait(spec.Basic.Ack)
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_qos(self, prefetch_size=0, prefetch_count=0, a_global=False):
         """Specify quality of service
 
@@ -1128,7 +1128,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_recover(self, requeue=False):
         """Redeliver unacknowledged messages
 
@@ -1146,7 +1146,7 @@ class Channel(AbstractChannel):
         args.write_bit(requeue)
         self._send_method(Method(spec.Basic.Recover, args))
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_recover_async(self, requeue=False):
         """Redeliver unacknowledged messages (async)
 
@@ -1169,7 +1169,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def basic_reject(self, delivery_tag, requeue):
         """Reject an incoming message
 
@@ -1218,7 +1218,7 @@ class Channel(AbstractChannel):
             msg,
         ))
 
-    @synchronized('lock')
+    @synchronized_connection()
     def tx_commit(self):
         """Commit the current transaction
 
@@ -1236,7 +1236,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def tx_rollback(self):
         """Abandon the current transaction
 
@@ -1254,7 +1254,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def tx_select(self):
         """Select standard transaction mode
 
@@ -1281,7 +1281,7 @@ class Channel(AbstractChannel):
         """
         pass
 
-    @synchronized('lock')
+    @synchronized_connection()
     def confirm_select(self, nowait=False):
         """Enable publisher confirms for this channel (RabbitMQ extension)
 

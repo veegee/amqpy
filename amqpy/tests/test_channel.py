@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 import six
@@ -45,15 +45,15 @@ class TestChannel:
         assert msg2.body == 'hello world'
 
         # plain string with specified encoding comes back as unicode
-        msg = Message('hello w\xf6rld', content_encoding='latin_1')
+        msg = Message(six.u('hello w\xf6rld'), content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
         assert msg2.properties['content_encoding'] == 'latin_1'
-        assert msg2.body == 'hello w\u00f6rld'
+        assert msg2.body == six.u('hello w\u00f6rld')
 
         # plain string (bytes in Python 3.x) with bogus encoding
         # don't really care about latin_1, just want bytes
-        test_bytes = 'hello w\xd6rld'.encode('latin_1')
+        test_bytes = six.u('hello w\xd6rld').encode('latin_1')
         msg = Message(test_bytes, content_encoding='I made this up')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
@@ -65,28 +65,28 @@ class TestChannel:
         ch.auto_decode = False
 
         # unicode body comes back as utf-8 encoded str
-        msg = Message('hello w\u00f6rld')
+        msg = Message(six.u('hello w\u00f6rld'))
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
         assert msg2.properties['content_encoding'] == 'UTF-8'
         assert isinstance(msg2.body, bytes)
-        assert msg2.body == 'hello w\xc3\xb6rld'.encode('latin_1')
+        assert msg2.body == six.u('hello w\xc3\xb6rld').encode('latin_1')
 
         # plain string with specified encoding stays plain string
-        msg = Message('hello w\xf6rld', content_encoding='latin_1')
+        msg = Message(six.u('hello w\xf6rld'), content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
         assert msg2.properties['content_encoding'] == 'latin_1'
         assert isinstance(msg2.body, bytes)
-        assert msg2.body == 'hello w\xf6rld'.encode('latin_1')
+        assert msg2.body == six.u('hello w\xf6rld').encode('latin_1')
 
         # explicit latin_1 encoding, comes back as str
-        msg = Message('hello w\u00f6rld', content_encoding='latin_1')
+        msg = Message(six.u('hello w\u00f6rld'), content_encoding='latin_1')
         ch.basic_publish(msg, 'amq.direct', routing_key=rand_rk)
         msg2 = ch.basic_get(qname, no_ack=True)
         assert msg2.properties['content_encoding'] == 'latin_1'
         assert isinstance(msg2.body, bytes)
-        assert msg2.body == 'hello w\xf6rld'.encode('latin_1')
+        assert msg2.body == six.u('hello w\xf6rld').encode('latin_1')
 
     def test_invalid_header(self, ch):
         """Test sending a message with an unserializable object in the header

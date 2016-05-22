@@ -6,7 +6,7 @@ The primary method of providing compatibility is by backporting Python 3.3+ feat
 monkey-patching. However, this is only done when safe, i.e., when monkey-patching does not change
 the behaviour of existing objects.
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 

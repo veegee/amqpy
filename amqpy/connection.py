@@ -1,6 +1,6 @@
 """AMQP Connections
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 import logging
@@ -8,7 +8,7 @@ import socket
 from array import array
 import pprint
 import six
-from threading import Event, Thread
+from threading import Event, Thread, Lock
 
 from . import __version__, compat
 from .proto import Method
@@ -20,7 +20,7 @@ from .exceptions import ResourceError, AMQPConnectionError, Timeout, error_for_c
 from .transport import create_transport
 from . import spec
 from .spec import method_t
-from .concurrency import synchronized
+from .concurrency import synchronized_connection
 from .login import login_responses
 
 __all__ = ['Connection']
@@ -77,6 +77,8 @@ class Connection(AbstractChannel):
         :type on_unblocked: Callable or None
         """
         log.debug('amqpy {} Connection.__init__()'.format(__version__))
+        self.conn_lock = Lock()
+
         #: Map of `{channel_id: Channel}` for all active channels
         #:
         #: :type: dict[int, Channel]
@@ -174,7 +176,7 @@ class Connection(AbstractChannel):
             log.debug('Start automatic heartbeat thread')
             thr = Thread(target=self._heartbeat_run,
                          name='amqp-HeartBeatThread-%s' % id(self))
-            thr.daemon=True
+            thr.daemon = True
             thr.start()
             self._heartbeat_thread = thr
 
@@ -216,7 +218,7 @@ class Connection(AbstractChannel):
         """
         return self.server_properties.get('capabilities') or {}
 
-    @synchronized('lock')
+    @synchronized_connection()
     def channel(self, channel_id=None):
         """Create a new channel, or fetch the channel associated with `channel_id` if specified
 
