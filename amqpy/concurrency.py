@@ -47,3 +47,35 @@ def synchronized(lock_name):
         return wrapper
 
     return decorator
+
+
+def synchronized_connection():
+    """Decorator for automatically acquiring and releasing a connection-level
+    lock for method call
+    """
+
+    def decorator(f):
+        @wraps(f)
+        def wrapper(self, *args, **kwargs):
+            try:
+                lock = self.conn_lock
+            except AttributeError:
+                lock = self.connection.conn_lock
+            acquired = lock.acquire(False)
+            if not acquired:
+                # log.debug('> Wait to acquire lock for [{}]'.format(f.__qualname__))
+                start_time = time.perf_counter()
+                lock.acquire()
+                tot_time = time.perf_counter() - start_time
+                if tot_time > 5:
+                    # only log if waited for more than 10s to acquire lock
+                    log.warn('Acquired lock for [{}] in: {:.3f}s'.format(f.__qualname__, tot_time))
+            try:
+                retval = f(self, *args, **kwargs)
+            finally:
+                lock.release()
+            return retval
+
+        return wrapper
+
+    return decorator

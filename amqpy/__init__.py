@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
-VERSION = (0, 13, 0)
+VERSION = (0, 13, 1)
 __version__ = '.'.join(map(str, VERSION[0:3])) + ''.join(VERSION[3:])
 __author__ = 'veegee'
 __maintainer__ = 'veegee'
