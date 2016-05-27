@@ -9,7 +9,6 @@ API documentation:
     amqpy.connection
     amqpy.channel
     amqpy.message
-    amqpy.consumer
     amqpy.spec
     amqpy.proto
     amqpy.exceptions
