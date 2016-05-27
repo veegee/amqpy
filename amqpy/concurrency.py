@@ -57,10 +57,13 @@ def synchronized_connection():
     def decorator(f):
         @wraps(f)
         def wrapper(self, *args, **kwargs):
-            try:
-                lock = self.conn_lock
-            except AttributeError:
+            if hasattr(self, 'connection'):
                 lock = self.connection.conn_lock
+            elif hasattr(self, 'conn_lock'):
+                lock = self.conn_lock
+            else:
+                raise Exception('Unable to find `lock` attribute')
+
             acquired = lock.acquire(False)
             if not acquired:
                 # log.debug('> Wait to acquire lock for [{}]'.format(f.__qualname__))
